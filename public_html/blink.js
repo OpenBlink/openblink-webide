@@ -11,7 +11,7 @@ const PROGRAM_HEADER_SIZE = 8;
 const DEFAULT_MTU = 20;
 const REQUESTED_MTU = 512;
 let negotiatedMTU = DEFAULT_MTU;
-const OPENBLINK_WEBIDE_VERSION = "0.3.3";
+const OPENBLINK_WEBIDE_VERSION = "0.3.4";
 
 appendToConsole(`OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`);
 
