@@ -12,9 +12,15 @@ let isConnected = false;
 let connectedDevice = null;
 let userInitiatedDisconnect = false;
 let reconnectAttempts = 0;
-let disconnectListenerAttached = false;
+let deviceWithDisconnectListener = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const INITIAL_RECONNECT_DELAY = 1000;
+
+// BLE UUIDs
+const OPENBLINK_SERVICE_UUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
+const OPENBLINK_PROGRAM_CHARACTERISTIC_UUID = "ad9fdd56-1135-4a84-923c-ce5a244385e7";
+const OPENBLINK_CONSOLE_CHARACTERISTIC_UUID = "a015b3de-185a-4252-aa04-7a87d38ce148";
+const OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID = "ca141151-3113-448b-b21a-6a6203d253ff";
 
 // MTU configuration
 const MAX_CHUNK_SIZE = 20;
@@ -187,21 +193,16 @@ function attemptReconnect(device) {
 
 // Connect to a BLE device (used for both initial connection and reconnection)
 async function connectToDevice(device) {
-  const openblinkServiceUUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
-  const openblinkProgramCharacteristicUUID = "ad9fdd56-1135-4a84-923c-ce5a244385e7";
-  const openblinkConsoleCharacteristicUUID = "a015b3de-185a-4252-aa04-7a87d38ce148";
-  const openblinkNegotiatedMtuCharacteristicUUID = "ca141151-3113-448b-b21a-6a6203d253ff";
-
   const server = await device.gatt.connect();
   console.log("Connected to GATT server");
 
-  const service = await server.getPrimaryService(openblinkServiceUUID);
+  const service = await server.getPrimaryService(OPENBLINK_SERVICE_UUID);
   console.log("Got service:", service);
 
   const characteristics = await Promise.all([
-    service.getCharacteristic(openblinkConsoleCharacteristicUUID),
-    service.getCharacteristic(openblinkProgramCharacteristicUUID),
-    service.getCharacteristic(openblinkNegotiatedMtuCharacteristicUUID),
+    service.getCharacteristic(OPENBLINK_CONSOLE_CHARACTERISTIC_UUID),
+    service.getCharacteristic(OPENBLINK_PROGRAM_CHARACTERISTIC_UUID),
+    service.getCharacteristic(OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID),
   ]);
 
   const consoleCharacteristic = characteristics[0];
@@ -382,7 +383,6 @@ async function sendFirmware(mrbContent) {
 Module.onRuntimeInitialized = () => {
   console.log("Emscripten runtime initialized.");
 
-  const openblinkServiceUUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
   const bleConnectButton = document.getElementById("ble-connect");
   const bleDisconnectButton = document.getElementById("ble-disconnect");
   const runMainButton = document.getElementById("run-main");
@@ -418,14 +418,17 @@ Module.onRuntimeInitialized = () => {
       .requestDevice({
         filters: [
           { namePrefix: "OpenBlink" },
-          { services: [openblinkServiceUUID] },
+          { services: [OPENBLINK_SERVICE_UUID] },
         ],
       })
       .then((device) => {
         appendToConsole("Selected device: " + device.name);
-        if (!disconnectListenerAttached) {
+        if (deviceWithDisconnectListener !== device) {
+          if (deviceWithDisconnectListener) {
+            deviceWithDisconnectListener.removeEventListener('gattserverdisconnected', handleDisconnect);
+          }
           device.addEventListener('gattserverdisconnected', handleDisconnect);
-          disconnectListenerAttached = true;
+          deviceWithDisconnectListener = device;
         }
         return connectToDevice(device);
       })
