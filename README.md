@@ -49,6 +49,7 @@ $ git submodule update
 $ cd emsdk
 emsdk $ ./emsdk install 4.0.23
 emsdk $ ./emsdk activate 4.0.23
+emsdk $ source ./emsdk_env.sh
 ```
 
 3. Build mruby in the `mruby` Directory
@@ -58,6 +59,8 @@ $ cd ../mruby
 mruby $ make
 mruby $ rake MRUBY_CONFIG=../emscripten.rb
 ```
+
+The build output (`mrbc.js` and `mrbc.wasm`) will be automatically placed in `public_html/mrbc/`.
 
 ---
 
@@ -108,6 +111,7 @@ $ git submodule update
 $ cd emsdk
 emsdk $ ./emsdk install 4.0.23
 emsdk $ ./emsdk activate 4.0.23
+emsdk $ source ./emsdk_env.sh
 ```
 
 3. 在 `mruby` 目录中构建 mruby
@@ -117,6 +121,8 @@ $ cd ../mruby
 mruby $ make
 mruby $ rake MRUBY_CONFIG=../emscripten.rb
 ```
+
+构建输出（`mrbc.js` 和 `mrbc.wasm`）将自动放置在 `public_html/mrbc/` 目录中。
 
 ---
 
@@ -167,6 +173,7 @@ $ git submodule update
 $ cd emsdk
 emsdk $ ./emsdk install 4.0.23
 emsdk $ ./emsdk activate 4.0.23
+emsdk $ source ./emsdk_env.sh
 ```
 
 3. `mruby` ディレクトリで mruby をビルド
@@ -176,3 +183,5 @@ $ cd ../mruby
 mruby $ make
 mruby $ rake MRUBY_CONFIG=../emscripten.rb
 ```
+
+ビルド出力（`mrbc.js` と `mrbc.wasm`）は自動的に `public_html/mrbc/` に配置されます。
