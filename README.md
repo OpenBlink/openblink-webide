@@ -47,8 +47,8 @@ $ git submodule update
 
 ```console
 $ cd emsdk
-emsdk $ ./emsdk install 4.0.22
-emsdk $ ./emsdk activate 4.0.22
+emsdk $ ./emsdk install 4.0.23
+emsdk $ ./emsdk activate 4.0.23
 ```
 
 3. Build mruby in the `mruby` Directory
@@ -106,8 +106,8 @@ $ git submodule update
 
 ```console
 $ cd emsdk
-emsdk $ ./emsdk install 4.0.22
-emsdk $ ./emsdk activate 4.0.22
+emsdk $ ./emsdk install 4.0.23
+emsdk $ ./emsdk activate 4.0.23
 ```
 
 3. 在 `mruby` 目录中构建 mruby
@@ -165,8 +165,8 @@ $ git submodule update
 
 ```console
 $ cd emsdk
-emsdk $ ./emsdk install 4.0.22
-emsdk $ ./emsdk activate 4.0.22
+emsdk $ ./emsdk install 4.0.23
+emsdk $ ./emsdk activate 4.0.23
 ```
 
 3. `mruby` ディレクトリで mruby をビルド
