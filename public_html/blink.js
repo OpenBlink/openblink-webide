@@ -175,6 +175,24 @@ function attemptReconnect(device) {
 
     try {
       await connectToDevice(device);
+
+      // If the user requested a disconnect while we were reconnecting,
+      // honor that request and avoid flipping the UI back to "Connected".
+      if (userInitiatedDisconnect) {
+        appendToConsole("Reconnect attempt was cancelled by user.");
+        try {
+          if (connectedDevice && connectedDevice.gatt && connectedDevice.gatt.connected) {
+            connectedDevice.gatt.disconnect();
+          }
+        } catch (disconnectError) {
+          appendToConsole("Error while enforcing user disconnect after reconnect: " + disconnectError.message);
+        }
+        isConnected = false;
+        reconnectAttempts = 0;
+        updateConnectionStatus("disconnected");
+        return;
+      }
+
       reconnectAttempts = 0;
       appendToConsole("Reconnected successfully!");
     } catch (error) {
