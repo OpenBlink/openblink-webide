@@ -26,6 +26,12 @@ const BLEProtocol = (function() {
   let deviceWithDisconnectListener = null;
   let negotiatedMTU = DEFAULT_MTU;
 
+  // Named function for console characteristic event listener to avoid duplicates
+  function handleConsoleValueChanged(event) {
+    const value = new TextDecoder().decode(event.target.value);
+    UIManager.appendToConsole(value);
+  }
+
   async function negotiateMTU() {
     if (!programCharacteristic || !programCharacteristic.service || !programCharacteristic.service.device) {
       console.warn("Cannot negotiate MTU: characteristic not available");
@@ -96,10 +102,9 @@ const BLEProtocol = (function() {
 
     await negotiateMTU();
 
-    consoleCharacteristic.addEventListener("characteristicvaluechanged", (event) => {
-      const value = new TextDecoder().decode(event.target.value);
-      UIManager.appendToConsole(value);
-    });
+    // Remove old listener before adding new one to avoid duplicates during reconnection
+    consoleCharacteristic.removeEventListener("characteristicvaluechanged", handleConsoleValueChanged);
+    consoleCharacteristic.addEventListener("characteristicvaluechanged", handleConsoleValueChanged);
 
     await consoleCharacteristic.startNotifications();
 
@@ -115,6 +120,7 @@ const BLEProtocol = (function() {
 
     programCharacteristic = null;
     negotiatedMtuCharacteristic = null;
+    consoleCharacteristic = null;
     negotiatedMTU = DEFAULT_MTU;
 
     if (userInitiatedDisconnect) {
@@ -247,6 +253,7 @@ const BLEProtocol = (function() {
 
       programCharacteristic = null;
       negotiatedMtuCharacteristic = null;
+      consoleCharacteristic = null;
       connectedDevice = null;
       negotiatedMTU = DEFAULT_MTU;
       isConnected = false;

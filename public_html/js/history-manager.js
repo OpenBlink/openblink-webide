@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2025 OpenBlink.org
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const HistoryManager = (function() {
@@ -59,8 +59,19 @@ const HistoryManager = (function() {
     } catch (e) {
       console.error('Failed to save history:', e);
       if (e.name === 'QuotaExceededError') {
-        history.shift();
-        saveHistory();
+        // Iteratively trim history to avoid stack overflow from recursion
+        while (history.length > 0) {
+          history.shift();
+          try {
+            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            break;
+          } catch (retryError) {
+            console.error('Failed to save history after trimming:', retryError);
+            if (retryError.name !== 'QuotaExceededError') {
+              break;
+            }
+          }
+        }
       }
     }
   }
@@ -83,8 +94,10 @@ const HistoryManager = (function() {
     
     for (let i = history.length - 1; i >= 0; i--) {
       const checkpoint = history[i];
+      // Escape checkpoint.id to prevent XSS
+      const escapedId = checkpoint.id.replace(/[&<>"']/g, '');
       html += `
-        <div class="history-item" data-id="${checkpoint.id}">
+        <div class="history-item" data-id="${escapedId}">
           <div class="history-item-header">
             <span class="history-time">${formatTimestamp(checkpoint.timestamp)}</span>
             <span class="history-slot">Slot ${checkpoint.metadata.slot}</span>
@@ -94,13 +107,21 @@ const HistoryManager = (function() {
             <span class="metric">Transfer: ${checkpoint.metadata.transferTime.toFixed(1)}ms</span>
             <span class="metric">Size: ${checkpoint.metadata.size}B</span>
           </div>
-          <button class="history-restore-btn" onclick="HistoryManager.restoreCheckpoint('${checkpoint.id}')">Restore</button>
+          <button class="history-restore-btn" data-checkpoint-id="${escapedId}">Restore</button>
         </div>
       `;
     }
     
     html += '</div>';
     panel.innerHTML = html;
+
+    // Use event delegation for restore buttons
+    panel.querySelectorAll('.history-restore-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const checkpointId = this.getAttribute('data-checkpoint-id');
+        HistoryManager.restoreCheckpoint(checkpointId);
+      });
+    });
   }
 
   return {
@@ -111,7 +132,7 @@ const HistoryManager = (function() {
 
     createCheckpoint: function(code, metadata) {
       const checkpoint = {
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
         timestamp: Date.now(),
         code: sanitizeContent(code),
         metadata: {

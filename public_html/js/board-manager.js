@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2025 OpenBlink.org
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const BoardManager = (function() {
@@ -60,6 +60,14 @@ const BoardManager = (function() {
         
         if (currentBoard.sampleCode && window.editor) {
           window.editor.setValue(currentBoard.sampleCode);
+          if (typeof FileManager !== 'undefined' && typeof FileManager.markClean === 'function') {
+            FileManager.markClean();
+          }
+        }
+
+        // Update reference panel for initial board load
+        if (typeof this.updateReferencePanel === 'function') {
+          this.updateReferencePanel(currentBoard);
         }
       }
 
@@ -110,19 +118,104 @@ const BoardManager = (function() {
     },
 
     parseMarkdown: function(markdown) {
-      let html = markdown
-        .replace(/^### (.*$)/gim, '<h4>$1</h4>')
-        .replace(/^## (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^# (.*$)/gim, '<h2>$1</h2>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/^\* (.*$)/gim, '<li>$1</li>')
-        .replace(/^\- (.*$)/gim, '<li>$1</li>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>');
+      // Simple line-oriented markdown parser for headings, lists, paragraphs and inline code
+      const lines = markdown.split('\n');
+      let html = '';
+      let inParagraph = false;
+      let inList = false;
 
-      html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-      
-      return '<p>' + html + '</p>';
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      function applyInlineFormatting(text) {
+        // Escape HTML first, then apply inline code formatting
+        const escaped = escapeHtml(text);
+        return escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+      }
+
+      function closeParagraph() {
+        if (inParagraph) {
+          html += '</p>';
+          inParagraph = false;
+        }
+      }
+
+      function closeList() {
+        if (inList) {
+          html += '</ul>';
+          inList = false;
+        }
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const trimmed = line.trim();
+
+        // Blank line: close paragraphs and lists
+        if (trimmed === '') {
+          closeParagraph();
+          closeList();
+          continue;
+        }
+
+        // Headings (###, ##, #)
+        let headingMatch;
+        if ((headingMatch = /^###\s+(.*)$/.exec(line)) !== null) {
+          closeParagraph();
+          closeList();
+          html += '<h4>' + applyInlineFormatting(headingMatch[1]) + '</h4>';
+          continue;
+        }
+        if ((headingMatch = /^##\s+(.*)$/.exec(line)) !== null) {
+          closeParagraph();
+          closeList();
+          html += '<h3>' + applyInlineFormatting(headingMatch[1]) + '</h3>';
+          continue;
+        }
+        if ((headingMatch = /^#\s+(.*)$/.exec(line)) !== null) {
+          closeParagraph();
+          closeList();
+          html += '<h2>' + applyInlineFormatting(headingMatch[1]) + '</h2>';
+          continue;
+        }
+
+        // List items starting with "* " or "- "
+        let listMatch;
+        if ((listMatch = /^\s*[\*\-]\s+(.*)$/.exec(line)) !== null) {
+          // Start a new list if not currently in one
+          if (!inList) {
+            closeParagraph();
+            html += '<ul>';
+            inList = true;
+          }
+          const itemText = applyInlineFormatting(listMatch[1]);
+          html += '<li>' + itemText + '</li>';
+          continue;
+        }
+
+        // Regular paragraph text
+        if (!inParagraph) {
+          closeList();
+          html += '<p>';
+          inParagraph = true;
+          html += applyInlineFormatting(line);
+        } else {
+          // New line within the same paragraph
+          html += '<br>' + applyInlineFormatting(line);
+        }
+      }
+
+      // Close any open blocks at the end
+      closeParagraph();
+      closeList();
+
+      return html;
     }
   };
 })();

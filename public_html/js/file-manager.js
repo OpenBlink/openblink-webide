@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2025 OpenBlink.org
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const FileManager = (function() {
@@ -34,6 +34,10 @@ const FileManager = (function() {
     },
 
     loadFile: function() {
+      if (!this.checkUnsavedChanges()) {
+        return;
+      }
+
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = '.rb';

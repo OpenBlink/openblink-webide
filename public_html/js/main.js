@@ -1,6 +1,6 @@
 /*
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2025 OpenBlink.org
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const OPENBLINK_WEBIDE_VERSION = "0.3.4";
@@ -50,21 +50,21 @@ function showCompatibilityWarning(missingFeatures) {
   warningDiv.style.display = 'block';
 }
 
-function initializeApp() {
+async function initializeApp() {
   if (!checkBrowserCompatibility()) {
     return;
   }
 
   UIManager.appendToConsole(`OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`);
-  
-  BoardManager.loadBoards().then(() => {
-    const defaultBoard = BoardManager.getCurrentBoard();
-    if (defaultBoard) {
-      UIManager.appendToConsole(`Loaded board: ${defaultBoard.displayName}`);
-    }
-  });
-
   UIManager.initialize();
+  
+  // Wait for boards to load before initializing FileManager to avoid race conditions
+  await BoardManager.loadBoards();
+  const defaultBoard = BoardManager.getCurrentBoard();
+  if (defaultBoard) {
+    UIManager.appendToConsole(`Loaded board: ${defaultBoard.displayName}`);
+  }
+
   FileManager.initialize(window.editor);
   HistoryManager.initialize();
 }
