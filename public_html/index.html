@@ -4,76 +4,158 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OpenBlink WebIDE</title>
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="css/main.css" />
+    <link rel="stylesheet" href="css/editor.css" />
+    <link rel="stylesheet" href="css/console.css" />
+    <link rel="stylesheet" href="css/history.css" />
     <link rel="stylesheet" href="codemirror/codemirror.css" />
     <link rel="stylesheet" href="codemirror/theme/dracula.css" />
   </head>
   <body>
     <h1>OpenBlink WebIDE</h1>
-    <div class="description">
-      OpenBlink
-      WebIDEは、Rubyコードを書いて、OpenBlinkデバイスに転送するためのツールです。
-    </div>
-    <hr />
-    <div class="step">
-      <div class="step-title">Step1: デバイスに接続する</div>
-      <div class="step-description">
-        「Connect to
-        device」ボタンをクリックして、Bluetoothデバイス選択ダイアログからOpenBlinkデバイスを選択します。
+    <p class="description">
+      OpenBlink WebIDE is a tool for writing Ruby code and transferring it to OpenBlink devices.
+    </p>
+
+    <div id="compatibility-warning"></div>
+
+    <div class="main-container">
+      <div class="left-panel">
+        <div class="step">
+          <div class="step-title">Step 1: Connect to Device</div>
+          <div class="step-description">
+            Click the "Connect to device" button and select an OpenBlink device from the Bluetooth device selection dialog.
+          </div>
+          <div class="button-group">
+            <button id="ble-connect">Connect to device</button>
+            <button id="ble-disconnect" class="secondary" disabled>Disconnect</button>
+            <span id="connectionStatus" class="connection-status disconnected">Disconnected</span>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="step">
+          <div class="step-title">Step 2: Write Ruby Code</div>
+          <div class="step-description">
+            Write your Ruby code in the editor below. You can use the sample code as a reference to create your own programs.
+          </div>
+          <div class="editor-container">
+            <div class="editor-toolbar">
+              <div class="form-group">
+                <label for="board-selector">Board:</label>
+                <select id="board-selector">
+                  <option value="m5stamps3">M5 Stamp S3</option>
+                </select>
+              </div>
+              <div class="editor-actions">
+                <button id="load-file" class="secondary">Load .rb File</button>
+                <button id="save-file" class="secondary">Save .rb File</button>
+              </div>
+            </div>
+            <textarea id="ruby-code"></textarea>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="step">
+          <div class="step-title">Step 3: Build and Transfer</div>
+          <div class="step-description">
+            Click the "Build & Blink" button to compile your code and transfer it to the device.
+            Once the transfer is complete, the program will run automatically.
+            Use the "Soft RESET" button to reset the device.
+          </div>
+          <div class="button-group">
+            <button id="run-main" class="success" disabled>Build & Blink</button>
+            <div class="form-group">
+              <label for="slot-selector">Slot:</label>
+              <select id="slot-selector">
+                <option value="1">Slot 1</option>
+                <option value="2" selected>Slot 2</option>
+              </select>
+            </div>
+            <button id="soft-reset" class="danger" disabled>Soft RESET</button>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="console-container">
+          <div class="console-header">
+            <span class="console-title">Console Output</span>
+            <button id="clear-console" class="clear-console-btn">Clear</button>
+          </div>
+          <div id="consoleOutput"></div>
+        </div>
       </div>
-      <button id="ble-connect">Connect to device</button>
-      <button id="ble-disconnect" disabled>Disconnect</button>
-      <span id="connectionStatus" class="connection-status disconnected">Disconnected</span>
-    </div>
-    <hr />
-    <div class="step">
-      <div class="step-title">Step2: Rubyコードを書く</div>
-      <div class="step-description">
-        エディタにRubyコードを記述します。サンプルコードを参考に、独自のプログラムを作成できます。
+
+      <div class="right-panel">
+        <div id="metrics-panel">
+          <div class="metrics-title">Performance Metrics</div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Compile</div>
+              <div class="metric-value" id="compile-time">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Transfer</div>
+              <div class="metric-value" id="transfer-time">--</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Size</div>
+              <div class="metric-value" id="program-size">--</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="history-panel">
+          <div class="history-empty">No build history yet</div>
+        </div>
+
+        <div id="reference-panel">
+          <div class="reference-title">Function Reference</div>
+          <div id="reference-content">
+            <h3>LED Control</h3>
+            <ul>
+              <li><code>LED.set([255, 0, 0])</code> - Set built-in LED to red</li>
+              <li><code>LED.set([0, 255, 0])</code> - Set built-in LED to green</li>
+              <li><code>LED.set([0, 0, 255])</code> - Set built-in LED to blue</li>
+            </ul>
+            <h3>Timer</h3>
+            <ul>
+              <li><code>sleep(seconds)</code> - Wait for specified seconds</li>
+              <li><code>sleep_ms(milliseconds)</code> - Wait for specified milliseconds</li>
+            </ul>
+          </div>
+        </div>
       </div>
-      <textarea id="ruby-code"></textarea>
     </div>
+
     <hr />
-    <div class="step">
-      <div class="step-title">Step3: ビルドして転送する</div>
-      <div class="step-description">
-        「Build&Blink」ボタンをクリックして、コードをコンパイルし、デバイスに転送します。
-        転送が完了すると、プログラムが自動的に実行されます。 「Soft
-        RESET」ボタンでデバイスをリセットできます。
-      </div>
-      <button id="run-main">Build&Blink</button> &nbsp; &nbsp; &nbsp;
-      <button id="soft-reset">Soft RESET</button>
+    <div class="footer">
+      <a href="https://github.com/OpenBlink">GitHub</a> |
+      <a href="https://openblink.org">OpenBlink.org</a>
     </div>
-    <hr />
-    <div id="consoleOutput"></div>
-    <hr />
-    <details>
-      <summary>利用可能な関数リファレンス</summary>
-      <div class="reference">
-        <h3>LED制御</h3>
-        <ul>
-          <li><code>LED.set([255, 0, 0])</code> - 内蔵LEDを赤色にする</li>
-          <li><code>LED.set([0, 255, 0])</code> - 内蔵LEDを緑色にする</li>
-          <li><code>LED.set([0, 0, 255])</code> - 内蔵LEDを赤色にする</li>
-        </ul>
-        <h3>タイマー</h3>
-        <ul>
-          <li><code>sleep (seconds)</code> - 指定した秒数だけ待機</li>
-          <li>
-            <code>sleep_ms (milli seconds)</code> - 指定したミリ秒だけ待機
-          </li>
-        </ul>
-      </div>
-    </details>
-    <hr />
-    <div>- <a href="https://github.com/OpenBlink">GitHub</a> -</div>
+
     <script src="codemirror/codemirror.js"></script>
     <script src="codemirror/mode/ruby/ruby.js"></script>
     <script src="codemirror/addon/edit/matchbrackets.js"></script>
-    <script src="codemirror.js"></script>
     <script>
-      // Setup Module.print and Module.printErr before mrbc.js loads
-      // This captures compiler output and errors
+      var editor = CodeMirror.fromTextArea(document.getElementById("ruby-code"), {
+        mode: "ruby",
+        theme: "dracula",
+        lineNumbers: true,
+        matchBrackets: true,
+        autoCloseBrackets: true,
+      });
+      window.editor = editor;
+
+      document.getElementById('clear-console').addEventListener('click', function() {
+        document.getElementById('consoleOutput').innerHTML = '';
+      });
+    </script>
+    <script>
       var Module = Module || {};
       Module.print = function(text) {
         var consoleOutput = document.getElementById("consoleOutput");
@@ -95,7 +177,14 @@
       };
     </script>
     <script src="mrbc/mrbc.js"></script>
-    <script src="crc.js"></script>
-    <script src="blink.js"></script>
+    <script src="lib/crc.js"></script>
+    <script src="js/error-handler.js"></script>
+    <script src="js/ui-manager.js"></script>
+    <script src="js/ble-protocol.js"></script>
+    <script src="js/file-manager.js"></script>
+    <script src="js/history-manager.js"></script>
+    <script src="js/board-manager.js"></script>
+    <script src="js/compiler.js"></script>
+    <script src="js/main.js"></script>
   </body>
 </html>
