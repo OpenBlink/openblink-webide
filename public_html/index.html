@@ -50,7 +50,10 @@
               </div>
               <div class="editor-actions">
                 <button id="load-file" class="secondary">Load .rb File</button>
-                <button id="save-file" class="secondary">Save .rb File</button>
+                <div class="filename-input-group">
+                  <input type="text" id="filename-input" value="program.rb" placeholder="filename.rb" />
+                  <button id="save-file" class="secondary">Download</button>
+                </div>
               </div>
             </div>
             <textarea id="ruby-code"></textarea>
@@ -93,18 +96,30 @@
       <div class="right-panel">
         <div id="metrics-panel">
           <div class="metrics-title">Performance Metrics</div>
-          <div class="metrics-grid">
-            <div class="metric-card">
-              <div class="metric-label">Compile</div>
-              <div class="metric-value" id="compile-time">--</div>
+          <div class="metrics-section">
+            <div class="metrics-row">
+              <span class="metrics-label">Compile Time</span>
+              <div class="metrics-values">
+                <span class="metric-item"><span class="metric-type">min</span><span id="compile-min">--</span></span>
+                <span class="metric-item"><span class="metric-type">avg</span><span id="compile-avg">--</span></span>
+                <span class="metric-item"><span class="metric-type">max</span><span id="compile-max">--</span></span>
+              </div>
             </div>
-            <div class="metric-card">
-              <div class="metric-label">Transfer</div>
-              <div class="metric-value" id="transfer-time">--</div>
+            <div class="metrics-row">
+              <span class="metrics-label">Transfer Time</span>
+              <div class="metrics-values">
+                <span class="metric-item"><span class="metric-type">min</span><span id="transfer-min">--</span></span>
+                <span class="metric-item"><span class="metric-type">avg</span><span id="transfer-avg">--</span></span>
+                <span class="metric-item"><span class="metric-type">max</span><span id="transfer-max">--</span></span>
+              </div>
             </div>
-            <div class="metric-card">
-              <div class="metric-label">Size</div>
-              <div class="metric-value" id="program-size">--</div>
+            <div class="metrics-row">
+              <span class="metrics-label">Program Size</span>
+              <div class="metrics-values">
+                <span class="metric-item"><span class="metric-type">min</span><span id="size-min">--</span></span>
+                <span class="metric-item"><span class="metric-type">avg</span><span id="size-avg">--</span></span>
+                <span class="metric-item"><span class="metric-type">max</span><span id="size-max">--</span></span>
+              </div>
             </div>
           </div>
         </div>

@@ -13,6 +13,20 @@ const UIManager = (function() {
   let slotSelector = null;
   let boardSelector = null;
 
+  let metricsHistory = {
+    compile: [],
+    transfer: [],
+    size: []
+  };
+
+  function calculateStats(arr) {
+    if (arr.length === 0) return { min: null, avg: null, max: null };
+    const min = Math.min(...arr);
+    const max = Math.max(...arr);
+    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    return { min, avg, max };
+  }
+
   function getSelectedSlot() {
     if (slotSelector) {
       const value = parseInt(slotSelector.value, 10);
@@ -87,19 +101,38 @@ const UIManager = (function() {
       const metricsPanel = document.getElementById("metrics-panel");
       if (!metricsPanel) return;
 
-      const compileTimeEl = document.getElementById("compile-time");
-      const transferTimeEl = document.getElementById("transfer-time");
-      const programSizeEl = document.getElementById("program-size");
+      if (metrics.compileTime !== undefined) {
+        metricsHistory.compile.push(metrics.compileTime);
+      }
+      if (metrics.transferTime !== undefined) {
+        metricsHistory.transfer.push(metrics.transferTime);
+      }
+      if (metrics.programSize !== undefined) {
+        metricsHistory.size.push(metrics.programSize);
+      }
 
-      if (compileTimeEl && metrics.compileTime !== undefined) {
-        compileTimeEl.textContent = metrics.compileTime.toFixed(2) + " ms";
-      }
-      if (transferTimeEl && metrics.transferTime !== undefined) {
-        transferTimeEl.textContent = metrics.transferTime.toFixed(2) + " ms";
-      }
-      if (programSizeEl && metrics.programSize !== undefined) {
-        programSizeEl.textContent = metrics.programSize + " bytes";
-      }
+      const compileStats = calculateStats(metricsHistory.compile);
+      const transferStats = calculateStats(metricsHistory.transfer);
+      const sizeStats = calculateStats(metricsHistory.size);
+
+      const updateElement = (id, value, unit, decimals) => {
+        const el = document.getElementById(id);
+        if (el && value !== null) {
+          el.textContent = (decimals !== undefined ? value.toFixed(decimals) : value) + unit;
+        }
+      };
+
+      updateElement("compile-min", compileStats.min, " ms", 1);
+      updateElement("compile-avg", compileStats.avg, " ms", 1);
+      updateElement("compile-max", compileStats.max, " ms", 1);
+
+      updateElement("transfer-min", transferStats.min, " ms", 1);
+      updateElement("transfer-avg", transferStats.avg, " ms", 1);
+      updateElement("transfer-max", transferStats.max, " ms", 1);
+
+      updateElement("size-min", sizeStats.min, " B", undefined);
+      updateElement("size-avg", Math.round(sizeStats.avg), " B", undefined);
+      updateElement("size-max", sizeStats.max, " B", undefined);
 
       metricsPanel.style.display = "block";
     },

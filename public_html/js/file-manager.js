@@ -58,6 +58,7 @@ const FileManager = (function() {
             editor.setValue(content);
             currentFile = file.name;
             isDirty = false;
+            this.updateFilenameInput();
             UIManager.appendToConsole(`Loaded file: ${file.name}`);
           }
         };
@@ -73,20 +74,31 @@ const FileManager = (function() {
     saveFile: function() {
       if (!editor) return;
 
+      const filenameInput = document.getElementById('filename-input');
+      let filename = filenameInput ? filenameInput.value.trim() : '';
+      
+      if (!filename) {
+        filename = 'program.rb';
+      }
+      if (!filename.endsWith('.rb')) {
+        filename += '.rb';
+      }
+
       const content = editor.getValue();
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = currentFile || 'program.rb';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      currentFile = filename;
       isDirty = false;
-      UIManager.appendToConsole(`Saved file: ${a.download}`);
+      UIManager.appendToConsole(`Downloaded file: ${filename}`);
     },
 
     checkUnsavedChanges: function() {
@@ -106,6 +118,18 @@ const FileManager = (function() {
 
     getCurrentFileName: function() {
       return currentFile;
+    },
+
+    updateFilenameInput: function() {
+      const filenameInput = document.getElementById('filename-input');
+      if (filenameInput) {
+        filenameInput.value = currentFile || 'program.rb';
+      }
+    },
+
+    setCurrentFileName: function(name) {
+      currentFile = name;
+      this.updateFilenameInput();
     }
   };
 })();

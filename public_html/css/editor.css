@@ -52,3 +52,23 @@
   color: var(--warning-color);
   font-weight: bold;
 }
+
+.filename-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.filename-input-group input {
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  width: 140px;
+}
+
+.filename-input-group input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}

@@ -32,6 +32,29 @@ const HistoryManager = (function() {
       .replace(/&amp;/g, '&');
   }
 
+  function computeDiff(oldCode, newCode) {
+    const oldLines = oldCode.split('\n');
+    const newLines = newCode.split('\n');
+    const diff = [];
+    const maxLines = Math.max(oldLines.length, newLines.length);
+    
+    for (let i = 0; i < maxLines; i++) {
+      const oldLine = oldLines[i];
+      const newLine = newLines[i];
+      
+      if (oldLine === undefined) {
+        diff.push({ type: 'add', line: i + 1, content: newLine });
+      } else if (newLine === undefined) {
+        diff.push({ type: 'remove', line: i + 1, content: oldLine });
+      } else if (oldLine !== newLine) {
+        diff.push({ type: 'remove', line: i + 1, content: oldLine });
+        diff.push({ type: 'add', line: i + 1, content: newLine });
+      }
+    }
+    
+    return diff;
+  }
+
   function loadHistory() {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY);
@@ -59,7 +82,6 @@ const HistoryManager = (function() {
     } catch (e) {
       console.error('Failed to save history:', e);
       if (e.name === 'QuotaExceededError') {
-        // Iteratively trim history to avoid stack overflow from recursion
         while (history.length > 0) {
           history.shift();
           try {
@@ -81,12 +103,42 @@ const HistoryManager = (function() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  function renderDiff(diff) {
+    if (diff.length === 0) {
+      return '<div class="diff-empty">No changes</div>';
+    }
+    
+    let html = '<div class="diff-view">';
+    const maxDiffLines = 6;
+    const displayDiff = diff.slice(0, maxDiffLines);
+    
+    for (const item of displayDiff) {
+      const escapedContent = sanitizeContent(item.content);
+      const truncatedContent = escapedContent.length > 40 
+        ? escapedContent.substring(0, 40) + '...' 
+        : escapedContent;
+      
+      if (item.type === 'add') {
+        html += `<div class="diff-line diff-add">+ ${truncatedContent}</div>`;
+      } else {
+        html += `<div class="diff-line diff-remove">- ${truncatedContent}</div>`;
+      }
+    }
+    
+    if (diff.length > maxDiffLines) {
+      html += `<div class="diff-more">... and ${diff.length - maxDiffLines} more changes</div>`;
+    }
+    
+    html += '</div>';
+    return html;
+  }
+
   function renderHistory() {
     const panel = document.getElementById('history-panel');
     if (!panel) return;
 
     if (history.length === 0) {
-      panel.innerHTML = '<div class="history-empty">No build history yet</div>';
+      panel.innerHTML = '<div class="history-title">Build History</div><div class="history-empty">No build history yet</div>';
       return;
     }
 
@@ -94,19 +146,16 @@ const HistoryManager = (function() {
     
     for (let i = history.length - 1; i >= 0; i--) {
       const checkpoint = history[i];
-      // Escape checkpoint.id to prevent XSS
       const escapedId = checkpoint.id.replace(/[&<>"']/g, '');
+      const diff = checkpoint.diff || [];
+      
       html += `
         <div class="history-item" data-id="${escapedId}">
           <div class="history-item-header">
             <span class="history-time">${formatTimestamp(checkpoint.timestamp)}</span>
             <span class="history-slot">Slot ${checkpoint.metadata.slot}</span>
           </div>
-          <div class="history-metrics">
-            <span class="metric">Compile: ${checkpoint.metadata.compileTime.toFixed(1)}ms</span>
-            <span class="metric">Transfer: ${checkpoint.metadata.transferTime.toFixed(1)}ms</span>
-            <span class="metric">Size: ${checkpoint.metadata.size}B</span>
-          </div>
+          ${renderDiff(diff)}
           <button class="history-restore-btn" data-checkpoint-id="${escapedId}">Restore</button>
         </div>
       `;
@@ -115,7 +164,6 @@ const HistoryManager = (function() {
     html += '</div>';
     panel.innerHTML = html;
 
-    // Use event delegation for restore buttons
     panel.querySelectorAll('.history-restore-btn').forEach(btn => {
       btn.addEventListener('click', function() {
         const checkpointId = this.getAttribute('data-checkpoint-id');
@@ -131,14 +179,21 @@ const HistoryManager = (function() {
     },
 
     createCheckpoint: function(code, metadata) {
+      const lastCheckpoint = history.length > 0 ? history[history.length - 1] : null;
+      const lastCode = lastCheckpoint ? unsanitizeContent(lastCheckpoint.code) : '';
+      
+      if (lastCode === code) {
+        return null;
+      }
+      
+      const diff = computeDiff(lastCode, code);
+
       const checkpoint = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
         timestamp: Date.now(),
         code: sanitizeContent(code),
+        diff: diff,
         metadata: {
-          compileTime: metadata.compileTime || 0,
-          transferTime: metadata.transferTime || 0,
-          size: metadata.size || 0,
           slot: metadata.slot || 2
         }
       };
