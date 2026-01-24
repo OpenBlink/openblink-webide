@@ -12,6 +12,7 @@ let isConnected = false;
 let connectedDevice = null;
 let userInitiatedDisconnect = false;
 let reconnectAttempts = 0;
+let disconnectListenerAttached = false;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const INITIAL_RECONNECT_DELAY = 1000;
 
@@ -26,16 +27,6 @@ let negotiatedMTU = DEFAULT_MTU;
 
 const OPENBLINK_WEBIDE_VERSION = "0.3.4";
 
-// Setup Module.print and Module.printErr before mrbc.js loads
-// This captures compiler output and errors
-var Module = Module || {};
-Module.print = function(text) {
-  appendToConsole(text);
-};
-Module.printErr = function(text) {
-  appendToConsole('Compiler Error: ' + text);
-};
-
 // Global error handlers for JavaScript runtime errors
 window.onerror = function(message, source, lineno, colno, error) {
   appendToConsole('Error: ' + message + ' (at line ' + lineno + ')');
@@ -43,7 +34,9 @@ window.onerror = function(message, source, lineno, colno, error) {
 };
 
 window.addEventListener('unhandledrejection', function(event) {
-  appendToConsole('Promise Error: ' + event.reason);
+  const reason = event.reason;
+  const message = reason?.message ?? String(reason);
+  appendToConsole('Promise Error: ' + message);
 });
 
 appendToConsole(`OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`);
@@ -97,6 +90,7 @@ function updateConnectionStatus(status) {
     case "connecting":
       statusElement.textContent = "Connecting...";
       statusElement.classList.add("connecting");
+      isConnected = false;
       if (connectButton) connectButton.disabled = true;
       if (disconnectButton) disconnectButton.disabled = true;
       if (runMainButton) runMainButton.disabled = true;
@@ -105,6 +99,7 @@ function updateConnectionStatus(status) {
     case "reconnecting":
       statusElement.textContent = "Reconnecting...";
       statusElement.classList.add("connecting");
+      isConnected = false;
       if (connectButton) connectButton.disabled = true;
       if (disconnectButton) disconnectButton.disabled = false;
       if (runMainButton) runMainButton.disabled = true;
@@ -428,7 +423,10 @@ Module.onRuntimeInitialized = () => {
       })
       .then((device) => {
         appendToConsole("Selected device: " + device.name);
-        device.addEventListener('gattserverdisconnected', handleDisconnect);
+        if (!disconnectListenerAttached) {
+          device.addEventListener('gattserverdisconnected', handleDisconnect);
+          disconnectListenerAttached = true;
+        }
         return connectToDevice(device);
       })
       .catch((error) => {
@@ -456,6 +454,9 @@ Module.onRuntimeInitialized = () => {
     // Disable button during processing
     runMainButton.disabled = true;
 
+    let argv = null;
+    let argPointers = [];
+
     try {
       const rubyCode = editor.getValue();
 
@@ -466,8 +467,8 @@ Module.onRuntimeInitialized = () => {
       const args = ["mrbc", "-o", outputFileName, sourceFileName];
       const argc = args.length;
 
-      const argv = Module._malloc(args.length * 4);
-      const argPointers = args.map((arg) => {
+      argv = Module._malloc(args.length * 4);
+      argPointers = args.map((arg) => {
         const ptr = Module._malloc(arg.length + 1);
         Module.stringToUTF8(arg, ptr, arg.length + 1);
         return ptr;
@@ -486,11 +487,6 @@ Module.onRuntimeInitialized = () => {
         );
       } else {
         appendToConsole("mrbc failed with exit code: " + result);
-        if (isConnected) {
-          runMainButton.disabled = false;
-        }
-        argPointers.forEach((ptr) => Module._free(ptr));
-        Module._free(argv);
         return;
       }
 
@@ -499,11 +495,6 @@ Module.onRuntimeInitialized = () => {
       if (!programCharacteristic) {
         appendToConsole("Error: Program characteristic not available");
         console.error("no program characteristic");
-        if (isConnected) {
-          runMainButton.disabled = false;
-        }
-        argPointers.forEach((ptr) => Module._free(ptr));
-        Module._free(argv);
         return;
       }
 
@@ -525,12 +516,18 @@ Module.onRuntimeInitialized = () => {
             runMainButton.disabled = false;
           }
         });
-
-      argPointers.forEach((ptr) => Module._free(ptr));
-      Module._free(argv);
     } catch (error) {
       appendToConsole("Error: " + error.message);
-      if (isConnected) {
+    } finally {
+      // Always free allocated WASM memory
+      if (argPointers.length > 0) {
+        argPointers.forEach((ptr) => Module._free(ptr));
+      }
+      if (argv !== null) {
+        Module._free(argv);
+      }
+      // Re-enable button if not waiting for sendFirmware
+      if (isConnected && !programCharacteristic) {
         runMainButton.disabled = false;
       }
     }
