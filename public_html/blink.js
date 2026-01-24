@@ -2,8 +2,20 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2025 ViXion Inc. All Rights Reserved.
  */
+
+// Global variables for BLE characteristics
 let programCharacteristic;
 let negotiatedMtuCharacteristic;
+
+// Connection state management
+let isConnected = false;
+let connectedDevice = null;
+let userInitiatedDisconnect = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const INITIAL_RECONNECT_DELAY = 1000;
+
+// MTU configuration
 const MAX_CHUNK_SIZE = 20;
 const DATA_HEADER_SIZE = 6;
 const DATA_PAYLOAD_SIZE = MAX_CHUNK_SIZE - DATA_HEADER_SIZE;
@@ -11,29 +23,230 @@ const PROGRAM_HEADER_SIZE = 8;
 const DEFAULT_MTU = 20;
 const REQUESTED_MTU = 512;
 let negotiatedMTU = DEFAULT_MTU;
+
 const OPENBLINK_WEBIDE_VERSION = "0.3.4";
+
+// Setup Module.print and Module.printErr before mrbc.js loads
+// This captures compiler output and errors
+var Module = Module || {};
+Module.print = function(text) {
+  appendToConsole(text);
+};
+Module.printErr = function(text) {
+  appendToConsole('Compiler Error: ' + text);
+};
+
+// Global error handlers for JavaScript runtime errors
+window.onerror = function(message, source, lineno, colno, error) {
+  appendToConsole('Error: ' + message + ' (at line ' + lineno + ')');
+  return false;
+};
+
+window.addEventListener('unhandledrejection', function(event) {
+  appendToConsole('Promise Error: ' + event.reason);
+});
 
 appendToConsole(`OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`);
 
 function appendToConsole(message) {
-  if (message.trim() === "") {
+  if (message === undefined || message === null) {
+    return;
+  }
+  const msgStr = String(message).trim();
+  if (msgStr === "") {
     return;
   }
   const consoleOutput = document.getElementById("consoleOutput");
   const line = document.createElement("div");
-  line.textContent = message;
+  line.textContent = msgStr;
   consoleOutput.appendChild(line);
   consoleOutput.scrollTop = consoleOutput.scrollHeight;
 }
 
+// Update the connection status UI
+function updateConnectionStatus(status) {
+  const statusElement = document.getElementById("connectionStatus");
+  const connectButton = document.getElementById("ble-connect");
+  const disconnectButton = document.getElementById("ble-disconnect");
+  const runMainButton = document.getElementById("run-main");
+  const softResetButton = document.getElementById("soft-reset");
+
+  if (!statusElement) return;
+
+  statusElement.className = "connection-status";
+
+  switch (status) {
+    case "connected":
+      statusElement.textContent = "Connected";
+      statusElement.classList.add("connected");
+      isConnected = true;
+      if (connectButton) connectButton.disabled = true;
+      if (disconnectButton) disconnectButton.disabled = false;
+      if (runMainButton) runMainButton.disabled = false;
+      if (softResetButton) softResetButton.disabled = false;
+      break;
+    case "disconnected":
+      statusElement.textContent = "Disconnected";
+      statusElement.classList.add("disconnected");
+      isConnected = false;
+      if (connectButton) connectButton.disabled = false;
+      if (disconnectButton) disconnectButton.disabled = true;
+      if (runMainButton) runMainButton.disabled = true;
+      if (softResetButton) softResetButton.disabled = true;
+      break;
+    case "connecting":
+      statusElement.textContent = "Connecting...";
+      statusElement.classList.add("connecting");
+      if (connectButton) connectButton.disabled = true;
+      if (disconnectButton) disconnectButton.disabled = true;
+      if (runMainButton) runMainButton.disabled = true;
+      if (softResetButton) softResetButton.disabled = true;
+      break;
+    case "reconnecting":
+      statusElement.textContent = "Reconnecting...";
+      statusElement.classList.add("connecting");
+      if (connectButton) connectButton.disabled = true;
+      if (disconnectButton) disconnectButton.disabled = false;
+      if (runMainButton) runMainButton.disabled = true;
+      if (softResetButton) softResetButton.disabled = true;
+      break;
+  }
+}
+
+// Disconnect from the BLE device
+function disconnectBluetooth() {
+  userInitiatedDisconnect = true;
+  reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
+
+  if (connectedDevice && connectedDevice.gatt.connected) {
+    appendToConsole("Disconnecting from device...");
+    connectedDevice.gatt.disconnect();
+  }
+
+  programCharacteristic = null;
+  negotiatedMtuCharacteristic = null;
+  connectedDevice = null;
+  negotiatedMTU = DEFAULT_MTU;
+  updateConnectionStatus("disconnected");
+  appendToConsole("Disconnected from device.");
+}
+
+// Handle unexpected disconnection with auto-reconnect
+function handleDisconnect(event) {
+  const device = event.target;
+  appendToConsole("Device disconnected: " + device.name);
+
+  programCharacteristic = null;
+  negotiatedMtuCharacteristic = null;
+  negotiatedMTU = DEFAULT_MTU;
+
+  if (userInitiatedDisconnect) {
+    userInitiatedDisconnect = false;
+    reconnectAttempts = 0;
+    updateConnectionStatus("disconnected");
+    return;
+  }
+
+  if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+    attemptReconnect(device);
+  } else {
+    appendToConsole("Max reconnection attempts reached. Please reconnect manually.");
+    connectedDevice = null;
+    reconnectAttempts = 0;
+    updateConnectionStatus("disconnected");
+  }
+}
+
+// Attempt to reconnect with exponential backoff
+function attemptReconnect(device) {
+  reconnectAttempts++;
+  const delay = INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1);
+
+  appendToConsole(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`);
+  updateConnectionStatus("reconnecting");
+
+  setTimeout(async () => {
+    if (userInitiatedDisconnect) {
+      reconnectAttempts = 0;
+      updateConnectionStatus("disconnected");
+      return;
+    }
+
+    try {
+      await connectToDevice(device);
+      reconnectAttempts = 0;
+      appendToConsole("Reconnected successfully!");
+    } catch (error) {
+      appendToConsole("Reconnection failed: " + error.message);
+      if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        attemptReconnect(device);
+      } else {
+        appendToConsole("Max reconnection attempts reached. Please reconnect manually.");
+        connectedDevice = null;
+        reconnectAttempts = 0;
+        updateConnectionStatus("disconnected");
+      }
+    }
+  }, delay);
+}
+
+// Connect to a BLE device (used for both initial connection and reconnection)
+async function connectToDevice(device) {
+  const openblinkServiceUUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
+  const openblinkProgramCharacteristicUUID = "ad9fdd56-1135-4a84-923c-ce5a244385e7";
+  const openblinkConsoleCharacteristicUUID = "a015b3de-185a-4252-aa04-7a87d38ce148";
+  const openblinkNegotiatedMtuCharacteristicUUID = "ca141151-3113-448b-b21a-6a6203d253ff";
+
+  const server = await device.gatt.connect();
+  console.log("Connected to GATT server");
+
+  const service = await server.getPrimaryService(openblinkServiceUUID);
+  console.log("Got service:", service);
+
+  const characteristics = await Promise.all([
+    service.getCharacteristic(openblinkConsoleCharacteristicUUID),
+    service.getCharacteristic(openblinkProgramCharacteristicUUID),
+    service.getCharacteristic(openblinkNegotiatedMtuCharacteristicUUID),
+  ]);
+
+  const consoleCharacteristic = characteristics[0];
+  programCharacteristic = characteristics[1];
+  negotiatedMtuCharacteristic = characteristics[2];
+
+  console.log("Got console characteristic:", consoleCharacteristic);
+  console.log("Got program characteristic:", programCharacteristic);
+  console.log("Got negotiatedMTU characteristic:", negotiatedMtuCharacteristic);
+
+  await negotiateMTU();
+
+  consoleCharacteristic.addEventListener("characteristicvaluechanged", (event) => {
+    const value = new TextDecoder().decode(event.target.value);
+    appendToConsole(value);
+  });
+
+  await consoleCharacteristic.startNotifications();
+
+  connectedDevice = device;
+  updateConnectionStatus("connected");
+  appendToConsole("Connected to device: " + device.name);
+}
+
 async function negotiateMTU() {
+  if (!programCharacteristic || !programCharacteristic.service || !programCharacteristic.service.device) {
+    console.warn("Cannot negotiate MTU: characteristic not available");
+    appendToConsole("MTU negotiation skipped: device not ready. Using default MTU: " + DEFAULT_MTU);
+    negotiatedMTU = DEFAULT_MTU;
+    return;
+  }
+
   const gattServer = programCharacteristic.service.device.gatt;
   if (gattServer.requestMTU) {
     try {
       negotiatedMTU = await gattServer.requestMTU(REQUESTED_MTU);
       console.log(`Negotiated MTU: ${negotiatedMTU}`);
     } catch (error) {
-      console.warn(`MTU negotiation failed. Using default MTU: ${DEFAULT_MTU}`);
+      console.warn(`MTU negotiation failed: ${error.message}. Using default MTU: ${DEFAULT_MTU}`);
+      appendToConsole("MTU negotiation failed. Using default MTU: " + DEFAULT_MTU);
       negotiatedMTU = DEFAULT_MTU;
     }
   } else {
@@ -44,6 +257,8 @@ async function negotiateMTU() {
       console.log("Device negotiated MTU(uint16):", devicemtu);
     } catch (error) {
       console.error("Device negotiated MTU Error:", error);
+      appendToConsole("Failed to read device MTU. Using default MTU: " + DEFAULT_MTU);
+      negotiatedMTU = DEFAULT_MTU;
     }
     console.log(
       `MTU negotiation not supported. Using device's negotiated MTU: ${negotiatedMTU}`
@@ -52,29 +267,42 @@ async function negotiateMTU() {
 }
 
 async function writeCharacteristic(characteristic, buffer) {
+  if (!characteristic) {
+    throw new Error("Characteristic not available");
+  }
   if (characteristic.properties.writeWithoutResponse) {
     return characteristic.writeValueWithoutResponse(buffer);
   } else {
-    console.log("writeWithoutResponse がサポートされていません。");
+    console.log("writeWithoutResponse is not supported.");
     return characteristic.writeValue(buffer);
   }
 }
 
 async function sendReset() {
+  if (!isConnected || !programCharacteristic) {
+    appendToConsole("Error: Not connected to device");
+    return;
+  }
+
   const buffer = new ArrayBuffer(2);
   const view = new DataView(buffer);
   view.setUint8(0, 0x01); // version = 0x01
   view.setUint8(1, "R".charCodeAt(0)); // command = 'R'
 
   try {
-    programCharacteristic.writeValue(buffer);
+    await programCharacteristic.writeValue(buffer);
     appendToConsole("Send [R]eset Complete");
   } catch (error) {
-    appendToConsole("Send [R]eset Error:", error);
+    appendToConsole("Send [R]eset Error: " + error.message);
   }
 }
 
 async function sendReload() {
+  if (!isConnected || !programCharacteristic) {
+    appendToConsole("Error: Not connected to device");
+    return;
+  }
+
   const buffer = new ArrayBuffer(2);
   const view = new DataView(buffer);
   view.setUint8(0, 0x01); // version = 0x01
@@ -84,19 +312,25 @@ async function sendReload() {
     await writeCharacteristic(programCharacteristic, buffer);
     appendToConsole("Send re[L]oad Complete");
   } catch (error) {
-    appendToConsole("Send re[L]oad Error:", error);
+    appendToConsole("Send re[L]oad Error: " + error.message);
   }
 }
 
 async function sendFirmware(mrbContent) {
-  const contentLength = mrbContent.length;
-  const crc16 = crc16_reflect(0xd175, 0xffff, mrbContent);
-  const slot = 2;
+  if (!isConnected) {
+    appendToConsole("Error: Not connected to device");
+    return;
+  }
 
   if (!programCharacteristic) {
+    appendToConsole("Error: Program characteristic not available");
     console.error("no program characteristic");
     return;
   }
+
+  const contentLength = mrbContent.length;
+  const crc16 = crc16_reflect(0xd175, 0xffff, mrbContent);
+  const slot = 2;
 
   appendToConsole(
     `Sending bytecode: slot=${slot}, length=${contentLength}bytes, CRC16=${crc16.toString(
@@ -126,7 +360,7 @@ async function sendFirmware(mrbContent) {
         `Send [D]ata Ok: Offset=${offset}, Size=${chunkDataSize}`
       );
     } catch (error) {
-      appendToConsole(`Send [D]ata Error: Offset=${offset}), Error:`, error);
+      appendToConsole(`Send [D]ata Error: Offset=${offset}, Error: ${error.message}`);
       return;
     }
   }
@@ -146,7 +380,7 @@ async function sendFirmware(mrbContent) {
     appendToConsole("Send [P]rogram Complete");
     sendReload();
   } catch (error) {
-    appendToConsole("Send [P]rogram Error:", error);
+    appendToConsole("Send [P]rogram Error: " + error.message);
   }
 }
 
@@ -154,22 +388,37 @@ Module.onRuntimeInitialized = () => {
   console.log("Emscripten runtime initialized.");
 
   const openblinkServiceUUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
-  const openblinkProgramCharacteristicUUID =
-    "ad9fdd56-1135-4a84-923c-ce5a244385e7";
-  const openblinkConsoleCharacteristicUUID =
-    "a015b3de-185a-4252-aa04-7a87d38ce148";
-  const openblinkNegotiatedMtuCharacteristicUUID =
-    "ca141151-3113-448b-b21a-6a6203d253ff";
   const bleConnectButton = document.getElementById("ble-connect");
+  const bleDisconnectButton = document.getElementById("ble-disconnect");
   const runMainButton = document.getElementById("run-main");
   const rebootButton = document.getElementById("soft-reset");
 
+  // Initialize button states
+  updateConnectionStatus("disconnected");
+
   rebootButton.addEventListener("click", () => {
-    sendReset();
+    if (!isConnected) {
+      appendToConsole("Error: Not connected to device");
+      return;
+    }
+    rebootButton.disabled = true;
+    sendReset().finally(() => {
+      if (isConnected) {
+        rebootButton.disabled = false;
+      }
+    });
+  });
+
+  bleDisconnectButton.addEventListener("click", () => {
+    disconnectBluetooth();
   });
 
   bleConnectButton.addEventListener("click", () => {
     appendToConsole("Connecting to device...");
+    updateConnectionStatus("connecting");
+    userInitiatedDisconnect = false;
+    reconnectAttempts = 0;
+
     navigator.bluetooth
       .requestDevice({
         filters: [
@@ -179,47 +428,34 @@ Module.onRuntimeInitialized = () => {
       })
       .then((device) => {
         appendToConsole("Selected device: " + device.name);
-        return device.gatt.connect();
-      })
-      .then((server) => {
-        console.log("Connected to GATT server");
-        return server.getPrimaryService(openblinkServiceUUID);
-      })
-      .then((service) => {
-        console.log("Got service:", service);
-        return Promise.all([
-          service.getCharacteristic(openblinkConsoleCharacteristicUUID),
-          service.getCharacteristic(openblinkProgramCharacteristicUUID),
-          service.getCharacteristic(openblinkNegotiatedMtuCharacteristicUUID),
-        ]);
-      })
-      .then((characteristics) => {
-        const consoleCharacteristic = characteristics[0];
-        programCharacteristic = characteristics[1];
-        negotiatedMtuCharacteristic = characteristics[2];
-        console.log("Got console characteristic:", consoleCharacteristic);
-        console.log("Got program characteristic:", programCharacteristic);
-        console.log(
-          "Got negotiatedMTU characteristic:",
-          negotiatedMtuCharacteristic
-        );
-        negotiateMTU();
-
-        consoleCharacteristic.addEventListener(
-          "characteristicvaluechanged",
-          (event) => {
-            const value = new TextDecoder().decode(event.target.value);
-            appendToConsole(value);
-          }
-        );
-        return consoleCharacteristic.startNotifications();
+        device.addEventListener('gattserverdisconnected', handleDisconnect);
+        return connectToDevice(device);
       })
       .catch((error) => {
-        console.error("Error :", error);
+        if (error.name === 'NotFoundError') {
+          appendToConsole("Connection cancelled: No device selected");
+        } else {
+          appendToConsole("Connection Error: " + error.message);
+        }
+        console.error("Error:", error);
+        updateConnectionStatus("disconnected");
       });
   });
 
   runMainButton.addEventListener("click", () => {
+    if (!isConnected) {
+      appendToConsole("Error: Not connected to device");
+      return;
+    }
+
+    if (!programCharacteristic) {
+      appendToConsole("Error: Program characteristic not available. Please reconnect.");
+      return;
+    }
+
+    // Disable button during processing
+    runMainButton.disabled = true;
+
     try {
       const rubyCode = editor.getValue();
 
@@ -249,14 +485,25 @@ Module.onRuntimeInitialized = () => {
           "mrbc success!: (" + (end_mrbc - start_mrbc).toFixed(2) + "ms)"
         );
       } else {
-        appendToConsole("mrbc failed with exit code:", result);
+        appendToConsole("mrbc failed with exit code: " + result);
+        if (isConnected) {
+          runMainButton.disabled = false;
+        }
+        argPointers.forEach((ptr) => Module._free(ptr));
+        Module._free(argv);
         return;
       }
 
       const mrbContent = Module.FS.readFile(outputFileName);
 
       if (!programCharacteristic) {
+        appendToConsole("Error: Program characteristic not available");
         console.error("no program characteristic");
+        if (isConnected) {
+          runMainButton.disabled = false;
+        }
+        argPointers.forEach((ptr) => Module._free(ptr));
+        Module._free(argv);
         return;
       }
 
@@ -271,13 +518,21 @@ Module.onRuntimeInitialized = () => {
           );
         })
         .catch((error) => {
-          appendToConsole("Sending bytecode Error:", error);
+          appendToConsole("Sending bytecode Error: " + error.message);
+        })
+        .finally(() => {
+          if (isConnected) {
+            runMainButton.disabled = false;
+          }
         });
 
       argPointers.forEach((ptr) => Module._free(ptr));
       Module._free(argv);
     } catch (error) {
-      appendToConsole("Error:", error);
+      appendToConsole("Error: " + error.message);
+      if (isConnected) {
+        runMainButton.disabled = false;
+      }
     }
   });
 };

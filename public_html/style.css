@@ -92,3 +92,34 @@ summary {
   border-radius: 3px;
   font-family: monospace;
 }
+
+/* Connection Status */
+.connection-status {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.connection-status.connected {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.connection-status.disconnected {
+  background-color: #9E9E9E;
+  color: white;
+}
+
+.connection-status.connecting {
+  background-color: #FF9800;
+  color: white;
+}
+
+/* Button States */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
