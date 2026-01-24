@@ -24,6 +24,15 @@ function checkBrowserCompatibility() {
   return true;
 }
 
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function showCompatibilityWarning(missingFeatures) {
   const warningDiv = document.getElementById('compatibility-warning');
   if (!warningDiv) return;
@@ -42,7 +51,7 @@ function showCompatibilityWarning(missingFeatures) {
       <strong>Browser Compatibility Warning</strong>
       <p>Your browser does not support the following required features:</p>
       <ul>
-        ${missingNames.map(name => `<li>${name}</li>`).join('')}
+        ${missingNames.map(name => `<li>${escapeHtml(name)}</li>`).join('')}
       </ul>
       <p>Please use a compatible browser such as Chrome or Edge.</p>
     </div>

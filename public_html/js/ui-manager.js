@@ -115,24 +115,49 @@ const UIManager = (function() {
       const transferStats = calculateStats(metricsHistory.transfer);
       const sizeStats = calculateStats(metricsHistory.size);
 
-      const updateElement = (id, value, unit, decimals) => {
+      const updateCurrent = (id, value, unit, decimals) => {
         const el = document.getElementById(id);
-        if (el && value !== null) {
+        if (el && value !== undefined) {
           el.textContent = (decimals !== undefined ? value.toFixed(decimals) : value) + unit;
         }
       };
 
-      updateElement("compile-min", compileStats.min, " ms", 1);
-      updateElement("compile-avg", compileStats.avg, " ms", 1);
-      updateElement("compile-max", compileStats.max, " ms", 1);
+      updateCurrent("compile-current", metrics.compileTime, " ms", 1);
+      updateCurrent("transfer-current", metrics.transferTime, " ms", 1);
+      updateCurrent("size-current", metrics.programSize, " B", undefined);
 
-      updateElement("transfer-min", transferStats.min, " ms", 1);
-      updateElement("transfer-avg", transferStats.avg, " ms", 1);
-      updateElement("transfer-max", transferStats.max, " ms", 1);
+      const renderChart = (chartId, stats, unit, decimals) => {
+        const chart = document.getElementById(chartId);
+        if (!chart || stats.min === null) return;
 
-      updateElement("size-min", sizeStats.min, " B", undefined);
-      updateElement("size-avg", Math.round(sizeStats.avg), " B", undefined);
-      updateElement("size-max", sizeStats.max, " B", undefined);
+        const range = stats.max - stats.min;
+        const padding = range > 0 ? range * 0.1 : stats.max * 0.1;
+        const displayMin = Math.max(0, stats.min - padding);
+        const displayMax = stats.max + padding;
+        const displayRange = displayMax - displayMin;
+
+        const minPercent = displayRange > 0 ? ((stats.min - displayMin) / displayRange) * 100 : 0;
+        const maxPercent = displayRange > 0 ? ((stats.max - displayMin) / displayRange) * 100 : 100;
+        const avgPercent = displayRange > 0 ? ((stats.avg - displayMin) / displayRange) * 100 : 50;
+
+        const formatValue = (val) => {
+          return decimals !== undefined ? val.toFixed(decimals) : Math.round(val);
+        };
+
+        chart.innerHTML = `
+          <div class="metrics-bar metrics-bar-range" style="left: ${minPercent}%; width: ${maxPercent - minPercent}%;"></div>
+          <div class="metrics-bar metrics-bar-avg" style="left: ${avgPercent}%;"></div>
+          <div class="metrics-chart-labels">
+            <span class="metrics-chart-min">${formatValue(stats.min)}${unit}</span>
+            <span class="metrics-chart-max">${formatValue(stats.max)}${unit}</span>
+          </div>
+          <span class="metrics-chart-avg" style="left: ${avgPercent}%;">avg: ${formatValue(stats.avg)}${unit}</span>
+        `;
+      };
+
+      renderChart("compile-chart", compileStats, "ms", 1);
+      renderChart("transfer-chart", transferStats, "ms", 1);
+      renderChart("size-chart", sizeStats, "B", undefined);
 
       metricsPanel.style.display = "block";
     },

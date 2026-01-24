@@ -66,9 +66,7 @@ const BoardManager = (function() {
         }
 
         // Update reference panel for initial board load
-        if (typeof this.updateReferencePanel === 'function') {
-          this.updateReferencePanel(currentBoard);
-        }
+        this.updateReferencePanel(currentBoard);
       }
 
       return boards;

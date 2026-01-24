@@ -133,16 +133,52 @@ const HistoryManager = (function() {
     return html;
   }
 
+  function getStorageUsage() {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      const usedBytes = stored ? new Blob([stored]).size : 0;
+      // SessionStorage typically has 5MB limit
+      const totalBytes = 5 * 1024 * 1024;
+      return {
+        used: usedBytes,
+        total: totalBytes,
+        percentage: Math.min(100, (usedBytes / totalBytes) * 100)
+      };
+    } catch (e) {
+      return { used: 0, total: 5 * 1024 * 1024, percentage: 0 };
+    }
+  }
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function renderStorageBar() {
+    const storage = getStorageUsage();
+    const barColor = storage.percentage > 80 ? '#e74c3c' : storage.percentage > 60 ? '#f39c12' : '#3498db';
+    
+    return `
+      <div class="storage-bar-container">
+        <div class="storage-bar-label">Storage: ${formatBytes(storage.used)} / ${formatBytes(storage.total)}</div>
+        <div class="storage-bar-track">
+          <div class="storage-bar-fill" style="width: ${storage.percentage}%; background-color: ${barColor};"></div>
+        </div>
+      </div>
+    `;
+  }
+
   function renderHistory() {
     const panel = document.getElementById('history-panel');
     if (!panel) return;
 
     if (history.length === 0) {
-      panel.innerHTML = '<div class="history-title">Build History</div><div class="history-empty">No build history yet</div>';
+      panel.innerHTML = '<div class="history-header"><div class="history-title">Build History</div>' + renderStorageBar() + '</div><div class="history-empty">No build history yet</div>';
       return;
     }
 
-    let html = '<div class="history-title">Build History</div><div class="history-list">';
+    let html = '<div class="history-header"><div class="history-title">Build History</div>' + renderStorageBar() + '</div><div class="history-list">';
     
     for (let i = history.length - 1; i >= 0; i--) {
       const checkpoint = history[i];
@@ -164,12 +200,18 @@ const HistoryManager = (function() {
     html += '</div>';
     panel.innerHTML = html;
 
-    panel.querySelectorAll('.history-restore-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const checkpointId = this.getAttribute('data-checkpoint-id');
+    // Use true event delegation: attach a single click handler to the panel
+    if (!panel.dataset.restoreDelegationBound) {
+      panel.addEventListener('click', function(event) {
+        const btn = event.target.closest('.history-restore-btn');
+        if (!btn || !panel.contains(btn)) {
+          return;
+        }
+        const checkpointId = btn.getAttribute('data-checkpoint-id');
         HistoryManager.restoreCheckpoint(checkpointId);
       });
-    });
+      panel.dataset.restoreDelegationBound = 'true';
+    }
   }
 
   return {
@@ -211,20 +253,30 @@ const HistoryManager = (function() {
     },
 
     restoreCheckpoint: function(checkpointId) {
-      const checkpoint = history.find(c => c.id === checkpointId);
-      if (!checkpoint) {
+      const checkpointIndex = history.findIndex(c => c.id === checkpointId);
+      if (checkpointIndex === -1) {
         UIManager.appendToConsole('Error: Checkpoint not found');
         return null;
       }
 
-      const code = unsanitizeContent(checkpoint.code);
+      // Restore the state BEFORE this checkpoint (the previous checkpoint's code)
+      // This makes "Restore" act as "undo these changes shown in the diff"
+      let code;
+      if (checkpointIndex === 0) {
+        // First checkpoint - no previous state, restore empty
+        code = '';
+        UIManager.appendToConsole('Restored to initial empty state');
+      } else {
+        const previousCheckpoint = history[checkpointIndex - 1];
+        code = unsanitizeContent(previousCheckpoint.code);
+        UIManager.appendToConsole(`Restored to state before ${formatTimestamp(history[checkpointIndex].timestamp)}`);
+      }
       
       if (window.editor) {
         if (!FileManager.checkUnsavedChanges()) {
           return null;
         }
         window.editor.setValue(code);
-        UIManager.appendToConsole(`Restored checkpoint from ${formatTimestamp(checkpoint.timestamp)}`);
       }
 
       return code;
