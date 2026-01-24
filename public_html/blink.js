@@ -477,6 +477,7 @@ Module.onRuntimeInitialized = () => {
 
     let argv = null;
     let argPointers = [];
+    let sendInFlight = false;
 
     try {
       const rubyCode = editor.getValue();
@@ -520,6 +521,7 @@ Module.onRuntimeInitialized = () => {
       }
 
       const start_send = performance.now();
+      sendInFlight = true;
       sendFirmware(mrbContent)
         .then(() => {
           const end_send = performance.now();
@@ -548,7 +550,8 @@ Module.onRuntimeInitialized = () => {
         Module._free(argv);
       }
       // Re-enable button if not waiting for sendFirmware
-      if (isConnected && !programCharacteristic) {
+      // (sendFirmware's .finally() handles re-enabling when send completes)
+      if (!sendInFlight && isConnected) {
         runMainButton.disabled = false;
       }
     }
