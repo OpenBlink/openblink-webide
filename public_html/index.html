@@ -22,6 +22,8 @@
         device」ボタンをクリックして、Bluetoothデバイス選択ダイアログからOpenBlinkデバイスを選択します。
       </div>
       <button id="ble-connect">Connect to device</button>
+      <button id="ble-disconnect" disabled>Disconnect</button>
+      <span id="connectionStatus" class="connection-status disconnected">Disconnected</span>
     </div>
     <hr />
     <div class="step">
@@ -69,6 +71,29 @@
     <script src="codemirror/mode/ruby/ruby.js"></script>
     <script src="codemirror/addon/edit/matchbrackets.js"></script>
     <script src="codemirror.js"></script>
+    <script>
+      // Setup Module.print and Module.printErr before mrbc.js loads
+      // This captures compiler output and errors
+      var Module = Module || {};
+      Module.print = function(text) {
+        var consoleOutput = document.getElementById("consoleOutput");
+        if (consoleOutput && text && text.trim() !== "") {
+          var line = document.createElement("div");
+          line.textContent = text;
+          consoleOutput.appendChild(line);
+          consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+      };
+      Module.printErr = function(text) {
+        var consoleOutput = document.getElementById("consoleOutput");
+        if (consoleOutput && text && text.trim() !== "") {
+          var line = document.createElement("div");
+          line.textContent = 'Compiler Error: ' + text;
+          consoleOutput.appendChild(line);
+          consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+      };
+    </script>
     <script src="mrbc/mrbc.js"></script>
     <script src="crc.js"></script>
     <script src="blink.js"></script>
