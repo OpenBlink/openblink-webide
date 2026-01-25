@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
-const BoardManager = (function() {
+const BoardManager = (function () {
   let boards = [];
   let currentBoard = null;
 
@@ -34,22 +34,22 @@ const BoardManager = (function() {
   }
 
   return {
-    loadBoards: async function() {
-      const boardList = ['m5stamps3'];
-      
+    loadBoards: async function () {
+      const boardList = ["m5stamps3", "xiao-nrf54l15"]; // Add new board names here
+
       for (const boardName of boardList) {
         const config = await fetchJSON(`boards/${boardName}/config.json`);
         if (config) {
           const sampleCode = await fetchText(`boards/${boardName}/sample.rb`);
           const reference = await fetchText(`boards/${boardName}/reference.md`);
-          
+
           boards.push({
             name: boardName,
             displayName: config.displayName || config.name,
             manufacturer: config.manufacturer,
             description: config.description,
-            sampleCode: sampleCode || '',
-            reference: reference || ''
+            sampleCode: sampleCode || "",
+            reference: reference || "",
           });
         }
       }
@@ -57,10 +57,13 @@ const BoardManager = (function() {
       if (boards.length > 0) {
         currentBoard = boards[0];
         UIManager.populateBoardSelector(boards);
-        
+
         if (currentBoard.sampleCode && window.editor) {
           window.editor.setValue(currentBoard.sampleCode);
-          if (typeof FileManager !== 'undefined' && typeof FileManager.markClean === 'function') {
+          if (
+            typeof FileManager !== "undefined" &&
+            typeof FileManager.markClean === "function"
+          ) {
             FileManager.markClean();
           }
         }
@@ -72,16 +75,16 @@ const BoardManager = (function() {
       return boards;
     },
 
-    getCurrentBoard: function() {
+    getCurrentBoard: function () {
       return currentBoard;
     },
 
-    getBoards: function() {
+    getBoards: function () {
       return boards;
     },
 
-    switchBoard: function(boardName) {
-      const board = boards.find(b => b.name === boardName);
+    switchBoard: function (boardName) {
+      const board = boards.find((b) => b.name === boardName);
       if (!board) {
         UIManager.appendToConsole(`Error: Board "${boardName}" not found`);
         return false;
@@ -100,44 +103,45 @@ const BoardManager = (function() {
 
       this.updateReferencePanel(board);
       UIManager.appendToConsole(`Switched to board: ${board.displayName}`);
-      
+
       return true;
     },
 
-    updateReferencePanel: function(board) {
-      const referenceContent = document.getElementById('reference-content');
+    updateReferencePanel: function (board) {
+      const referenceContent = document.getElementById("reference-content");
       if (!referenceContent || !board) return;
 
       if (board.reference) {
         referenceContent.innerHTML = this.parseMarkdown(board.reference);
       } else {
-        referenceContent.innerHTML = '<p>No reference documentation available for this board.</p>';
+        referenceContent.innerHTML =
+          "<p>No reference documentation available for this board.</p>";
       }
     },
 
-    parseMarkdown: function(markdown) {
+    parseMarkdown: function (markdown) {
       // Simple line-oriented markdown parser for headings, lists, paragraphs and inline code
-      const lines = markdown.split('\n');
-      let html = '';
+      const lines = markdown.split("\n");
+      let html = "";
       let inParagraph = false;
       let inList = false;
 
       function applyInlineFormatting(text) {
         // Escape HTML first, then apply inline code formatting
         const escaped = Utils.escapeHtml(text);
-        return escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+        return escaped.replace(/`([^`]+)`/g, "<code>$1</code>");
       }
 
       function closeParagraph() {
         if (inParagraph) {
-          html += '</p>';
+          html += "</p>";
           inParagraph = false;
         }
       }
 
       function closeList() {
         if (inList) {
-          html += '</ul>';
+          html += "</ul>";
           inList = false;
         }
       }
@@ -147,7 +151,7 @@ const BoardManager = (function() {
         const trimmed = line.trim();
 
         // Blank line: close paragraphs and lists
-        if (trimmed === '') {
+        if (trimmed === "") {
           closeParagraph();
           closeList();
           continue;
@@ -158,19 +162,19 @@ const BoardManager = (function() {
         if ((headingMatch = /^###\s+(.*)$/.exec(line)) !== null) {
           closeParagraph();
           closeList();
-          html += '<h4>' + applyInlineFormatting(headingMatch[1]) + '</h4>';
+          html += "<h4>" + applyInlineFormatting(headingMatch[1]) + "</h4>";
           continue;
         }
         if ((headingMatch = /^##\s+(.*)$/.exec(line)) !== null) {
           closeParagraph();
           closeList();
-          html += '<h3>' + applyInlineFormatting(headingMatch[1]) + '</h3>';
+          html += "<h3>" + applyInlineFormatting(headingMatch[1]) + "</h3>";
           continue;
         }
         if ((headingMatch = /^#\s+(.*)$/.exec(line)) !== null) {
           closeParagraph();
           closeList();
-          html += '<h2>' + applyInlineFormatting(headingMatch[1]) + '</h2>';
+          html += "<h2>" + applyInlineFormatting(headingMatch[1]) + "</h2>";
           continue;
         }
 
@@ -180,23 +184,23 @@ const BoardManager = (function() {
           // Start a new list if not currently in one
           if (!inList) {
             closeParagraph();
-            html += '<ul>';
+            html += "<ul>";
             inList = true;
           }
           const itemText = applyInlineFormatting(listMatch[1]);
-          html += '<li>' + itemText + '</li>';
+          html += "<li>" + itemText + "</li>";
           continue;
         }
 
         // Regular paragraph text
         if (!inParagraph) {
           closeList();
-          html += '<p>';
+          html += "<p>";
           inParagraph = true;
           html += applyInlineFormatting(line);
         } else {
           // New line within the same paragraph
-          html += '<br>' + applyInlineFormatting(line);
+          html += "<br>" + applyInlineFormatting(line);
         }
       }
 
@@ -205,6 +209,6 @@ const BoardManager = (function() {
       closeList();
 
       return html;
-    }
+    },
   };
 })();
