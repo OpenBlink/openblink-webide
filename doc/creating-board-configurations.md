@@ -1,6 +1,6 @@
-# Creating Board Configurations for WebSimulator
+# Creating Board Configurations
 
-This guide explains how to add support for new microcontroller boards to the WebSimulator without recompiling C code.
+This guide explains how to add support for new microcontroller boards to OpenBlink WebIDE.
 
 ## Directory Structure
 
@@ -9,16 +9,104 @@ Create files in the `public_html/boards/` directory:
 ```
 public_html/boards/
 └── your-board-id/
-    ├── board-config.js      # Board configuration
-    ├── ui-components.js     # UI generation
-    └── api-definitions.js   # mruby/c API definitions
+    ├── config.json          # Board metadata (required)
+    ├── sample.rb            # Sample code (required)
+    ├── reference.md         # API reference (required)
+    ├── board-config.js      # Simulator UI configuration (required if simulator enabled)
+    ├── ui-components.js     # UI generation functions (required if simulator enabled)
+    └── api-definitions.js   # mruby/c API definitions (required if simulator enabled)
 ```
 
-## Required Files
+Even if you don't use the simulator, the three files `config.json`, `sample.rb`, and `reference.md` are required.
 
-### 1. board-config.js
+## Required Files (Basic Configuration)
 
-Defines basic board settings:
+### 1. config.json
+
+This file defines the board metadata and is loaded by BoardManager when the WebIDE starts. See `public_html/js/board-manager.js` for implementation details.
+
+```json
+{
+  "name": "your-board-id",
+  "displayName": "Your Board Display Name",
+  "manufacturer": "Manufacturer Name",
+  "description": "Description of your board",
+  "simulator": {
+    "enabled": true,
+    "description": "Simulator description"
+  }
+}
+```
+
+Field descriptions:
+
+- `name` - Board ID used internally (required, must match directory name)
+- `displayName` - Display name shown in the board selector dropdown (required)
+- `manufacturer` - Manufacturer name (optional)
+- `description` - Board description (optional)
+- `simulator.enabled` - Enable/disable simulator functionality (required, set to `false` if not using simulator)
+- `simulator.description` - Simulator description (optional)
+
+### 2. sample.rb
+
+This file contains sample Ruby code that is automatically loaded into the editor when the board is selected. It helps users get started quickly with a working example.
+
+The sample code should demonstrate basic functionality of the board, such as LED control or sensor reading. Keep it simple and well-commented so users can understand and modify it easily.
+
+Example structure:
+
+```ruby
+# Basic LED blink example for Your Board
+
+while true
+  LED.set([255, 0, 0])  # Red
+  sleep 0.5
+  LED.set([0, 0, 0])    # Off
+  sleep 0.5
+end
+```
+
+### 3. reference.md
+
+This file provides API reference documentation displayed in the right panel of the WebIDE. It is parsed by BoardManager's Markdown parser and rendered as HTML.
+
+The Markdown parser supports:
+
+- Headings (`#`, `##`, `###`)
+- Unordered lists (`-` or `*`)
+- Paragraphs
+- Inline code (`` `code` ``)
+
+Example structure (see `public_html/boards/xiao-nrf54l15/reference.md` for a complete example):
+
+```markdown
+# Your Board Function Reference
+
+## LED Control
+
+### LED.set([r, g, b])
+
+Sets the built-in LED to the specified RGB color.
+
+- `r` - Red value (0-255)
+- `g` - Green value (0-255)
+- `b` - Blue value (0-255)
+
+## Timer Functions
+
+### sleep(seconds)
+
+Pauses program execution for the specified number of seconds.
+
+- `seconds` - Number of seconds to wait (can be a decimal)
+- Example: `sleep 1` - Wait for 1 second
+```
+
+The following files are only required if you want to enable the simulator for your board (`simulator.enabled: true` in config.json).
+
+### 4. board-config.js
+
+Defines basic board settings for the simulator:
 
 ```javascript
 const BOARD_CONFIG = {
@@ -38,7 +126,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-### 2. api-definitions.js
+### 5. api-definitions.js
 
 Defines classes and methods for mruby/c using the `MrubycWasmAPI` class:
 
@@ -159,7 +247,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-### 3. ui-components.js
+### 6. ui-components.js
 
 Generates board-specific UI elements:
 

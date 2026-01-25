@@ -1,6 +1,6 @@
-# WebSimulator 用ボード設定の作成
+# ボード設定の作成
 
-このガイドでは、C コードを再コンパイルせずに WebSimulator に新しいマイコンボードのサポートを追加する方法を説明します。
+このガイドでは、OpenBlink WebIDE に新しいマイコンボードのサポートを追加する方法を説明します。
 
 ## ディレクトリ構造
 
@@ -9,16 +9,104 @@
 ```
 public_html/boards/
 └── your-board-id/
-    ├── board-config.js      # ボード設定
-    ├── ui-components.js     # UI 生成
-    └── api-definitions.js   # mruby/c API 定義
+    ├── config.json          # ボードメタデータ（必須）
+    ├── sample.rb            # サンプルコード（必須）
+    ├── reference.md         # API リファレンス（必須）
+    ├── board-config.js      # シミュレータ UI 設定（シミュレータ有効時に必須）
+    ├── ui-components.js     # UI 生成関数（シミュレータ有効時に必須）
+    └── api-definitions.js   # mruby/c API 定義（シミュレータ有効時に必須）
 ```
 
-## 必要なファイル
+シミュレータを使用しない場合でも、`config.json`、`sample.rb`、`reference.md` の 3 つのファイルは必須です。
 
-### 1. board-config.js
+## 必須ファイル（基本設定）
 
-基本的なボード設定を定義します：
+### 1. config.json
+
+このファイルはボードのメタデータを定義し、WebIDE 起動時に BoardManager によって読み込まれます。実装の詳細は `public_html/js/board-manager.js` を参照してください。
+
+```json
+{
+  "name": "your-board-id",
+  "displayName": "ボードの表示名",
+  "manufacturer": "メーカー名",
+  "description": "ボードの説明",
+  "simulator": {
+    "enabled": true,
+    "description": "シミュレータの説明"
+  }
+}
+```
+
+フィールドの説明：
+
+- `name` - 内部で使用されるボード ID（必須、ディレクトリ名と一致する必要があります）
+- `displayName` - ボード選択ドロップダウンに表示される名前（必須）
+- `manufacturer` - メーカー名（オプション）
+- `description` - ボードの説明（オプション）
+- `simulator.enabled` - シミュレータ機能の有効/無効（必須、シミュレータを使用しない場合は `false` に設定）
+- `simulator.description` - シミュレータの説明（オプション）
+
+### 2. sample.rb
+
+このファイルには、ボード選択時にエディタに自動的に読み込まれるサンプル Ruby コードが含まれています。動作するサンプルを提供することで、ユーザーがすぐに開始できるようにします。
+
+サンプルコードは、LED 制御やセンサー読み取りなど、ボードの基本機能をデモンストレーションする必要があります。ユーザーが理解しやすく修正しやすいように、シンプルでコメント付きにしてください。
+
+構造の例：
+
+```ruby
+# Your Board 用の基本的な LED 点滅サンプル
+
+while true
+  LED.set([255, 0, 0])  # 赤
+  sleep 0.5
+  LED.set([0, 0, 0])    # 消灯
+  sleep 0.5
+end
+```
+
+### 3. reference.md
+
+このファイルは、WebIDE の右パネルに表示される API リファレンスドキュメントを提供します。BoardManager の Markdown パーサーによって解析され、HTML としてレンダリングされます。
+
+Markdown パーサーがサポートする機能：
+
+- 見出し（`#`、`##`、`###`）
+- 箇条書きリスト（`-` または `*`）
+- 段落
+- インラインコード（`` `code` ``）
+
+構造の例（完全な例は `public_html/boards/xiao-nrf54l15/reference.md` を参照）：
+
+```markdown
+# Your Board 関数リファレンス
+
+## LED 制御
+
+### LED.set([r, g, b])
+
+内蔵 LED を指定した RGB カラーに設定します。
+
+- `r` - 赤の値（0-255）
+- `g` - 緑の値（0-255）
+- `b` - 青の値（0-255）
+
+## タイマー関数
+
+### sleep(seconds)
+
+指定した秒数だけプログラムの実行を一時停止します。
+
+- `seconds` - 待機する秒数（小数も可）
+- 例：`sleep 1` - 1 秒待機
+```
+
+以下のファイルは、ボードでシミュレータを有効にする場合（config.json で `simulator.enabled: true`）にのみ必要です。
+
+### 4. board-config.js
+
+シミュレータ用の基本的なボード設定を定義します：
 
 ```javascript
 const BOARD_CONFIG = {
@@ -38,7 +126,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-### 2. api-definitions.js
+### 5. api-definitions.js
 
 `MrubycWasmAPI` クラスを使用して mruby/c のクラスとメソッドを定義します：
 
@@ -159,7 +247,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-### 3. ui-components.js
+### 6. ui-components.js
 
 ボード固有の UI 要素を生成します：
 

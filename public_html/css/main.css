@@ -84,21 +84,39 @@ hr {
   padding: 15px;
 }
 
-.step {
-  margin: 15px 0;
+.panel {
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 15px;
+  overflow: hidden;
 }
 
-.step-title {
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+  border-bottom: 1px solid var(--border-color);
   font-weight: 600;
-  font-size: 18px;
-  margin-bottom: 8px;
+  font-size: 14px;
   color: var(--text-color);
 }
 
-.step-description {
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: var(--text-muted);
+.panel-icon {
+  font-size: 16px;
+  opacity: 0.8;
+}
+
+.panel-title {
+  flex: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-content {
+  padding: 15px;
 }
 
 button {
