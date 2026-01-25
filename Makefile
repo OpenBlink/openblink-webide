@@ -21,6 +21,7 @@ CFLAGS = -O3 \
          -I$(MRUBYC_SRC_DIR) \
          -I$(HAL_DIR) \
          -DMRBC_SCHEDULER_EXIT=1 -DMRBC_USE_FLOAT=1 -DMRBC_USE_MATH=1 -DMAX_VM_COUNT=5 \
+         -DMRBC_DEBUG \
          -DNDEBUG
 
 # Emscripten specific flags
