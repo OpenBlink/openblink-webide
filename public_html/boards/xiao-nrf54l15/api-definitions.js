@@ -56,10 +56,10 @@ class MrubycWasmAPI {
    */
   defineClass(name, superClass) {
     return this.module.ccall(
-      'mrbc_wasm_define_class',
-      'number',
-      ['string', 'number'],
-      [name, superClass]
+      "mrbc_wasm_define_class",
+      "number",
+      ["string", "number"],
+      [name, superClass],
     );
   }
 
@@ -71,10 +71,10 @@ class MrubycWasmAPI {
    */
   defineMethod(cls, name, func) {
     this.module.ccall(
-      'mrbc_wasm_define_method',
+      "mrbc_wasm_define_method",
       null,
-      ['number', 'string', 'number'],
-      [cls, name, func]
+      ["number", "string", "number"],
+      [cls, name, func],
     );
   }
 
@@ -177,10 +177,10 @@ class MrubycWasmAPI {
    */
   setGlobalConst(name, value) {
     this.module.ccall(
-      'mrbc_wasm_set_global_const',
+      "mrbc_wasm_set_global_const",
       null,
-      ['string', 'number'],
-      [name, value]
+      ["string", "number"],
+      [name, value],
     );
   }
 
@@ -202,56 +202,60 @@ class MrubycWasmAPI {
  */
 function definePixelsAPI(mrubycModule) {
   const api = new MrubycWasmAPI(mrubycModule);
-  
+
   if (currentPixelsInstance && currentApi) {
     currentApi.freeInstance(currentPixelsInstance);
     currentPixelsInstance = null;
   }
   currentApi = api;
-  
+
   const oldCallbacks = [...registeredCallbacks];
   registeredCallbacks = [];
-  
+
   const classObject = api.getClassObject();
-  
-  const pixelsClass = api.defineClass('Pixels', classObject);
-  
+
+  const pixelsClass = api.defineClass("Pixels", classObject);
+
   const setPixelCallback = api.addFunction((vmPtr, vPtr, argc) => {
-    if (api.isNumericArg(vPtr, 1) && api.isNumericArg(vPtr, 2) &&
-        api.isNumericArg(vPtr, 3) && api.isNumericArg(vPtr, 4)) {
+    if (
+      api.isNumericArg(vPtr, 1) &&
+      api.isNumericArg(vPtr, 2) &&
+      api.isNumericArg(vPtr, 3) &&
+      api.isNumericArg(vPtr, 4)
+    ) {
       const index = api.getIntArg(vPtr, 1);
-      const red = api.getIntArg(vPtr, 2);
-      const green = api.getIntArg(vPtr, 3);
-      const blue = api.getIntArg(vPtr, 4);
-      
-      if (typeof window.setPixelColor === 'function') {
+      const red = api.getIntArg(vPtr, 2) * 10;
+      const green = api.getIntArg(vPtr, 3) * 10;
+      const blue = api.getIntArg(vPtr, 4) * 10;
+
+      if (typeof window.setPixelColor === "function") {
         window.setPixelColor(index, red, green, blue);
       }
       api.setReturnBool(vPtr, true);
     } else {
       api.setReturnBool(vPtr, false);
     }
-  }, 'viii');
-  
+  }, "viii");
+
   registeredCallbacks.push(setPixelCallback);
-  api.defineMethod(pixelsClass, 'set', setPixelCallback);
-  
+  api.defineMethod(pixelsClass, "set", setPixelCallback);
+
   const updateCallback = api.addFunction((vmPtr, vPtr, argc) => {
     api.setReturnBool(vPtr, true);
-  }, 'viii');
-  
+  }, "viii");
+
   registeredCallbacks.push(updateCallback);
-  api.defineMethod(pixelsClass, 'update', updateCallback);
-  
+  api.defineMethod(pixelsClass, "update", updateCallback);
+
   const pixelsInstance = api.instanceNew(pixelsClass);
-  
+
   if (pixelsInstance) {
     currentPixelsInstance = pixelsInstance;
-    api.setGlobalConst('PIXELS', pixelsInstance);
+    api.setGlobalConst("PIXELS", pixelsInstance);
   } else {
-    console.error('definePixelsAPI: Failed to create Pixels instance');
+    console.error("definePixelsAPI: Failed to create Pixels instance");
   }
-  
+
   for (const callback of oldCallbacks) {
     try {
       api.removeFunction(callback);
@@ -272,7 +276,7 @@ function cleanupPixelsAPI(mrubycModule) {
     currentPixelsInstance = null;
   }
   currentApi = null;
-  
+
   for (const callback of registeredCallbacks) {
     try {
       mrubycModule.removeFunction(callback);
@@ -283,7 +287,7 @@ function cleanupPixelsAPI(mrubycModule) {
   registeredCallbacks = [];
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.definePixelsAPI = definePixelsAPI;
   window.cleanupPixelsAPI = cleanupPixelsAPI;
 }

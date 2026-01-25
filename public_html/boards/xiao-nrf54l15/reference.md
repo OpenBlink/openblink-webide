@@ -1,15 +1,5 @@
 # XIAO nRF54L15 Function Reference
 
-## Switch Control
-
-### Input.pressed?(part: :sw1)
-
-Returns whether the button is pressed.
-
-### Input.released?(part: :sw1)
-
-Returns whether the button is released.
-
 ## 6x10 RGB MATRIX for XIAO
 
 ### PIXELS.set(index, r, g, b)
@@ -24,16 +14,6 @@ Sets the 6x10 RGB MATRIX to the specified color.
 ### PIXELS.update
 
 Applies the settings to the matrix.
-
-## LED Control
-
-### LED.set(part: :led1, state: true)
-
-Turns ON the LED.
-
-### LED.set(part: :led1, state: false)
-
-Turns OFF the LED.
 
 ## Timer Functions
 
