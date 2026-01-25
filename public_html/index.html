@@ -23,31 +23,30 @@
 
     <div class="main-container">
       <div class="left-panel">
-        <div class="step">
-          <div class="step-title">Step 1: Connect to Device</div>
-          <div class="step-description">
-            Click the "Connect to device" button and select an OpenBlink device
-            from the Bluetooth device selection dialog.
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-icon">&#128268;</span>
+              <span class="panel-title">Connection</span>
+            </div>
+            <div class="panel-content">
+              <div class="button-group">
+                <button id="ble-connect">Connect to device</button>
+                <button id="ble-disconnect" class="secondary" disabled>
+                  Disconnect
+                </button>
+                <span id="connectionStatus" class="connection-status disconnected"
+                  >Disconnected</span
+                >
+              </div>
+            </div>
           </div>
-          <div class="button-group">
-            <button id="ble-connect">Connect to device</button>
-            <button id="ble-disconnect" class="secondary" disabled>
-              Disconnect
-            </button>
-            <span id="connectionStatus" class="connection-status disconnected"
-              >Disconnected</span
-            >
-          </div>
-        </div>
 
-        <hr />
-
-        <div class="step">
-          <div class="step-title">Step 2: Write Ruby Code</div>
-          <div class="step-description">
-            Write your Ruby code in the editor below. You can use the sample
-            code as a reference to create your own programs.
-          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-icon">&#128221;</span>
+              <span class="panel-title">Editor</span>
+            </div>
+            <div class="panel-content">
           <div class="editor-container">
             <div class="editor-toolbar">
               <div class="form-group">
@@ -71,36 +70,33 @@
             </div>
             <textarea id="ruby-code"></textarea>
           </div>
+          </div>
         </div>
 
-        <hr />
-
-        <div class="step">
-          <div class="step-title">Step 3: Build and Transfer</div>
-          <div class="step-description">
-            Click the "Build & Blink" button to compile your code and transfer
-            it to the device. Once the transfer is complete, the program will
-            run automatically. Use the "Soft RESET" button to reset the device.
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-icon">&#9654;</span>
+            <span class="panel-title">Build & Deploy</span>
           </div>
-          <div class="button-group">
-            <button id="run-main" class="success" disabled>
-              Build & Blink
-            </button>
-            <button id="run-simulator" disabled>
-              Run Simulator
-            </button>
-            <div class="form-group">
-              <label for="slot-selector">Slot:</label>
-              <select id="slot-selector">
-                <option value="1">Slot 1</option>
-                <option value="2" selected>Slot 2</option>
-              </select>
+          <div class="panel-content">
+            <div class="button-group">
+              <button id="run-main" class="success" disabled>
+                Build & Blink
+              </button>
+              <button id="run-simulator" disabled>
+                Run Simulator
+              </button>
+              <div class="form-group">
+                <label for="slot-selector">Slot:</label>
+                <select id="slot-selector">
+                  <option value="1">Slot 1</option>
+                  <option value="2" selected>Slot 2</option>
+                </select>
+              </div>
+              <button id="soft-reset" class="danger" disabled>Soft RESET</button>
             </div>
-            <button id="soft-reset" class="danger" disabled>Soft RESET</button>
           </div>
         </div>
-
-        <hr />
 
         <div class="console-container">
           <div class="console-header">
@@ -171,7 +167,6 @@
       </div>
     </div>
 
-    <hr />
     <div class="footer">
       <a href="https://github.com/OpenBlink/openblink-webide/">GitHub</a>&nbsp;
       <a

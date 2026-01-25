@@ -14,9 +14,10 @@
   width: 90%;
   max-width: 600px;
   max-height: 90vh;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background: #252526;
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid #3c3c3c;
   z-index: 1000;
   overflow: hidden;
 }
@@ -25,37 +26,43 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px 20px;
-  background: #333;
-  color: white;
+  padding: 10px 15px;
+  background: #333333;
+  color: #cccccc;
+  border-bottom: 1px solid #3c3c3c;
 }
 
 .simulator-title {
-  font-size: 1.1em;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .simulator-close-btn {
-  padding: 5px 15px;
-  background: #666;
-  color: white;
-  border: none;
+  padding: 4px 12px;
+  background: #3c3c3c;
+  color: #cccccc;
+  border: 1px solid #5a5a5a;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-size: 12px;
+  transition: background-color 0.15s;
 }
 
 .simulator-close-btn:hover {
-  background: #888;
+  background: #4a4a4a;
 }
 
 .simulator-status {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 20px;
-  background: #f5f5f5;
-  border-bottom: 1px solid #ddd;
+  padding: 8px 15px;
+  background: #2d2d2d;
+  border-bottom: 1px solid #3c3c3c;
+  color: #cccccc;
+  font-size: 12px;
 }
 
 .simulator-status-indicator {
@@ -89,17 +96,17 @@
 }
 
 .simulator-board-ui {
-  padding: 20px;
-  background: #fafafa;
-  border-bottom: 1px solid #ddd;
+  padding: 15px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #3c3c3c;
   min-height: 100px;
 }
 
 .simulator-board-title {
-  font-size: 1em;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 15px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cccccc;
+  margin-bottom: 12px;
 }
 
 .simulator-console {
@@ -110,34 +117,36 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background: #444;
-  color: white;
-  font-size: 0.9em;
+  padding: 8px 15px;
+  background: #333333;
+  color: #cccccc;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .simulator-clear-btn {
   padding: 3px 10px;
-  background: #666;
-  color: white;
-  border: none;
+  background: #3c3c3c;
+  color: #cccccc;
+  border: 1px solid #5a5a5a;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 0.85em;
+  font-size: 11px;
 }
 
 .simulator-clear-btn:hover {
-  background: #888;
+  background: #4a4a4a;
 }
 
 .simulator-output {
   background-color: #1e1e1e;
   color: #d4d4d4;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  padding: 15px;
-  min-height: 150px;
-  max-height: 250px;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+  padding: 12px;
+  min-height: 120px;
+  max-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -165,22 +174,22 @@
   direction: rtl;
   grid-auto-flow: column;
   width: fit-content;
-  border: 1px solid #ddd;
-  background-color: #f0f0f0;
+  border: 1px solid #3c3c3c;
+  background-color: #2d2d2d;
   margin: 0 auto;
 }
 
 .simulator-dot {
   width: 30px;
   height: 30px;
-  background-color: #ccc;
+  background-color: #444444;
   border-radius: 50%;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  color: #666;
+  color: #858585;
   transition: background-color 0.1s;
 }
 
@@ -192,7 +201,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.7);
   z-index: 999;
 }
 
@@ -207,6 +216,6 @@
 }
 
 #run-simulator:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }

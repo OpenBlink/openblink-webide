@@ -1,6 +1,6 @@
-# 为 WebSimulator 创建开发板配置
+# 创建开发板配置
 
-本指南说明如何在不重新编译 C 代码的情况下为 WebSimulator 添加新的微控制器开发板支持。
+本指南说明如何为 OpenBlink WebIDE 添加新的微控制器开发板支持。
 
 ## 目录结构
 
@@ -9,16 +9,104 @@
 ```
 public_html/boards/
 └── your-board-id/
-    ├── board-config.js      # 开发板配置
-    ├── ui-components.js     # UI 生成
-    └── api-definitions.js   # mruby/c API 定义
+    ├── config.json          # 开发板元数据（必需）
+    ├── sample.rb            # 示例代码（必需）
+    ├── reference.md         # API 参考（必需）
+    ├── board-config.js      # 模拟器 UI 配置（启用模拟器时必需）
+    ├── ui-components.js     # UI 生成函数（启用模拟器时必需）
+    └── api-definitions.js   # mruby/c API 定义（启用模拟器时必需）
 ```
 
-## 必需文件
+即使不使用模拟器，`config.json`、`sample.rb` 和 `reference.md` 这三个文件也是必需的。
 
-### 1. board-config.js
+## 必需文件（基本配置）
 
-定义基本开发板设置：
+### 1. config.json
+
+此文件定义开发板元数据，在 WebIDE 启动时由 BoardManager 加载。实现详情请参阅 `public_html/js/board-manager.js`。
+
+```json
+{
+  "name": "your-board-id",
+  "displayName": "开发板显示名称",
+  "manufacturer": "制造商名称",
+  "description": "开发板描述",
+  "simulator": {
+    "enabled": true,
+    "description": "模拟器描述"
+  }
+}
+```
+
+字段说明：
+
+- `name` - 内部使用的开发板 ID（必需，必须与目录名匹配）
+- `displayName` - 在开发板选择下拉菜单中显示的名称（必需）
+- `manufacturer` - 制造商名称（可选）
+- `description` - 开发板描述（可选）
+- `simulator.enabled` - 启用/禁用模拟器功能（必需，如果不使用模拟器则设置为 `false`）
+- `simulator.description` - 模拟器描述（可选）
+
+### 2. sample.rb
+
+此文件包含选择开发板时自动加载到编辑器中的示例 Ruby 代码。通过提供可运行的示例，帮助用户快速入门。
+
+示例代码应演示开发板的基本功能，如 LED 控制或传感器读取。保持简单并添加注释，以便用户理解和修改。
+
+结构示例：
+
+```ruby
+# Your Board 的基本 LED 闪烁示例
+
+while true
+  LED.set([255, 0, 0])  # 红色
+  sleep 0.5
+  LED.set([0, 0, 0])    # 关闭
+  sleep 0.5
+end
+```
+
+### 3. reference.md
+
+此文件提供显示在 WebIDE 右侧面板中的 API 参考文档。由 BoardManager 的 Markdown 解析器解析并渲染为 HTML。
+
+Markdown 解析器支持的功能：
+
+- 标题（`#`、`##`、`###`）
+- 无序列表（`-` 或 `*`）
+- 段落
+- 行内代码（`` `code` ``）
+
+结构示例（完整示例请参阅 `public_html/boards/xiao-nrf54l15/reference.md`）：
+
+```markdown
+# Your Board 函数参考
+
+## LED 控制
+
+### LED.set([r, g, b])
+
+将内置 LED 设置为指定的 RGB 颜色。
+
+- `r` - 红色值（0-255）
+- `g` - 绿色值（0-255）
+- `b` - 蓝色值（0-255）
+
+## 定时器函数
+
+### sleep(seconds)
+
+暂停程序执行指定的秒数。
+
+- `seconds` - 等待的秒数（可以是小数）
+- 示例：`sleep 1` - 等待 1 秒
+```
+
+以下文件仅在为开发板启用模拟器时需要（config.json 中 `simulator.enabled: true`）。
+
+### 4. board-config.js
+
+为模拟器定义基本开发板设置：
 
 ```javascript
 const BOARD_CONFIG = {
@@ -38,7 +126,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-### 2. api-definitions.js
+### 5. api-definitions.js
 
 使用 `MrubycWasmAPI` 类为 mruby/c 定义类和方法：
 
@@ -159,7 +247,7 @@ if (typeof window !== 'undefined') {
 }
 ```
 
-### 3. ui-components.js
+### 6. ui-components.js
 
 生成开发板特定的 UI 元素：
 
