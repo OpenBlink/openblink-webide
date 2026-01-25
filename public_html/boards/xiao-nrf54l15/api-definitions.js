@@ -216,7 +216,7 @@ function definePixelsAPI(mrubycModule) {
 
   const pixelsClass = api.defineClass("Pixels", classObject);
 
-  // Clamp RGB values to 0-255 range as per API documentation
+  // Clamp RGB values to 0-255 range for CSS after 10x amplification
   const clampRGB = (value) => Math.max(0, Math.min(255, value));
 
   const setPixelCallback = api.addFunction((vmPtr, vPtr, argc) => {
@@ -227,9 +227,9 @@ function definePixelsAPI(mrubycModule) {
       api.isNumericArg(vPtr, 4)
     ) {
       const index = api.getIntArg(vPtr, 1);
-      const red = clampRGB(api.getIntArg(vPtr, 2)) * 10;
-      const green = clampRGB(api.getIntArg(vPtr, 3)) * 10;
-      const blue = clampRGB(api.getIntArg(vPtr, 4)) * 10;
+      const red = clampRGB(api.getIntArg(vPtr, 2) * 10);
+      const green = clampRGB(api.getIntArg(vPtr, 3) * 10);
+      const blue = clampRGB(api.getIntArg(vPtr, 4) * 10);
 
       if (typeof window.setPixelColor === "function") {
         window.setPixelColor(index, red, green, blue);
