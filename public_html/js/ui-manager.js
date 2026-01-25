@@ -266,7 +266,7 @@ const UIManager = (function() {
           } catch (error) {
             this.appendToConsole("Error loading simulator: " + error.message);
           } finally {
-            runSimulatorButton.disabled = false;
+            this.updateSimulatorButton(BoardManager.getCurrentBoard());
           }
         });
       }

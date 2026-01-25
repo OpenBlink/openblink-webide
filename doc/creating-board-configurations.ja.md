@@ -213,7 +213,7 @@ if (typeof window !== 'undefined') {
   "name": "your-board-id",
   "displayName": "Your Board Name",
   "simulator": {
-    "supported": true
+    "enabled": true
   }
 }
 ```

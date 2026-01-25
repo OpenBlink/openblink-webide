@@ -221,6 +221,7 @@ function definePixelsAPI(mrubycModule) {
 
   const setPixelCallback = api.addFunction((vmPtr, vPtr, argc) => {
     if (
+      argc >= 4 &&
       api.isNumericArg(vPtr, 1) &&
       api.isNumericArg(vPtr, 2) &&
       api.isNumericArg(vPtr, 3) &&

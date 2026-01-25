@@ -213,7 +213,7 @@ Add `simulator` configuration to the board's `config.json`:
   "name": "your-board-id",
   "displayName": "Your Board Name",
   "simulator": {
-    "supported": true
+    "enabled": true
   }
 }
 ```

@@ -164,8 +164,13 @@ const Simulator = (function() {
       isRunning = false;
       setStatus('ready', 'Simulator ready');
       
-      const runBtn = document.getElementById('run-simulator');
-      if (runBtn) runBtn.disabled = false;
+      // Recompute the Run Simulator button state based on the current board
+      if (typeof UIManager !== 'undefined' && typeof BoardManager !== 'undefined') {
+        UIManager.updateSimulatorButton(BoardManager.getCurrentBoard());
+      } else {
+        const runBtn = document.getElementById('run-simulator');
+        if (runBtn) runBtn.disabled = false;
+      }
     }
   }
 
