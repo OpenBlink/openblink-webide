@@ -224,9 +224,9 @@ function definePixelsAPI(mrubycModule) {
       api.isNumericArg(vPtr, 4)
     ) {
       const index = api.getIntArg(vPtr, 1);
-      const red = api.getIntArg(vPtr, 2) * 10;
-      const green = api.getIntArg(vPtr, 3) * 10;
-      const blue = api.getIntArg(vPtr, 4) * 10;
+      const red = Math.max(0, Math.min(255, api.getIntArg(vPtr, 2))) * 10;
+      const green = Math.max(0, Math.min(255, api.getIntArg(vPtr, 3))) * 10;
+      const blue = Math.max(0, Math.min(255, api.getIntArg(vPtr, 4))) * 10;
 
       if (typeof window.setPixelColor === "function") {
         window.setPixelColor(index, red, green, blue);
