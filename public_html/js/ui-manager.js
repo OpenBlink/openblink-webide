@@ -7,11 +7,13 @@ const UIManager = (function() {
   let connectButton = null;
   let disconnectButton = null;
   let runMainButton = null;
+  let runSimulatorButton = null;
   let softResetButton = null;
   let loadFileButton = null;
   let saveFileButton = null;
   let slotSelector = null;
   let boardSelector = null;
+  let simulatorLoaded = false;
 
   const MAX_METRICS_HISTORY = 100;
 
@@ -184,6 +186,7 @@ const UIManager = (function() {
       connectButton = document.getElementById("ble-connect");
       disconnectButton = document.getElementById("ble-disconnect");
       runMainButton = document.getElementById("run-main");
+      runSimulatorButton = document.getElementById("run-simulator");
       softResetButton = document.getElementById("soft-reset");
       loadFileButton = document.getElementById("load-file");
       saveFileButton = document.getElementById("save-file");
@@ -242,6 +245,31 @@ const UIManager = (function() {
           BoardManager.switchBoard(e.target.value);
         });
       }
+
+      if (runSimulatorButton) {
+        runSimulatorButton.addEventListener("click", async () => {
+          const currentBoard = BoardManager.getCurrentBoard();
+          if (!currentBoard || !BoardManager.hasSimulatorSupport(currentBoard)) {
+            this.appendToConsole("Error: Simulator not available for this board");
+            return;
+          }
+
+          runSimulatorButton.disabled = true;
+          this.appendToConsole("Loading simulator...");
+
+          try {
+            await this.loadSimulatorResources();
+            const success = await Simulator.show(currentBoard.name);
+            if (success) {
+              await Simulator.runFromEditor();
+            }
+          } catch (error) {
+            this.appendToConsole("Error loading simulator: " + error.message);
+          } finally {
+            runSimulatorButton.disabled = false;
+          }
+        });
+      }
     },
 
     populateBoardSelector: function(boards) {
@@ -260,6 +288,36 @@ const UIManager = (function() {
       if (runMainButton) {
         runMainButton.disabled = !enabled || !BLEProtocol.isConnected();
       }
+    },
+
+    updateSimulatorButton: function(board) {
+      if (!runSimulatorButton) return;
+      
+      const hasSimulator = BoardManager.hasSimulatorSupport(board);
+      runSimulatorButton.disabled = !hasSimulator;
+      runSimulatorButton.title = hasSimulator 
+        ? "Run code in browser simulator" 
+        : "Simulator not available for this board";
+    },
+
+    loadSimulatorResources: async function() {
+      if (simulatorLoaded) return;
+
+      const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = () => reject(new Error("Failed to load " + src));
+          document.body.appendChild(script);
+        });
+      };
+
+      await loadScript("mrubyc/mrubyc.js");
+      await loadScript("lib/board-loader.js");
+      await loadScript("js/simulator.js");
+
+      simulatorLoaded = true;
     }
   };
 })();

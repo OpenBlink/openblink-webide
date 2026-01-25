@@ -50,6 +50,7 @@ const BoardManager = (function () {
             description: config.description,
             sampleCode: sampleCode || "",
             reference: reference || "",
+            simulator: config.simulator || null,
           });
         }
       }
@@ -70,6 +71,9 @@ const BoardManager = (function () {
 
         // Update reference panel for initial board load
         this.updateReferencePanel(currentBoard);
+
+        // Update simulator button state for initial board
+        UIManager.updateSimulatorButton(currentBoard);
       }
 
       return boards;
@@ -102,9 +106,14 @@ const BoardManager = (function () {
       }
 
       this.updateReferencePanel(board);
+      UIManager.updateSimulatorButton(board);
       UIManager.appendToConsole(`Switched to board: ${board.displayName}`);
 
       return true;
+    },
+
+    hasSimulatorSupport: function (board) {
+      return board && board.simulator && board.simulator.enabled === true;
     },
 
     updateReferencePanel: function (board) {
