@@ -201,7 +201,6 @@ class MrubycWasmAPI {
  * @param {Object} mrubycModule - The mruby/c WASM module instance
  */
 function definePixelsAPI(mrubycModule) {
-  console.log('[definePixelsAPI] Called with module:', mrubycModule ? 'valid' : 'null');
   const api = new MrubycWasmAPI(mrubycModule);
   
   if (currentPixelsInstance && currentApi) {
@@ -216,10 +215,8 @@ function definePixelsAPI(mrubycModule) {
   const classObject = api.getClassObject();
   
   const pixelsClass = api.defineClass('Pixels', classObject);
-  console.log('[definePixelsAPI] Pixels class defined:', pixelsClass);
   
   const setPixelCallback = api.addFunction((vmPtr, vPtr, argc) => {
-    console.log('[setPixelCallback] Called with argc:', argc);
     if (api.isNumericArg(vPtr, 1) && api.isNumericArg(vPtr, 2) &&
         api.isNumericArg(vPtr, 3) && api.isNumericArg(vPtr, 4)) {
       const index = api.getIntArg(vPtr, 1);
@@ -229,20 +226,15 @@ function definePixelsAPI(mrubycModule) {
       
       if (typeof window.setPixelColor === 'function') {
         window.setPixelColor(index, red, green, blue);
-      } else {
-        console.warn('[PIXELS.set] window.setPixelColor is not defined');
       }
       api.setReturnBool(vPtr, true);
     } else {
-      console.warn('[PIXELS.set] Arguments are not numeric');
       api.setReturnBool(vPtr, false);
     }
   }, 'viii');
   
   registeredCallbacks.push(setPixelCallback);
-  console.log('[definePixelsAPI] setPixelCallback function pointer:', setPixelCallback);
   api.defineMethod(pixelsClass, 'set', setPixelCallback);
-  console.log('[definePixelsAPI] set method defined on Pixels class');
   
   const updateCallback = api.addFunction((vmPtr, vPtr, argc) => {
     api.setReturnBool(vPtr, true);
@@ -256,7 +248,6 @@ function definePixelsAPI(mrubycModule) {
   if (pixelsInstance) {
     currentPixelsInstance = pixelsInstance;
     api.setGlobalConst('PIXELS', pixelsInstance);
-    console.log('[definePixelsAPI] PIXELS constant set successfully');
   } else {
     console.error('definePixelsAPI: Failed to create Pixels instance');
   }
