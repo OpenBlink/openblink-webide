@@ -122,18 +122,9 @@ const BoardManager = (function() {
       let inParagraph = false;
       let inList = false;
 
-      function escapeHtml(text) {
-        return text
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      }
-
       function applyInlineFormatting(text) {
         // Escape HTML first, then apply inline code formatting
-        const escaped = escapeHtml(text);
+        const escaped = Utils.escapeHtml(text);
         return escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
       }
 

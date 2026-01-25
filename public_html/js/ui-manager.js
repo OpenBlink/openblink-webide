@@ -13,11 +13,20 @@ const UIManager = (function() {
   let slotSelector = null;
   let boardSelector = null;
 
+  const MAX_METRICS_HISTORY = 100;
+
   let metricsHistory = {
     compile: [],
     transfer: [],
     size: []
   };
+
+  function addToHistory(arr, value) {
+    arr.push(value);
+    while (arr.length > MAX_METRICS_HISTORY) {
+      arr.shift();
+    }
+  }
 
   function calculateStats(arr) {
     if (arr.length === 0) return { min: null, avg: null, max: null };
@@ -102,13 +111,13 @@ const UIManager = (function() {
       if (!metricsPanel) return;
 
       if (metrics.compileTime !== undefined) {
-        metricsHistory.compile.push(metrics.compileTime);
+        addToHistory(metricsHistory.compile, metrics.compileTime);
       }
       if (metrics.transferTime !== undefined) {
-        metricsHistory.transfer.push(metrics.transferTime);
+        addToHistory(metricsHistory.transfer, metrics.transferTime);
       }
       if (metrics.programSize !== undefined) {
-        metricsHistory.size.push(metrics.programSize);
+        addToHistory(metricsHistory.size, metrics.programSize);
       }
 
       const compileStats = calculateStats(metricsHistory.compile);
@@ -136,11 +145,18 @@ const UIManager = (function() {
         const displayMax = stats.max + padding;
         const displayRange = displayMax - displayMin;
 
-        const minPercent = displayRange > 0 ? ((stats.min - displayMin) / displayRange) * 100 : 0;
-        const maxPercent = displayRange > 0 ? ((stats.max - displayMin) / displayRange) * 100 : 100;
-        const avgPercent = displayRange > 0 ? ((stats.avg - displayMin) / displayRange) * 100 : 50;
+        // Calculate percentages and validate to ensure finite numbers between 0-100
+        const clampPercent = (val) => {
+          if (!Number.isFinite(val)) return 0;
+          return Math.max(0, Math.min(100, val));
+        };
+
+        const minPercent = clampPercent(displayRange > 0 ? ((stats.min - displayMin) / displayRange) * 100 : 0);
+        const maxPercent = clampPercent(displayRange > 0 ? ((stats.max - displayMin) / displayRange) * 100 : 100);
+        const avgPercent = clampPercent(displayRange > 0 ? ((stats.avg - displayMin) / displayRange) * 100 : 50);
 
         const formatValue = (val) => {
+          if (!Number.isFinite(val)) return '--';
           return decimals !== undefined ? val.toFixed(decimals) : Math.round(val);
         };
 
