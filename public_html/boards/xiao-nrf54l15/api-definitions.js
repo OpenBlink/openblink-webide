@@ -201,6 +201,7 @@ class MrubycWasmAPI {
  * @param {Object} mrubycModule - The mruby/c WASM module instance
  */
 function definePixelsAPI(mrubycModule) {
+  console.log('[definePixelsAPI] Called with module:', mrubycModule ? 'valid' : 'null');
   const api = new MrubycWasmAPI(mrubycModule);
   
   if (currentPixelsInstance && currentApi) {
@@ -226,9 +227,12 @@ function definePixelsAPI(mrubycModule) {
       
       if (typeof window.setPixelColor === 'function') {
         window.setPixelColor(index, red, green, blue);
+      } else {
+        console.warn('[PIXELS.set] window.setPixelColor is not defined');
       }
       api.setReturnBool(vPtr, true);
     } else {
+      console.warn('[PIXELS.set] Arguments are not numeric');
       api.setReturnBool(vPtr, false);
     }
   }, 'viii');
@@ -248,6 +252,7 @@ function definePixelsAPI(mrubycModule) {
   if (pixelsInstance) {
     currentPixelsInstance = pixelsInstance;
     api.setGlobalConst('PIXELS', pixelsInstance);
+    console.log('[definePixelsAPI] PIXELS constant set successfully');
   } else {
     console.error('definePixelsAPI: Failed to create Pixels instance');
   }
