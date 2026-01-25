@@ -29,11 +29,11 @@ Applies the settings to the matrix.
 
 ### LED.set(part: :led1, state: true)
 
-Turns OFF the LED.
+Turns ON the LED.
 
 ### LED.set(part: :led1, state: false)
 
-Turns ON the LED.
+Turns OFF the LED.
 
 ## Timer Functions
 
