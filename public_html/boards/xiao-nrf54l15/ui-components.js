@@ -43,12 +43,15 @@ function createBoardUI(container, config) {
  * @param {number} blue - Blue component (0-255)
  */
 function setPixelColor(id, red, green, blue) {
+  console.log('[setPixelColor] id:', id, 'rgb:', red, green, blue);
   const targetDot = document.getElementById('simulator-pixel-' + id);
   if (targetDot) {
     targetDot.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
     const brightness = red + green + blue;
     const isLight = brightness > 128 * 3;
     targetDot.style.color = isLight ? '#666' : 'white';
+  } else {
+    console.warn('[setPixelColor] Element not found: simulator-pixel-' + id);
   }
 }
 
