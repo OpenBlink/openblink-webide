@@ -62,6 +62,10 @@ mruby $ rake MRUBY_CONFIG=../emscripten.rb
 
 The build output (`mrbc.js` and `mrbc.wasm`) will be automatically placed in `public_html/mrbc/`.
 
+## Documentation
+
+- [Creating Board Configurations for WebSimulator](doc/creating-board-configurations.md)
+
 ---
 
 # OpenBlink WebIDE
@@ -124,6 +128,10 @@ mruby $ rake MRUBY_CONFIG=../emscripten.rb
 
 构建输出（`mrbc.js` 和 `mrbc.wasm`）将自动放置在 `public_html/mrbc/` 目录中。
 
+## 文档
+
+- [为 WebSimulator 创建开发板配置](doc/creating-board-configurations.zh-CN.md)
+
 ---
 
 # OpenBlink WebIDE
@@ -185,3 +193,7 @@ mruby $ rake MRUBY_CONFIG=../emscripten.rb
 ```
 
 ビルド出力（`mrbc.js` と `mrbc.wasm`）は自動的に `public_html/mrbc/` に配置されます。
+
+## ドキュメント
+
+- [WebSimulator 用ボード設定の作成](doc/creating-board-configurations.ja.md)
