@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -14,7 +14,8 @@
   <body>
     <h1>OpenBlink WebIDE</h1>
     <p class="description">
-      OpenBlink WebIDE is a tool for writing Ruby code and transferring it to OpenBlink devices.
+      OpenBlink WebIDE is a tool for writing Ruby code and transferring it to
+      OpenBlink devices.
     </p>
 
     <div id="compatibility-warning"></div>
@@ -24,12 +25,17 @@
         <div class="step">
           <div class="step-title">Step 1: Connect to Device</div>
           <div class="step-description">
-            Click the "Connect to device" button and select an OpenBlink device from the Bluetooth device selection dialog.
+            Click the "Connect to device" button and select an OpenBlink device
+            from the Bluetooth device selection dialog.
           </div>
           <div class="button-group">
             <button id="ble-connect">Connect to device</button>
-            <button id="ble-disconnect" class="secondary" disabled>Disconnect</button>
-            <span id="connectionStatus" class="connection-status disconnected">Disconnected</span>
+            <button id="ble-disconnect" class="secondary" disabled>
+              Disconnect
+            </button>
+            <span id="connectionStatus" class="connection-status disconnected"
+              >Disconnected</span
+            >
           </div>
         </div>
 
@@ -38,7 +44,8 @@
         <div class="step">
           <div class="step-title">Step 2: Write Ruby Code</div>
           <div class="step-description">
-            Write your Ruby code in the editor below. You can use the sample code as a reference to create your own programs.
+            Write your Ruby code in the editor below. You can use the sample
+            code as a reference to create your own programs.
           </div>
           <div class="editor-container">
             <div class="editor-toolbar">
@@ -51,7 +58,12 @@
               <div class="editor-actions">
                 <button id="load-file" class="secondary">Load .rb File</button>
                 <div class="filename-input-group">
-                  <input type="text" id="filename-input" value="program.rb" placeholder="filename.rb" />
+                  <input
+                    type="text"
+                    id="filename-input"
+                    value="program.rb"
+                    placeholder="filename.rb"
+                  />
                   <button id="save-file" class="secondary">Download</button>
                 </div>
               </div>
@@ -65,12 +77,14 @@
         <div class="step">
           <div class="step-title">Step 3: Build and Transfer</div>
           <div class="step-description">
-            Click the "Build & Blink" button to compile your code and transfer it to the device.
-            Once the transfer is complete, the program will run automatically.
-            Use the "Soft RESET" button to reset the device.
+            Click the "Build & Blink" button to compile your code and transfer
+            it to the device. Once the transfer is complete, the program will
+            run automatically. Use the "Soft RESET" button to reset the device.
           </div>
           <div class="button-group">
-            <button id="run-main" class="success" disabled>Build & Blink</button>
+            <button id="run-main" class="success" disabled>
+              Build & Blink
+            </button>
             <div class="form-group">
               <label for="slot-selector">Slot:</label>
               <select id="slot-selector">
@@ -130,14 +144,23 @@
           <div id="reference-content">
             <h3>LED Control</h3>
             <ul>
-              <li><code>LED.set([255, 0, 0])</code> - Set built-in LED to red</li>
-              <li><code>LED.set([0, 255, 0])</code> - Set built-in LED to green</li>
-              <li><code>LED.set([0, 0, 255])</code> - Set built-in LED to blue</li>
+              <li>
+                <code>LED.set([255, 0, 0])</code> - Set built-in LED to red
+              </li>
+              <li>
+                <code>LED.set([0, 255, 0])</code> - Set built-in LED to green
+              </li>
+              <li>
+                <code>LED.set([0, 0, 255])</code> - Set built-in LED to blue
+              </li>
             </ul>
             <h3>Timer</h3>
             <ul>
               <li><code>sleep(seconds)</code> - Wait for specified seconds</li>
-              <li><code>sleep_ms(milliseconds)</code> - Wait for specified milliseconds</li>
+              <li>
+                <code>sleep_ms(milliseconds)</code> - Wait for specified
+                milliseconds
+              </li>
             </ul>
           </div>
         </div>
@@ -146,30 +169,40 @@
 
     <hr />
     <div class="footer">
-      <a href="https://github.com/OpenBlink">GitHub</a> |
-      <a href="https://openblink.org">OpenBlink.org</a>
+      <a href="https://github.com/OpenBlink/openblink-webide/">GitHub</a>&nbsp;
+      <a
+        href="https://deepwiki.com/OpenBlink/openblink-webide/"
+        target="_blank"
+      >
+        <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" />
+      </a>
     </div>
 
     <script src="codemirror/codemirror.js"></script>
     <script src="codemirror/mode/ruby/ruby.js"></script>
     <script src="codemirror/addon/edit/matchbrackets.js"></script>
     <script>
-      var editor = CodeMirror.fromTextArea(document.getElementById("ruby-code"), {
-        mode: "ruby",
-        theme: "dracula",
-        lineNumbers: true,
-        matchBrackets: true,
-        autoCloseBrackets: true,
-      });
+      var editor = CodeMirror.fromTextArea(
+        document.getElementById("ruby-code"),
+        {
+          mode: "ruby",
+          theme: "dracula",
+          lineNumbers: true,
+          matchBrackets: true,
+          autoCloseBrackets: true,
+        },
+      );
       window.editor = editor;
 
-      document.getElementById('clear-console').addEventListener('click', function() {
-        document.getElementById('consoleOutput').innerHTML = '';
-      });
+      document
+        .getElementById("clear-console")
+        .addEventListener("click", function () {
+          document.getElementById("consoleOutput").innerHTML = "";
+        });
     </script>
     <script>
       var Module = Module || {};
-      Module.print = function(text) {
+      Module.print = function (text) {
         var consoleOutput = document.getElementById("consoleOutput");
         if (consoleOutput && text && text.trim() !== "") {
           var line = document.createElement("div");
@@ -178,11 +211,11 @@
           consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
       };
-      Module.printErr = function(text) {
+      Module.printErr = function (text) {
         var consoleOutput = document.getElementById("consoleOutput");
         if (consoleOutput && text && text.trim() !== "") {
           var line = document.createElement("div");
-          line.textContent = 'Compiler Error: ' + text;
+          line.textContent = "Compiler Error: " + text;
           consoleOutput.appendChild(line);
           consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
