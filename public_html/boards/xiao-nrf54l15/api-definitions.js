@@ -216,8 +216,10 @@ function definePixelsAPI(mrubycModule) {
   const classObject = api.getClassObject();
   
   const pixelsClass = api.defineClass('Pixels', classObject);
+  console.log('[definePixelsAPI] Pixels class defined:', pixelsClass);
   
   const setPixelCallback = api.addFunction((vmPtr, vPtr, argc) => {
+    console.log('[setPixelCallback] Called with argc:', argc);
     if (api.isNumericArg(vPtr, 1) && api.isNumericArg(vPtr, 2) &&
         api.isNumericArg(vPtr, 3) && api.isNumericArg(vPtr, 4)) {
       const index = api.getIntArg(vPtr, 1);
@@ -238,7 +240,9 @@ function definePixelsAPI(mrubycModule) {
   }, 'viii');
   
   registeredCallbacks.push(setPixelCallback);
+  console.log('[definePixelsAPI] setPixelCallback function pointer:', setPixelCallback);
   api.defineMethod(pixelsClass, 'set', setPixelCallback);
+  console.log('[definePixelsAPI] set method defined on Pixels class');
   
   const updateCallback = api.addFunction((vmPtr, vPtr, argc) => {
     api.setReturnBool(vPtr, true);
