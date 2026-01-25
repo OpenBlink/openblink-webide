@@ -2,5 +2,9 @@
   "name": "xiao-nrf54l15",
   "displayName": "XIAO nRF54L15",
   "manufacturer": "Seeed Studio",
-  "description": "Seeed Studio XIAO nRF54L15"
+  "description": "Seeed Studio XIAO nRF54L15",
+  "simulator": {
+    "enabled": true,
+    "description": "6x10 RGB Matrix Simulator"
+  }
 }

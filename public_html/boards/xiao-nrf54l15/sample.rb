@@ -45,10 +45,6 @@ end
 tick = 0
 
 while true
-  if Input.pressed?(part: :sw1)
-    puts ("SW1 pressed")
-  end
-
   10.times do |x|
     6.times do |y|
       
