@@ -1,0 +1,69 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
+ */
+
+.console-container {
+  margin: 15px 0;
+}
+
+.console-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.console-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+#consoleOutput {
+  background-color: #1e1e1e;
+  color: #00ff00;
+  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-size: 13px;
+  padding: 12px;
+  width: 100%;
+  height: 180px;
+  overflow-y: auto;
+  border-radius: var(--border-radius);
+  border: 1px solid #333;
+}
+
+#consoleOutput div {
+  padding: 2px 0;
+  word-wrap: break-word;
+}
+
+#consoleOutput div::before {
+  content: ">";
+  margin-right: 8px;
+  color: #888;
+}
+
+#consoleOutput::-webkit-scrollbar {
+  width: 8px;
+}
+
+#consoleOutput::-webkit-scrollbar-track {
+  background: #2d2d2d;
+  border-radius: 4px;
+}
+
+#consoleOutput::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+#consoleOutput::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.clear-console-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  background-color: #6c757d;
+}

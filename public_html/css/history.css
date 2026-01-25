@@ -1,0 +1,340 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
+ */
+
+#history-panel {
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  gap: 10px;
+}
+
+.history-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-color);
+  flex-shrink: 0;
+}
+
+.storage-bar-container {
+  flex: 1;
+  max-width: 150px;
+  min-width: 100px;
+}
+
+.storage-bar-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  text-align: right;
+}
+
+.storage-bar-track {
+  height: 6px;
+  background: var(--background);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.storage-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.history-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  background: var(--background);
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.history-item:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.history-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.history-slot {
+  font-size: 11px;
+  background: var(--primary-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.diff-view {
+  margin: 8px 0;
+  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-size: 11px;
+  background: #1e1e1e;
+  border-radius: 4px;
+  padding: 6px;
+  overflow-x: auto;
+}
+
+.diff-line {
+  padding: 1px 4px;
+  white-space: pre;
+}
+
+.diff-add {
+  color: #4ec9b0;
+  background: rgba(78, 201, 176, 0.1);
+}
+
+.diff-remove {
+  color: #f14c4c;
+  background: rgba(241, 76, 76, 0.1);
+}
+
+.diff-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.diff-more {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  font-style: italic;
+}
+
+.history-restore-btn {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 12px;
+  background-color: #6c757d;
+}
+
+.history-restore-btn:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+#metrics-panel {
+  display: none;
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 15px;
+}
+
+.metrics-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-color);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.metrics-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.metrics-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.metrics-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.metrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metrics-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.metrics-current {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-color);
+}
+
+.metrics-chart {
+  position: relative;
+  height: 24px;
+  background: var(--background);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metrics-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.metrics-bar-range {
+  background: linear-gradient(90deg, #e8f4fd 0%, #3498db 50%, #2980b9 100%);
+  opacity: 0.3;
+}
+
+.metrics-bar-avg {
+  width: 3px;
+  background: var(--primary-color);
+  z-index: 2;
+}
+
+.metrics-chart-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 6px;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.metrics-chart-min,
+.metrics-chart-max {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.metrics-chart-avg {
+  position: absolute;
+  font-size: 10px;
+  color: var(--primary-color);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px 4px;
+  border-radius: 2px;
+  transform: translateX(-50%);
+}
+
+#reference-panel {
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 15px;
+}
+
+.reference-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-color);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reference-title::after {
+  content: "▼";
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.reference-title.collapsed::after {
+  transform: rotate(-90deg);
+}
+
+#reference-content {
+  font-size: 13px;
+  color: var(--text-color);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+#reference-content h2,
+#reference-content h3,
+#reference-content h4 {
+  margin-top: 12px;
+  margin-bottom: 6px;
+  color: var(--text-color);
+}
+
+#reference-content h2 {
+  font-size: 16px;
+}
+
+#reference-content h3 {
+  font-size: 14px;
+}
+
+#reference-content h4 {
+  font-size: 13px;
+}
+
+#reference-content code {
+  background-color: #f4f4f4;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+}
+
+#reference-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+#reference-content li {
+  margin: 4px 0;
+}

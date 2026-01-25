@@ -1,0 +1,257 @@
+/*
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
+ */
+
+:root {
+  --primary-color: #3498db;
+  --primary-hover: #2980b9;
+  --success-color: #2ecc71;
+  --error-color: #e74c3c;
+  --warning-color: #f39c12;
+  --background: #f8f9fa;
+  --card-background: #ffffff;
+  --text-color: #333333;
+  --text-muted: #666666;
+  --border-color: #ddd;
+  --border-radius: 8px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --transition: all 0.2s ease;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--background);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+h1 {
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  font-size: 2rem;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 20px 0;
+}
+
+.description {
+  margin: 10px 0 20px;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.main-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 20px;
+}
+
+.left-panel {
+  min-width: 0;
+}
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+@media (max-width: 900px) {
+  .main-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .right-panel {
+    order: -1;
+  }
+}
+
+.card {
+  background: var(--card-background);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 15px;
+}
+
+.step {
+  margin: 15px 0;
+}
+
+.step-title {
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--text-color);
+}
+
+.step-description {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+button:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+button.secondary {
+  background-color: #6c757d;
+}
+
+button.secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+button.success {
+  background-color: var(--success-color);
+}
+
+button.success:hover:not(:disabled) {
+  background-color: #27ae60;
+}
+
+button.danger {
+  background-color: var(--error-color);
+}
+
+button.danger:hover:not(:disabled) {
+  background-color: #c0392b;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.connection-status {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.connection-status.connected {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.connection-status.disconnected {
+  background-color: #9E9E9E;
+  color: white;
+}
+
+.connection-status.connecting {
+  background-color: var(--warning-color);
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 14px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+#compatibility-warning {
+  display: none;
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: var(--border-radius);
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+#compatibility-warning .warning-content {
+  color: #856404;
+}
+
+#compatibility-warning strong {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+#compatibility-warning ul {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+
+.footer a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}

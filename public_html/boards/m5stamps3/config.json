@@ -1,0 +1,6 @@
+{
+  "name": "m5stamps3",
+  "displayName": "M5 Stamp S3",
+  "manufacturer": "M5Stack",
+  "description": "ESP32-S3 based compact board with built-in RGB LED"
+}
