@@ -33,7 +33,7 @@ const BoardManager = (function () {
     }
   }
 
-  async function fetchLocalizedReference(boardName, language) {
+  async function fetchLocalizedReference(boardName) {
     // Derive the localized file suffix from I18n when available,
     // falling back to the English `.md` default otherwise.
     let suffix = '.md';
@@ -66,9 +66,8 @@ const BoardManager = (function () {
       for (const boardName of boardList) {
         const config = await fetchJSON(`boards/${boardName}/config.json`);
         if (config) {
-          const sampleCode = await fetchText(`boards/${boardName}/sample.rb`);
-          const language = (typeof I18n !== 'undefined') ? I18n.getLanguage() : 'en';
-          const reference = await fetchLocalizedReference(boardName, language);
+            const sampleCode = await fetchText(`boards/${boardName}/sample.rb`);
+            const reference = await fetchLocalizedReference(boardName);
 
           boards.push({
             name: boardName,
@@ -153,8 +152,7 @@ const BoardManager = (function () {
       const referenceContent = document.getElementById("reference-content");
       if (!referenceContent || !board) return;
 
-      const language = (typeof I18n !== 'undefined') ? I18n.getLanguage() : 'en';
-      const localizedReference = await fetchLocalizedReference(board.name, language);
+      const localizedReference = await fetchLocalizedReference(board.name);
 
       if (localizedReference) {
         referenceContent.innerHTML = this.parseMarkdown(localizedReference);

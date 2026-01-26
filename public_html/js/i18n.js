@@ -155,7 +155,7 @@ const I18n = (function() {
     t: function(key, params) {
       let translation = getTranslation(key);
       if (!translation) {
-        return key;
+        return null;
       }
 
       if (params) {
