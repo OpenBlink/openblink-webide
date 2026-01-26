@@ -80,7 +80,10 @@ const Simulator = (function() {
       <div class="simulator-console">
         <div class="simulator-console-header">
           <span>Simulator Output</span>
-          <button id="simulator-clear" class="simulator-clear-btn">Clear</button>
+          <div class="simulator-console-buttons">
+            <button id="simulator-clear" class="simulator-clear-btn">Clear</button>
+            <button id="simulator-show-stats" class="simulator-stats-btn">Show VM Statistics</button>
+          </div>
         </div>
         <div id="simulator-output" class="simulator-output"></div>
       </div>
@@ -210,6 +213,10 @@ const Simulator = (function() {
         document.getElementById('simulator-clear').addEventListener('click', () => {
           clearOutput();
         });
+        
+        document.getElementById('simulator-show-stats').addEventListener('click', () => {
+          this.showVMStatistics();
+        });
       }
       
       simulatorPanel.style.display = 'block';
@@ -303,6 +310,19 @@ const Simulator = (function() {
      */
     getModule: function() {
       return mrubycModule;
+    },
+
+    /**
+     * Show VM statistics in the simulator output
+     */
+    showVMStatistics: function() {
+      if (mrubycModule) {
+        appendOutput('\n--- VM Statistics ---\n', 'info');
+        mrubycModule._mrbc_wasm_print_statistics();
+        appendOutput('--- End Statistics ---\n', 'info');
+      } else {
+        appendOutput('[ERROR] mruby/c module not loaded.\n', 'error');
+      }
     }
   };
 })();

@@ -90,7 +90,9 @@
       "status.reconnecting": "Reconnecting...",
     
       "simulator.available": "Run code in browser simulator",
-      "simulator.unavailable": "Simulator not available for this board"
+      "simulator.unavailable": "Simulator not available for this board",
+      "simulator.showVMStatistics": "Show VM Statistics",
+      "simulator.clear": "Clear"
     },
   
   "zh-CN": {
@@ -184,7 +186,9 @@
       "status.reconnecting": "重新连接中...",
     
       "simulator.available": "在浏览器模拟器中运行代码",
-      "simulator.unavailable": "此开发板不支持模拟器"
+      "simulator.unavailable": "此开发板不支持模拟器",
+      "simulator.showVMStatistics": "显示 VM 统计",
+      "simulator.clear": "清除"
     },
   
     "zh-TW": {
@@ -278,7 +282,9 @@
       "status.reconnecting": "重新連線中...",
     
       "simulator.available": "在瀏覽器模擬器中執行程式碼",
-      "simulator.unavailable": "此開發板不支援模擬器"
+      "simulator.unavailable": "此開發板不支援模擬器",
+      "simulator.showVMStatistics": "顯示 VM 統計",
+      "simulator.clear": "清除"
     },
   
     "ja": {
@@ -372,7 +378,9 @@
       "status.reconnecting": "再接続中...",
     
       "simulator.available": "ブラウザシミュレータでコードを実行",
-      "simulator.unavailable": "このボードではシミュレータを利用できません"
+      "simulator.unavailable": "このボードではシミュレータを利用できません",
+      "simulator.showVMStatistics": "VM 統計を表示",
+      "simulator.clear": "クリア"
     },
   
     "ja-easy": {
@@ -466,6 +474,8 @@
     "status.reconnecting": "🔄 もういちど つないでいます...",
     
     "simulator.available": "🎮 ためしに うごかす",
-    "simulator.unavailable": "😢 このボードでは ためしに うごかせません"
+    "simulator.unavailable": "😢 このボードでは ためしに うごかせません",
+    "simulator.showVMStatistics": "📊 VMの じょうたいを みる",
+    "simulator.clear": "🧹 けす"
   }
 }
