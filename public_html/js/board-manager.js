@@ -34,15 +34,21 @@ const BoardManager = (function () {
   }
 
   async function fetchLocalizedReference(boardName, language) {
-    const suffixes = {
-      'en': '.md',
-      'zh-CN': '.zh-CN.md',
-      'zh-TW': '.zh-TW.md',
-      'ja': '.ja.md',
-      'ja-easy': '.ja-easy.md'
-    };
+    // Derive the localized file suffix from I18n when available,
+    // falling back to the English `.md` default otherwise.
+    let suffix = '.md';
 
-    const suffix = suffixes[language] || '.md';
+    if (typeof I18n !== 'undefined' && typeof I18n.getLocalizedFileSuffix === 'function') {
+      try {
+        const localizedSuffix = I18n.getLocalizedFileSuffix();
+        if (typeof localizedSuffix === 'string' && localizedSuffix.trim() !== '') {
+          suffix = localizedSuffix;
+        }
+      } catch (error) {
+        console.error('Failed to get localized file suffix from I18n:', error);
+      }
+    }
+
     const localizedPath = `boards/${boardName}/reference${suffix}`;
 
     let content = await fetchText(localizedPath);

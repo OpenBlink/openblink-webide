@@ -274,7 +274,7 @@ const UIManager = (function() {
               await Simulator.runFromEditor();
             }
           } catch (error) {
-            const errorMsg = t('error.loadingSimulator', { message: error.message }) || ("Error loading simulator: " + error.message);
+            const errorMsg = t('error.loadingSimulatorFailed', { message: error.message }) || ("Error loading simulator: " + error.message);
             this.appendToConsole(errorMsg);
           } finally {
             this.updateSimulatorButton(BoardManager.getCurrentBoard());
