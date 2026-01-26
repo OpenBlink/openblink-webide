@@ -26,12 +26,7 @@ const ErrorHandler = (function() {
     'NotAllowedError': 'Permission denied. Please allow Bluetooth access when prompted.'
   };
 
-  function t(key, params) {
-    if (typeof I18n !== 'undefined') {
-      return I18n.t(key, params);
-    }
-    return null;
-  }
+  // Note: Global t() helper is defined in i18n.js
 
   return {
     getErrorMessage: function(error) {
@@ -69,7 +64,7 @@ const ErrorHandler = (function() {
     displayError: function(error, context) {
       const friendlyMessage = this.getErrorMessage(error);
       
-      const errorPrefix = (typeof I18n !== 'undefined') ? 'Error: ' : 'Error: ';
+      const errorPrefix = 'Error: ';
       UIManager.appendToConsole(errorPrefix + friendlyMessage);
       
       if (error && error.message && error.message !== friendlyMessage) {

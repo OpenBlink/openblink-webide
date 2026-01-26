@@ -227,7 +227,7 @@
         var consoleOutput = document.getElementById("consoleOutput");
         if (consoleOutput && text && text.trim() !== "") {
           var line = document.createElement("div");
-          var prefix = (typeof I18n !== 'undefined') ? I18n.t('compiler.errorPrefix') : 'Compiler Error: ';
+          var prefix = (typeof I18n !== 'undefined') ? (I18n.t('compiler.errorPrefix') || 'Compiler Error: ') : 'Compiler Error: ';
           var errorText = prefix + text;
           if (typeof I18n !== 'undefined' && I18n.isEasyJapanese()) {
             errorText = I18n.wrapCompilerError(text);

@@ -23,12 +23,7 @@ const UIManager = (function() {
     size: []
   };
 
-  function t(key, params) {
-    if (typeof I18n !== 'undefined') {
-      return I18n.t(key, params);
-    }
-    return null;
-  }
+  // Note: Global t() helper is defined in i18n.js
 
   function addToHistory(arr, value) {
     arr.push(value);

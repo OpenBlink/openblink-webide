@@ -3,6 +3,14 @@
  * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
+// Global translation helper function for use across all modules
+function t(key, params) {
+  if (typeof I18n !== 'undefined' && typeof I18n.t === 'function') {
+    return I18n.t(key, params);
+  }
+  return null;
+}
+
 const I18n = (function() {
   const STORAGE_KEY = 'openblink_language';
   const SUPPORTED_LANGUAGES = ['en', 'zh-CN', 'zh-TW', 'ja', 'ja-easy'];
@@ -160,7 +168,10 @@ const I18n = (function() {
 
       if (params) {
         Object.keys(params).forEach(function(paramKey) {
-          translation = translation.replace(new RegExp('\\{' + paramKey + '\\}', 'g'), params[paramKey]);
+          translation = translation.replace(
+            new RegExp('\\{' + paramKey + '\\}', 'g'),
+            function() { return String(params[paramKey]); }
+          );
         });
       }
 
@@ -184,8 +195,8 @@ const I18n = (function() {
 
     wrapCompilerError: function(errorMessage) {
       if (this.isEasyJapanese()) {
-        const prefix = this.t('compiler.error.prefix');
-        const suffix = this.t('compiler.error.suffix');
+        const prefix = this.t('compiler.error.prefix') || '';
+        const suffix = this.t('compiler.error.suffix') || '';
         return prefix + '\n' + errorMessage + '\n' + suffix;
       }
       return errorMessage;
