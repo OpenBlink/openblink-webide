@@ -72,13 +72,13 @@ function showCompatibilityWarning(missingFeatures) {
 }
 
 async function initializeApp() {
-  if (!checkBrowserCompatibility()) {
-    return;
-  }
-
   await I18n.init();
 
   setupLanguageSelector();
+
+  if (!checkBrowserCompatibility()) {
+    return;
+  }
 
   const startedMsg = t('message.started', { version: OPENBLINK_WEBIDE_VERSION }) 
     || `OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`;
