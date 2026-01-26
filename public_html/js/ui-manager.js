@@ -13,9 +13,11 @@ const UIManager = (function() {
   let saveFileButton = null;
   let slotSelector = null;
   let boardSelector = null;
-  let simulatorLoaded = false;
+    let simulatorLoaded = false;
+    let simulatorLoading = false;
+    let simulatorLoadPromise = null;
 
-  const MAX_METRICS_HISTORY = 100;
+    const MAX_METRICS_HISTORY = 100;
 
   let metricsHistory = {
     compile: [],
@@ -306,24 +308,73 @@ const UIManager = (function() {
       runSimulatorButton.title = hasSimulator ? availableTitle : unavailableTitle;
     },
 
-    loadSimulatorResources: async function() {
-      if (simulatorLoaded) return;
+                loadSimulatorResources: async function() {
+                  if (simulatorLoaded) return Promise.resolve();
+      
+                  if (simulatorLoading && simulatorLoadPromise) {
+                    return simulatorLoadPromise;
+                  }
 
-      const loadScript = (src) => {
-        return new Promise((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = src;
-          script.onload = resolve;
-          script.onerror = () => reject(new Error("Failed to load " + src));
-          document.body.appendChild(script);
-        });
-      };
+                  simulatorLoading = true;
+      
+                  const SCRIPT_TIMEOUT = 30000;
+                  const MAX_RETRIES = 3;
+                  const INITIAL_RETRY_DELAY = 1000;
+          
+                  const loadScriptWithRetry = async (src) => {
+                    let lastError = null;
+            
+                    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+                      try {
+                        await new Promise((resolve, reject) => {
+                          const script = document.createElement("script");
+                          script.src = src;
+                  
+                          const timeoutId = setTimeout(() => {
+                            reject(new Error(`Script load timeout after ${SCRIPT_TIMEOUT}ms: ${src}`));
+                          }, SCRIPT_TIMEOUT);
+                  
+                          script.onload = () => {
+                            clearTimeout(timeoutId);
+                            resolve();
+                          };
+                          script.onerror = () => {
+                            clearTimeout(timeoutId);
+                            reject(new Error("Failed to load " + src));
+                          };
+                          document.body.appendChild(script);
+                        });
+                        return;
+                      } catch (error) {
+                        lastError = error;
+                        console.warn(`Script load attempt ${attempt + 1}/${MAX_RETRIES} failed for ${src}:`, error.message);
+                
+                        if (attempt < MAX_RETRIES - 1) {
+                          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+                          await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                      }
+                    }
+            
+                    throw lastError;
+                  };
 
-      await loadScript("mrubyc/mrubyc.js");
-      await loadScript("lib/board-loader.js");
-      await loadScript("js/simulator.js");
+                  simulatorLoadPromise = (async () => {
+                    try {
+                      await loadScriptWithRetry("mrubyc/mrubyc.js");
+                      await loadScriptWithRetry("lib/board-loader.js");
+                      await loadScriptWithRetry("js/simulator.js");
+                      simulatorLoaded = true;
+                    } catch (error) {
+                      simulatorLoading = false;
+                      simulatorLoadPromise = null;
+                      throw error;
+                    } finally {
+                      simulatorLoading = false;
+                    }
+                  })();
 
-      simulatorLoaded = true;
-    }
+                  return simulatorLoadPromise;
+                }
   };
 })();

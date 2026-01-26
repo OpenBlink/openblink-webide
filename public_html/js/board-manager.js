@@ -6,31 +6,74 @@
 const BoardManager = (function () {
   let boards = [];
   let currentBoard = null;
+  
+  const FETCH_TIMEOUT = 15000;
+  const MAX_RETRIES = 3;
+  const INITIAL_RETRY_DELAY = 1000;
+  
+  const resourceCache = new Map();
 
-  async function fetchJSON(url) {
+  async function fetchWithTimeout(url, timeout) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      return response;
     } catch (error) {
-      console.error(`Failed to fetch ${url}:`, error);
-      return null;
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${timeout}ms`);
+      }
+      throw error;
     }
   }
 
-  async function fetchText(url) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    async function fetchWithRetry(url, options = {}) {
+      const { timeout = FETCH_TIMEOUT, maxRetries = MAX_RETRIES, parseAs = 'json', useCache = true } = options;
+    
+      const cacheKey = `${url}:${parseAs}`;
+      if (useCache && resourceCache.has(cacheKey)) {
+        return resourceCache.get(cacheKey);
       }
-      return await response.text();
-    } catch (error) {
-      console.error(`Failed to fetch ${url}:`, error);
+    
+      let lastError = null;
+    
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const response = await fetchWithTimeout(url, timeout);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const result = parseAs === 'json' ? await response.json() : await response.text();
+        
+          if (useCache) {
+            resourceCache.set(cacheKey, result);
+          }
+        
+          return result;
+        } catch (error) {
+          lastError = error;
+          console.warn(`Fetch attempt ${attempt + 1}/${maxRetries} failed for ${url}:`, error.message);
+        
+          if (attempt < maxRetries - 1) {
+            const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+    
+      console.error(`Failed to fetch ${url} after ${maxRetries} attempts:`, lastError);
       return null;
     }
+
+  async function fetchJSON(url) {
+    return fetchWithRetry(url, { parseAs: 'json' });
+  }
+
+  async function fetchText(url) {
+    return fetchWithRetry(url, { parseAs: 'text' });
   }
 
   async function fetchLocalizedReference(boardName) {
@@ -113,36 +156,36 @@ const BoardManager = (function () {
       return boards;
     },
 
-    switchBoard: function (boardName) {
-      const board = boards.find((b) => b.name === boardName);
-      if (!board) {
-        const errorMsg = (typeof I18n !== 'undefined')
-          ? I18n.t('error.boardNotFound', { boardName: boardName })
-          : `Error: Board "${boardName}" not found`;
-        UIManager.appendToConsole(errorMsg);
-        return false;
-      }
+        switchBoard: async function (boardName) {
+          const board = boards.find((b) => b.name === boardName);
+          if (!board) {
+            const errorMsg = (typeof I18n !== 'undefined')
+              ? I18n.t('error.boardNotFound', { boardName: boardName })
+              : `Error: Board "${boardName}" not found`;
+            UIManager.appendToConsole(errorMsg);
+            return false;
+          }
 
-      if (!FileManager.checkUnsavedChanges()) {
-        return false;
-      }
+          if (!FileManager.checkUnsavedChanges()) {
+            return false;
+          }
 
-      currentBoard = board;
+          currentBoard = board;
 
-      if (board.sampleCode && window.editor) {
-        window.editor.setValue(board.sampleCode);
-        FileManager.markClean();
-      }
+          if (board.sampleCode && window.editor) {
+            window.editor.setValue(board.sampleCode);
+            FileManager.markClean();
+          }
 
-      this.updateReferencePanel(board);
-      UIManager.updateSimulatorButton(board);
-      const switchMsg = (typeof I18n !== 'undefined')
-        ? I18n.t('message.boardSwitched', { boardName: board.displayName })
-        : `Switched to board: ${board.displayName}`;
-      UIManager.appendToConsole(switchMsg);
+          await this.updateReferencePanel(board);
+          UIManager.updateSimulatorButton(board);
+          const switchMsg = (typeof I18n !== 'undefined')
+            ? I18n.t('message.boardSwitched', { boardName: board.displayName })
+            : `Switched to board: ${board.displayName}`;
+          UIManager.appendToConsole(switchMsg);
 
-      return true;
-    },
+          return true;
+        },
 
     hasSimulatorSupport: function (board) {
       return board && board.simulator && board.simulator.enabled === true;

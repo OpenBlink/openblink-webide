@@ -15,10 +15,62 @@ const I18n = (function() {
   const STORAGE_KEY = 'openblink_language';
   const SUPPORTED_LANGUAGES = ['en', 'zh-CN', 'zh-TW', 'ja', 'ja-easy'];
   const DEFAULT_LANGUAGE = 'en';
+  const FETCH_TIMEOUT = 15000;
+  const MAX_RETRIES = 3;
+  const INITIAL_RETRY_DELAY = 1000;
 
   let translations = {};
+  let translationsCache = null;
   let currentLanguage = DEFAULT_LANGUAGE;
   let initialized = false;
+
+  async function fetchWithTimeout(url, timeout) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${timeout}ms`);
+      }
+      throw error;
+    }
+  }
+
+    async function fetchTranslationsWithRetry() {
+      if (translationsCache) {
+        return translationsCache;
+      }
+    
+      let lastError = null;
+    
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          const response = await fetchWithTimeout('i18n/translations.json', FETCH_TIMEOUT);
+          if (!response.ok) {
+            throw new Error('Failed to load translations: ' + response.status);
+          }
+          const result = await response.json();
+          translationsCache = result;
+          return result;
+        } catch (error) {
+          lastError = error;
+          console.warn(`Translation fetch attempt ${attempt + 1}/${MAX_RETRIES} failed:`, error.message);
+        
+          if (attempt < MAX_RETRIES - 1) {
+            const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+    
+      console.error('Failed to load translations after all retries:', lastError);
+      return {};
+    }
 
   function detectBrowserLanguage() {
     const browserLang = navigator.language || navigator.userLanguage || '';
@@ -109,21 +161,12 @@ const I18n = (function() {
   }
 
   return {
-    init: async function() {
-      if (initialized) return;
+        init: async function() {
+          if (initialized) return;
 
-      try {
-        const response = await fetch('i18n/translations.json');
-        if (!response.ok) {
-          throw new Error('Failed to load translations: ' + response.status);
-        }
-        translations = await response.json();
-      } catch (error) {
-        console.error('Failed to load translations:', error);
-        translations = {};
-      }
+          translations = await fetchTranslationsWithRetry();
 
-      const savedLang = loadSavedLanguage();
+          const savedLang = loadSavedLanguage();
       if (savedLang) {
         currentLanguage = savedLang;
       } else {

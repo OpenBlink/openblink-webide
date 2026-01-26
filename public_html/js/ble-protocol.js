@@ -15,6 +15,7 @@ const BLEProtocol = (function() {
   const REQUESTED_MTU = 512;
   const MAX_RECONNECT_ATTEMPTS = 5;
   const INITIAL_RECONNECT_DELAY = 1000;
+  const WRITE_TIMEOUT = 10000;
 
   let programCharacteristic = null;
   let negotiatedMtuCharacteristic = null;
@@ -67,17 +68,35 @@ const BLEProtocol = (function() {
     }
   }
 
-  async function writeCharacteristic(characteristic, buffer) {
-    if (!characteristic) {
-      throw new Error("Characteristic not available");
+    async function writeCharacteristicWithTimeout(characteristic, buffer, timeout = WRITE_TIMEOUT) {
+      if (!characteristic) {
+        throw new Error("Characteristic not available");
+      }
+    
+      return new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`BLE write timeout after ${timeout}ms`));
+        }, timeout);
+      
+        const writePromise = characteristic.properties.writeWithoutResponse
+          ? characteristic.writeValueWithoutResponse(buffer)
+          : characteristic.writeValue(buffer);
+      
+        writePromise
+          .then(() => {
+            clearTimeout(timeoutId);
+            resolve();
+          })
+          .catch((error) => {
+            clearTimeout(timeoutId);
+            reject(error);
+          });
+      });
     }
-    if (characteristic.properties.writeWithoutResponse) {
-      return characteristic.writeValueWithoutResponse(buffer);
-    } else {
-      console.log("writeWithoutResponse is not supported.");
-      return characteristic.writeValue(buffer);
+
+    async function writeCharacteristic(characteristic, buffer) {
+      return writeCharacteristicWithTimeout(characteristic, buffer);
     }
-  }
 
   async function connectToDevice(device) {
     const server = await device.gatt.connect();

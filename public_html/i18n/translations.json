@@ -17,7 +17,7 @@
     "editor.download": "Download",
     "editor.filenamePlaceholder": "filename.rb",
     
-    "build.title": "Build & Deploy",
+    "build.title": "Build & Blink",
     "build.buildAndBlink": "Build & Blink",
     "build.runSimulator": "Run Simulator",
     "build.slot": "Slot:",
@@ -89,13 +89,19 @@
       "status.connecting": "Connecting...",
       "status.reconnecting": "Reconnecting...",
     
-      "simulator.available": "Run code in browser simulator",
-      "simulator.unavailable": "Simulator not available for this board",
-      "simulator.showVMStatistics": "Show VM Statistics",
-      "simulator.clear": "Clear"
-    },
+              "simulator.available": "Run code in browser simulator",
+              "simulator.unavailable": "Simulator not available for this board",
+              "simulator.showVMStatistics": "Show VM Statistics",
+              "simulator.clear": "Clear",
+              "simulator.title": "WebSimulator (Experimental)",
+              "simulator.close": "Close",
+              "simulator.output": "Simulator Output",
+        
+              "loading.setup": "Setting up...",
+              "loading.boards": "Loading boards..."
+            },
   
-  "zh-CN": {
+    "zh-CN": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE 是一个用于编写 Ruby 代码并将其传输到 OpenBlink 设备的工具。",
     
@@ -113,7 +119,7 @@
     "editor.download": "下载",
     "editor.filenamePlaceholder": "文件名.rb",
     
-    "build.title": "构建与部署",
+    "build.title": "Build & Blink",
     "build.buildAndBlink": "构建并烧录",
     "build.runSimulator": "运行模拟器",
     "build.slot": "插槽：",
@@ -185,13 +191,19 @@
       "status.connecting": "连接中...",
       "status.reconnecting": "重新连接中...",
     
-      "simulator.available": "在浏览器模拟器中运行代码",
-      "simulator.unavailable": "此开发板不支持模拟器",
-      "simulator.showVMStatistics": "显示 VM 统计",
-      "simulator.clear": "清除"
-    },
+                  "simulator.available": "在浏览器模拟器中运行代码",
+                  "simulator.unavailable": "此开发板不支持模拟器",
+                  "simulator.showVMStatistics": "显示 VM 统计",
+                  "simulator.clear": "清除",
+                  "simulator.title": "网页模拟器（实验性）",
+                  "simulator.close": "关闭",
+                  "simulator.output": "模拟器输出",
+          
+                  "loading.setup": "正在设置...",
+                  "loading.boards": "正在加载开发板..."
+                },
   
-    "zh-TW": {
+        "zh-TW": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE 是一個用於編寫 Ruby 程式碼並將其傳輸到 OpenBlink 裝置的工具。",
     
@@ -209,7 +221,7 @@
     "editor.download": "下載",
     "editor.filenamePlaceholder": "檔案名稱.rb",
     
-    "build.title": "建置與部署",
+    "build.title": "Build & Blink",
     "build.buildAndBlink": "建置並燒錄",
     "build.runSimulator": "執行模擬器",
     "build.slot": "插槽：",
@@ -281,13 +293,19 @@
       "status.connecting": "連線中...",
       "status.reconnecting": "重新連線中...",
     
-      "simulator.available": "在瀏覽器模擬器中執行程式碼",
-      "simulator.unavailable": "此開發板不支援模擬器",
-      "simulator.showVMStatistics": "顯示 VM 統計",
-      "simulator.clear": "清除"
-    },
+                  "simulator.available": "在瀏覽器模擬器中執行程式碼",
+                  "simulator.unavailable": "此開發板不支援模擬器",
+                  "simulator.showVMStatistics": "顯示 VM 統計",
+                  "simulator.clear": "清除",
+                  "simulator.title": "網頁模擬器（實驗性）",
+                  "simulator.close": "關閉",
+                  "simulator.output": "模擬器輸出",
+          
+                  "loading.setup": "正在設定...",
+                  "loading.boards": "正在載入開發板..."
+                },
   
-    "ja": {
+        "ja": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE は、Ruby コードを書いて OpenBlink デバイスに転送するためのツールです。",
     
@@ -305,7 +323,7 @@
     "editor.download": "ダウンロード",
     "editor.filenamePlaceholder": "ファイル名.rb",
     
-    "build.title": "ビルド＆デプロイ",
+    "build.title": "Build & Blink",
     "build.buildAndBlink": "ビルド＆転送",
     "build.runSimulator": "シミュレータを実行",
     "build.slot": "スロット：",
@@ -377,13 +395,19 @@
       "status.connecting": "接続中...",
       "status.reconnecting": "再接続中...",
     
-      "simulator.available": "ブラウザシミュレータでコードを実行",
-      "simulator.unavailable": "このボードではシミュレータを利用できません",
-      "simulator.showVMStatistics": "VM 統計を表示",
-      "simulator.clear": "クリア"
-    },
+                  "simulator.available": "ブラウザシミュレータでコードを実行",
+                  "simulator.unavailable": "このボードではシミュレータを利用できません",
+                  "simulator.showVMStatistics": "VM 統計を表示",
+                  "simulator.clear": "クリア",
+                  "simulator.title": "Webシミュレータ（実験的）",
+                  "simulator.close": "閉じる",
+                  "simulator.output": "シミュレータ出力",
+          
+                  "loading.setup": "設定中...",
+                  "loading.boards": "ボードを読み込み中..."
+                },
   
-    "ja-easy": {
+        "ja-easy": {
     "app.title": "🌟 オープンブリンク",
     "app.description": "オープンブリンクは、プログラムを かいて、デバイスに おくる どうぐです。",
     
@@ -401,7 +425,7 @@
     "editor.download": "💾 ほぞんする",
     "editor.filenamePlaceholder": "ファイルのなまえ.rb",
     
-    "build.title": "🚀 うごかす",
+    "build.title": "ビルド & ブリンク",
     "build.buildAndBlink": "✨ つくって おくる",
     "build.runSimulator": "🎮 ためしに うごかす",
     "build.slot": "📍 ばしょ：",
@@ -476,6 +500,12 @@
     "simulator.available": "🎮 ためしに うごかす",
     "simulator.unavailable": "😢 このボードでは ためしに うごかせません",
     "simulator.showVMStatistics": "📊 VMの じょうたいを みる",
-    "simulator.clear": "🧹 けす"
+    "simulator.clear": "🧹 けす",
+    "simulator.title": "🎮 シミュレータ（ためしよう）",
+    "simulator.close": "❌ とじる",
+    "simulator.output": "📝 シミュレータの メッセージ",
+    
+    "loading.setup": "⏳ じゅんびしています...",
+    "loading.boards": "📦 ボードを よみこんでいます..."
   }
 }

@@ -63,33 +63,40 @@ const Simulator = (function() {
    * Create the simulator UI panel
    * @returns {HTMLElement} The simulator panel element
    */
-  function createSimulatorPanel() {
-    const panel = document.createElement('div');
-    panel.id = 'simulator-panel';
-    panel.className = 'simulator-panel';
-    panel.innerHTML = `
-      <div class="simulator-header">
-        <span class="simulator-title">WebSimulator (Experimental)</span>
-        <button id="simulator-close" class="simulator-close-btn">Close</button>
-      </div>
-      <div class="simulator-status">
-        <div id="simulator-status-indicator" class="simulator-status-indicator loading"></div>
-        <span id="simulator-status-text">Loading mruby/c module...</span>
-      </div>
-      <div id="simulator-board-ui" class="simulator-board-ui"></div>
-      <div class="simulator-console">
-        <div class="simulator-console-header">
-          <span>Simulator Output</span>
-          <div class="simulator-console-buttons">
-            <button id="simulator-clear" class="simulator-clear-btn">Clear</button>
-            <button id="simulator-show-stats" class="simulator-stats-btn">Show VM Statistics</button>
-          </div>
+    function createSimulatorPanel() {
+      const panel = document.createElement('div');
+      panel.id = 'simulator-panel';
+      panel.className = 'simulator-panel';
+    
+      const titleText = t('simulator.title') || 'WebSimulator (Experimental)';
+      const closeText = t('simulator.close') || 'Close';
+      const outputText = t('simulator.output') || 'Simulator Output';
+      const clearText = t('simulator.clear') || 'Clear';
+      const statsText = t('simulator.showVMStatistics') || 'Show VM Statistics';
+    
+      panel.innerHTML = `
+        <div class="simulator-header">
+          <span class="simulator-title">${titleText}</span>
+          <button id="simulator-close" class="simulator-close-btn">${closeText}</button>
         </div>
-        <div id="simulator-output" class="simulator-output"></div>
-      </div>
-    `;
-    return panel;
-  }
+        <div class="simulator-status">
+          <div id="simulator-status-indicator" class="simulator-status-indicator loading"></div>
+          <span id="simulator-status-text">Loading mruby/c module...</span>
+        </div>
+        <div id="simulator-board-ui" class="simulator-board-ui"></div>
+        <div class="simulator-console">
+          <div class="simulator-console-header">
+            <span>${outputText}</span>
+            <div class="simulator-console-buttons">
+              <button id="simulator-clear" class="simulator-clear-btn">${clearText}</button>
+              <button id="simulator-show-stats" class="simulator-stats-btn">${statsText}</button>
+            </div>
+          </div>
+          <div id="simulator-output" class="simulator-output"></div>
+        </div>
+      `;
+      return panel;
+    }
 
   /**
    * Initialize the mruby/c WASM module and board loader
@@ -265,14 +272,24 @@ const Simulator = (function() {
       return true;
     },
 
-    /**
-     * Hide the simulator panel
-     */
-    hide: function() {
-      if (simulatorPanel) {
-        simulatorPanel.style.display = 'none';
-      }
-    },
+        /**
+         * Hide the simulator panel and cleanup running processes
+         */
+        hide: function() {
+          if (simulatorPanel) {
+            simulatorPanel.style.display = 'none';
+          }
+      
+          isRunning = false;
+      
+          window.mrubycOutput = null;
+          window.mrubycError = null;
+          window.mrubycOnTaskCreated = null;
+      
+          if (typeof UIManager !== 'undefined' && typeof BoardManager !== 'undefined') {
+            UIManager.updateSimulatorButton(BoardManager.getCurrentBoard());
+          }
+        },
 
     /**
      * Run the current editor code in the simulator
