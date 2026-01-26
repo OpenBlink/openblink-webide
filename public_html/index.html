@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OpenBlink WebIDE</title>
+    <title data-i18n="app.title">OpenBlink WebIDE</title>
     <link rel="stylesheet" href="css/main.css" />
     <link rel="stylesheet" href="css/editor.css" />
     <link rel="stylesheet" href="css/console.css" />
@@ -13,8 +13,20 @@
     <link rel="stylesheet" href="codemirror/theme/dracula.css" />
   </head>
   <body>
-    <h1>OpenBlink WebIDE</h1>
-    <p class="description">
+    <div class="header-container">
+      <h1 data-i18n="app.title">OpenBlink WebIDE</h1>
+      <div class="language-selector-container">
+        <label for="language-selector" data-i18n="language.selector">Language</label>
+        <select id="language-selector">
+          <option value="en">English</option>
+          <option value="zh-CN">简体中文</option>
+          <option value="zh-TW">繁體中文</option>
+          <option value="ja">日本語</option>
+          <option value="ja-easy">やさしい日本語</option>
+        </select>
+      </div>
+    </div>
+    <p class="description" data-i18n="app.description">
       OpenBlink WebIDE is a tool for writing Ruby code and transferring it to
       OpenBlink devices.
     </p>
@@ -26,15 +38,15 @@
           <div class="panel">
             <div class="panel-header">
               <span class="panel-icon">&#128268;</span>
-              <span class="panel-title">Connection</span>
+              <span class="panel-title" data-i18n="connection.title">Connection</span>
             </div>
             <div class="panel-content">
               <div class="button-group">
-                <button id="ble-connect">Connect to device</button>
-                <button id="ble-disconnect" class="secondary" disabled>
+                <button id="ble-connect" data-i18n="connection.connect">Connect to device</button>
+                <button id="ble-disconnect" class="secondary" disabled data-i18n="connection.disconnect">
                   Disconnect
                 </button>
-                <span id="connectionStatus" class="connection-status disconnected"
+                <span id="connectionStatus" class="connection-status disconnected" data-i18n="connection.status.disconnected"
                   >Disconnected</span
                 >
               </div>
@@ -44,27 +56,28 @@
           <div class="panel">
             <div class="panel-header">
               <span class="panel-icon">&#128221;</span>
-              <span class="panel-title">Editor</span>
+              <span class="panel-title" data-i18n="editor.title">Editor</span>
             </div>
             <div class="panel-content">
           <div class="editor-container">
             <div class="editor-toolbar">
               <div class="form-group">
-                <label for="board-selector">Board:</label>
+                <label for="board-selector" data-i18n="editor.board">Board:</label>
                 <select id="board-selector">
                   <option value="m5stamps3">M5 Stamp S3</option>
                 </select>
               </div>
               <div class="editor-actions">
-                <button id="load-file" class="secondary">Load .rb File</button>
+                <button id="load-file" class="secondary" data-i18n="editor.loadFile">Load .rb File</button>
                 <div class="filename-input-group">
                   <input
                     type="text"
                     id="filename-input"
                     value="program.rb"
                     placeholder="filename.rb"
+                    data-i18n-placeholder="editor.filenamePlaceholder"
                   />
-                  <button id="save-file" class="secondary">Download</button>
+                  <button id="save-file" class="secondary" data-i18n="editor.download">Download</button>
                 </div>
               </div>
             </div>
@@ -76,32 +89,32 @@
         <div class="panel">
           <div class="panel-header">
             <span class="panel-icon">&#9654;</span>
-            <span class="panel-title">Build & Deploy</span>
+            <span class="panel-title" data-i18n="build.title">Build & Deploy</span>
           </div>
           <div class="panel-content">
             <div class="button-group">
-              <button id="run-main" class="success" disabled>
+              <button id="run-main" class="success" disabled data-i18n="build.buildAndBlink">
                 Build & Blink
               </button>
-              <button id="run-simulator" disabled>
+              <button id="run-simulator" disabled data-i18n="build.runSimulator">
                 Run Simulator
               </button>
               <div class="form-group">
-                <label for="slot-selector">Slot:</label>
+                <label for="slot-selector" data-i18n="build.slot">Slot:</label>
                 <select id="slot-selector">
-                  <option value="1">Slot 1</option>
-                  <option value="2" selected>Slot 2</option>
+                  <option value="1" data-i18n="build.slot1">Slot 1</option>
+                  <option value="2" selected data-i18n="build.slot2">Slot 2</option>
                 </select>
               </div>
-              <button id="soft-reset" class="danger" disabled>Soft RESET</button>
+              <button id="soft-reset" class="danger" disabled data-i18n="build.softReset">Soft RESET</button>
             </div>
           </div>
         </div>
 
         <div class="console-container">
           <div class="console-header">
-            <span class="console-title">Console Output</span>
-            <button id="clear-console" class="clear-console-btn">Clear</button>
+            <span class="console-title" data-i18n="console.title">Console Output</span>
+            <button id="clear-console" class="clear-console-btn" data-i18n="console.clear">Clear</button>
           </div>
           <div id="consoleOutput"></div>
         </div>
@@ -109,25 +122,25 @@
 
       <div class="right-panel">
         <div id="metrics-panel">
-          <div class="metrics-title">Performance Metrics</div>
+          <div class="metrics-title" data-i18n="metrics.title">Performance Metrics</div>
           <div class="metrics-section">
             <div class="metrics-row">
               <div class="metrics-header">
-                <span class="metrics-label">Compile Time</span>
+                <span class="metrics-label" data-i18n="metrics.compileTime">Compile Time</span>
                 <span class="metrics-current" id="compile-current">--</span>
               </div>
               <div class="metrics-chart" id="compile-chart"></div>
             </div>
             <div class="metrics-row">
               <div class="metrics-header">
-                <span class="metrics-label">Transfer Time</span>
+                <span class="metrics-label" data-i18n="metrics.transferTime">Transfer Time</span>
                 <span class="metrics-current" id="transfer-current">--</span>
               </div>
               <div class="metrics-chart" id="transfer-chart"></div>
             </div>
             <div class="metrics-row">
               <div class="metrics-header">
-                <span class="metrics-label">Program Size</span>
+                <span class="metrics-label" data-i18n="metrics.programSize">Program Size</span>
                 <span class="metrics-current" id="size-current">--</span>
               </div>
               <div class="metrics-chart" id="size-chart"></div>
@@ -136,11 +149,11 @@
         </div>
 
         <div id="history-panel">
-          <div class="history-empty">No build history yet</div>
+          <div class="history-empty" data-i18n="history.empty">No build history yet</div>
         </div>
 
         <div id="reference-panel">
-          <div class="reference-title">Function Reference</div>
+          <div class="reference-title" data-i18n="reference.title">Function Reference</div>
           <div id="reference-content">
             <h3>LED Control</h3>
             <ul>
@@ -214,7 +227,12 @@
         var consoleOutput = document.getElementById("consoleOutput");
         if (consoleOutput && text && text.trim() !== "") {
           var line = document.createElement("div");
-          line.textContent = "Compiler Error: " + text;
+          var prefix = (typeof I18n !== 'undefined') ? I18n.t('compiler.errorPrefix') : 'Compiler Error: ';
+          var errorText = prefix + text;
+          if (typeof I18n !== 'undefined' && I18n.isEasyJapanese()) {
+            errorText = I18n.wrapCompilerError(text);
+          }
+          line.textContent = errorText;
           consoleOutput.appendChild(line);
           consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
@@ -223,6 +241,7 @@
     <script src="mrbc/mrbc.js"></script>
     <script src="lib/crc.js"></script>
     <script src="js/utils.js"></script>
+    <script src="js/i18n.js"></script>
     <script src="js/error-handler.js"></script>
     <script src="js/ui-manager.js"></script>
     <script src="js/ble-protocol.js"></script>

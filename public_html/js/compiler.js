@@ -4,6 +4,13 @@
  */
 
 const Compiler = (function() {
+  function t(key, params) {
+    if (typeof I18n !== 'undefined') {
+      return I18n.t(key, params);
+    }
+    return null;
+  }
+
   return {
     compile: function(rubyCode) {
       const sourceFileName = "temp.rb";
@@ -35,9 +42,10 @@ const Compiler = (function() {
         const compileTime = endTime - startTime;
 
         if (result !== 0) {
+          const errorMsg = t('compiler.failed', { code: result }) || ("mrbc failed with exit code: " + result);
           return {
             success: false,
-            error: "mrbc failed with exit code: " + result,
+            error: errorMsg,
             compileTime: compileTime
           };
         }
@@ -62,12 +70,14 @@ const Compiler = (function() {
 
     buildAndBlink: async function() {
       if (!BLEProtocol.isConnected()) {
-        UIManager.appendToConsole("Error: Not connected to device");
+        const msg = t('error.notConnected') || "Not connected to device";
+        UIManager.appendToConsole("Error: " + msg);
         return;
       }
 
       if (!BLEProtocol.isProgramCharacteristicAvailable()) {
-        UIManager.appendToConsole("Error: Program characteristic not available. Please reconnect.");
+        const msg = t('error.characteristicNotAvailable') || "Program characteristic not available. Please reconnect.";
+        UIManager.appendToConsole("Error: " + msg);
         return;
       }
 
@@ -84,9 +94,9 @@ const Compiler = (function() {
           return;
         }
 
-        UIManager.appendToConsole(
-          "mrbc success!: (" + compileResult.compileTime.toFixed(2) + "ms)"
-        );
+        const successMsg = t('compiler.success', { time: compileResult.compileTime.toFixed(2) }) 
+          || ("mrbc success!: (" + compileResult.compileTime.toFixed(2) + "ms)");
+        UIManager.appendToConsole(successMsg);
 
         const startSend = performance.now();
         
@@ -95,9 +105,9 @@ const Compiler = (function() {
         const endSend = performance.now();
         const transferTime = endSend - startSend;
 
-        UIManager.appendToConsole(
-          "Sending bytecode: Complete! (" + transferTime.toFixed(2) + "ms)"
-        );
+        const completeMsg = t('compiler.sendComplete', { time: transferTime.toFixed(2) })
+          || ("Sending bytecode: Complete! (" + transferTime.toFixed(2) + "ms)");
+        UIManager.appendToConsole(completeMsg);
 
         UIManager.updateMetrics({
           compileTime: compileResult.compileTime,
@@ -113,7 +123,8 @@ const Compiler = (function() {
         });
 
       } catch (error) {
-        UIManager.appendToConsole("Error: " + error.message);
+        const errorMsg = t('compiler.error', { message: error.message }) || ("Error: " + error.message);
+        UIManager.appendToConsole(errorMsg);
       } finally {
         if (BLEProtocol.isConnected()) {
           UIManager.setRunButtonEnabled(true);

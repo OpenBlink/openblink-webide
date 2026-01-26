@@ -23,6 +23,13 @@ const UIManager = (function() {
     size: []
   };
 
+  function t(key, params) {
+    if (typeof I18n !== 'undefined') {
+      return I18n.t(key, params);
+    }
+    return null;
+  }
+
   function addToHistory(arr, value) {
     arr.push(value);
     while (arr.length > MAX_METRICS_HISTORY) {
@@ -74,7 +81,7 @@ const UIManager = (function() {
 
       switch (status) {
         case "connected":
-          statusElement.textContent = "Connected";
+          statusElement.textContent = t('status.connected') || "Connected";
           statusElement.classList.add("connected");
           if (connectButton) connectButton.disabled = true;
           if (disconnectButton) disconnectButton.disabled = false;
@@ -82,7 +89,7 @@ const UIManager = (function() {
           if (softResetButton) softResetButton.disabled = false;
           break;
         case "disconnected":
-          statusElement.textContent = "Disconnected";
+          statusElement.textContent = t('status.disconnected') || "Disconnected";
           statusElement.classList.add("disconnected");
           if (connectButton) connectButton.disabled = false;
           if (disconnectButton) disconnectButton.disabled = true;
@@ -90,7 +97,7 @@ const UIManager = (function() {
           if (softResetButton) softResetButton.disabled = true;
           break;
         case "connecting":
-          statusElement.textContent = "Connecting...";
+          statusElement.textContent = t('status.connecting') || "Connecting...";
           statusElement.classList.add("connecting");
           if (connectButton) connectButton.disabled = true;
           if (disconnectButton) disconnectButton.disabled = true;
@@ -98,7 +105,7 @@ const UIManager = (function() {
           if (softResetButton) softResetButton.disabled = true;
           break;
         case "reconnecting":
-          statusElement.textContent = "Reconnecting...";
+          statusElement.textContent = t('status.reconnecting') || "Reconnecting...";
           statusElement.classList.add("connecting");
           if (connectButton) connectButton.disabled = true;
           if (disconnectButton) disconnectButton.disabled = false;
@@ -210,7 +217,8 @@ const UIManager = (function() {
       if (softResetButton) {
         softResetButton.addEventListener("click", () => {
           if (!BLEProtocol.isConnected()) {
-            this.appendToConsole("Error: Not connected to device");
+            const msg = t('error.notConnected') || "Not connected to device";
+            this.appendToConsole("Error: " + msg);
             return;
           }
           softResetButton.disabled = true;
@@ -250,12 +258,14 @@ const UIManager = (function() {
         runSimulatorButton.addEventListener("click", async () => {
           const currentBoard = BoardManager.getCurrentBoard();
           if (!currentBoard || !BoardManager.hasSimulatorSupport(currentBoard)) {
-            this.appendToConsole("Error: Simulator not available for this board");
+            const msg = t('error.simulatorNotAvailable') || "Simulator not available for this board";
+            this.appendToConsole("Error: " + msg);
             return;
           }
 
           runSimulatorButton.disabled = true;
-          this.appendToConsole("Loading simulator...");
+          const loadingMsg = t('message.loadingSimulator') || "Loading simulator...";
+          this.appendToConsole(loadingMsg);
 
           try {
             await this.loadSimulatorResources();
@@ -264,7 +274,8 @@ const UIManager = (function() {
               await Simulator.runFromEditor();
             }
           } catch (error) {
-            this.appendToConsole("Error loading simulator: " + error.message);
+            const errorMsg = t('error.loadingSimulator', { message: error.message }) || ("Error loading simulator: " + error.message);
+            this.appendToConsole(errorMsg);
           } finally {
             this.updateSimulatorButton(BoardManager.getCurrentBoard());
           }
@@ -295,9 +306,9 @@ const UIManager = (function() {
       
       const hasSimulator = BoardManager.hasSimulatorSupport(board);
       runSimulatorButton.disabled = !hasSimulator;
-      runSimulatorButton.title = hasSimulator 
-        ? "Run code in browser simulator" 
-        : "Simulator not available for this board";
+      const availableTitle = t('simulator.available') || "Run code in browser simulator";
+      const unavailableTitle = t('simulator.unavailable') || "Simulator not available for this board";
+      runSimulatorButton.title = hasSimulator ? availableTitle : unavailableTitle;
     },
 
     loadSimulatorResources: async function() {

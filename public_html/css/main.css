@@ -42,6 +42,30 @@ h1 {
   font-weight: 400;
 }
 
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.language-selector-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.language-selector-container label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+#language-selector {
+  min-width: 140px;
+}
+
 .description {
   margin: 0 0 15px;
   font-size: 13px;

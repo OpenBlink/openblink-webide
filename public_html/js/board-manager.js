@@ -33,6 +33,26 @@ const BoardManager = (function () {
     }
   }
 
+  async function fetchLocalizedReference(boardName, language) {
+    const suffixes = {
+      'en': '.md',
+      'zh-CN': '.zh-CN.md',
+      'zh-TW': '.zh-TW.md',
+      'ja': '.ja.md',
+      'ja-easy': '.ja-easy.md'
+    };
+
+    const suffix = suffixes[language] || '.md';
+    const localizedPath = `boards/${boardName}/reference${suffix}`;
+
+    let content = await fetchText(localizedPath);
+    if (!content && suffix !== '.md') {
+      content = await fetchText(`boards/${boardName}/reference.md`);
+    }
+
+    return content;
+  }
+
   return {
     loadBoards: async function () {
       const boardList = ["m5stamps3", "xiao-nrf54l15"]; // Add new board names here
@@ -41,7 +61,8 @@ const BoardManager = (function () {
         const config = await fetchJSON(`boards/${boardName}/config.json`);
         if (config) {
           const sampleCode = await fetchText(`boards/${boardName}/sample.rb`);
-          const reference = await fetchText(`boards/${boardName}/reference.md`);
+          const language = (typeof I18n !== 'undefined') ? I18n.getLanguage() : 'en';
+          const reference = await fetchLocalizedReference(boardName, language);
 
           boards.push({
             name: boardName,
@@ -90,7 +111,10 @@ const BoardManager = (function () {
     switchBoard: function (boardName) {
       const board = boards.find((b) => b.name === boardName);
       if (!board) {
-        UIManager.appendToConsole(`Error: Board "${boardName}" not found`);
+        const errorMsg = (typeof I18n !== 'undefined')
+          ? I18n.t('error.boardNotFound', { boardName: boardName })
+          : `Error: Board "${boardName}" not found`;
+        UIManager.appendToConsole(errorMsg);
         return false;
       }
 
@@ -107,7 +131,10 @@ const BoardManager = (function () {
 
       this.updateReferencePanel(board);
       UIManager.updateSimulatorButton(board);
-      UIManager.appendToConsole(`Switched to board: ${board.displayName}`);
+      const switchMsg = (typeof I18n !== 'undefined')
+        ? I18n.t('message.boardSwitched', { boardName: board.displayName })
+        : `Switched to board: ${board.displayName}`;
+      UIManager.appendToConsole(switchMsg);
 
       return true;
     },
@@ -116,15 +143,28 @@ const BoardManager = (function () {
       return board && board.simulator && board.simulator.enabled === true;
     },
 
-    updateReferencePanel: function (board) {
+    updateReferencePanel: async function (board) {
       const referenceContent = document.getElementById("reference-content");
       if (!referenceContent || !board) return;
 
-      if (board.reference) {
+      const language = (typeof I18n !== 'undefined') ? I18n.getLanguage() : 'en';
+      const localizedReference = await fetchLocalizedReference(board.name, language);
+
+      if (localizedReference) {
+        referenceContent.innerHTML = this.parseMarkdown(localizedReference);
+      } else if (board.reference) {
         referenceContent.innerHTML = this.parseMarkdown(board.reference);
       } else {
-        referenceContent.innerHTML =
-          "<p>No reference documentation available for this board.</p>";
+        const noDocMsg = (typeof I18n !== 'undefined')
+          ? I18n.t('reference.noDoc')
+          : 'No reference documentation available for this board.';
+        referenceContent.innerHTML = '<p>' + Utils.escapeHtml(noDocMsg) + '</p>';
+      }
+    },
+
+    reloadReferenceForLanguage: async function () {
+      if (currentBoard) {
+        await this.updateReferencePanel(currentBoard);
       }
     },
 
