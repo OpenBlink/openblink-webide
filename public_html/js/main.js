@@ -5,6 +5,8 @@
 
 const OPENBLINK_WEBIDE_VERSION = "0.3.4";
 
+// Note: Global t() helper is defined in i18n.js
+
 function checkBrowserCompatibility() {
   const features = {
     webBluetooth: 'bluetooth' in navigator,
@@ -28,57 +30,97 @@ function showCompatibilityWarning(missingFeatures) {
   const warningDiv = document.getElementById('compatibility-warning');
   if (!warningDiv) return;
 
-  const featureNames = {
+  const featureKeyMap = {
+    webBluetooth: 'compatibility.feature.webBluetooth',
+    webAssembly: 'compatibility.feature.webAssembly',
+    localStorage: 'compatibility.feature.localStorage',
+    sessionStorage: 'compatibility.feature.sessionStorage'
+  };
+
+  const fallbackNames = {
     webBluetooth: 'Web Bluetooth API',
     webAssembly: 'WebAssembly',
     localStorage: 'Local Storage',
     sessionStorage: 'Session Storage'
   };
 
-  const missingNames = missingFeatures.map(f => featureNames[f] || f);
+  const missingNames = missingFeatures.map(f => {
+    const translated = t(featureKeyMap[f]);
+    return (translated && translated !== featureKeyMap[f]) ? translated : (fallbackNames[f] || f);
+  });
+
+  const warningTitle = t('compatibility.warning.title') || 'Browser Compatibility Warning';
+  const warningMessage = t('compatibility.warning.message') || 'Your browser does not support the following required features:';
+  const warningSuggestion = t('compatibility.warning.suggestion') || 'Please use a compatible browser such as Chrome or Edge.';
   
   warningDiv.innerHTML = `
     <div class="warning-content">
-      <strong>Browser Compatibility Warning</strong>
-      <p>Your browser does not support the following required features:</p>
+      <strong>${Utils.escapeHtml(warningTitle)}</strong>
+      <p>${Utils.escapeHtml(warningMessage)}</p>
       <ul>
         ${missingNames.map(name => `<li>${Utils.escapeHtml(name)}</li>`).join('')}
       </ul>
-      <p>Please use a compatible browser such as Chrome or Edge.</p>
+      <p>${Utils.escapeHtml(warningSuggestion)}</p>
     </div>
   `;
   warningDiv.style.display = 'block';
 }
 
 async function initializeApp() {
+  await I18n.init();
+
+  setupLanguageSelector();
+
   if (!checkBrowserCompatibility()) {
     return;
   }
 
-  UIManager.appendToConsole(`OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`);
+  const startedMsg = t('message.started', { version: OPENBLINK_WEBIDE_VERSION }) 
+    || `OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`;
+  UIManager.appendToConsole(startedMsg);
   UIManager.initialize();
   
-  // Wait for boards to load before initializing FileManager to avoid race conditions
   await BoardManager.loadBoards();
   const defaultBoard = BoardManager.getCurrentBoard();
   if (defaultBoard) {
-    UIManager.appendToConsole(`Loaded board: ${defaultBoard.displayName}`);
+    const loadedMsg = t('message.boardLoaded', { boardName: defaultBoard.displayName })
+      || `Loaded board: ${defaultBoard.displayName}`;
+    UIManager.appendToConsole(loadedMsg);
   }
 
   FileManager.initialize(window.editor);
   HistoryManager.initialize();
 }
 
+function setupLanguageSelector() {
+  const selector = document.getElementById('language-selector');
+  if (!selector) return;
+
+  selector.value = I18n.getLanguage();
+
+  selector.addEventListener('change', function(e) {
+    I18n.setLanguage(e.target.value);
+  });
+
+  document.addEventListener('languageChanged', function() {
+    BoardManager.reloadReferenceForLanguage();
+  });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   window.onerror = function(message, source, lineno, colno, error) {
-    UIManager.appendToConsole('Error: ' + message + ' (at line ' + lineno + ')');
+    const errorMsg = t('message.lineError', { message: message, line: lineno })
+      || ('Error: ' + message + ' (at line ' + lineno + ')');
+    UIManager.appendToConsole(errorMsg);
     return false;
   };
 
   window.addEventListener('unhandledrejection', function(event) {
     const reason = event.reason;
     const message = reason?.message ?? String(reason);
-    UIManager.appendToConsole('Promise Error: ' + message);
+    const errorMsg = t('message.promiseError', { message: message })
+      || ('Promise Error: ' + message);
+    UIManager.appendToConsole(errorMsg);
   });
 });
 
