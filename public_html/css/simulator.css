@@ -125,7 +125,13 @@
   letter-spacing: 0.5px;
 }
 
-.simulator-clear-btn {
+.simulator-console-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.simulator-clear-btn,
+.simulator-stats-btn {
   padding: 3px 10px;
   background: #3c3c3c;
   color: #cccccc;
@@ -135,7 +141,8 @@
   font-size: 11px;
 }
 
-.simulator-clear-btn:hover {
+.simulator-clear-btn:hover,
+.simulator-stats-btn:hover {
   background: #4a4a4a;
 }
 
