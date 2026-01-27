@@ -66,30 +66,67 @@ function showCompatibilityWarning(missingFeatures) {
   warningDiv.style.display = 'block';
 }
 
+function showLoadingOverlay(message) {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+    const loadingText = overlay.querySelector('.loading-text');
+    if (loadingText && message) {
+      loadingText.textContent = message;
+    }
+  }
+}
+
+function updateLoadingMessage(message) {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    const loadingText = overlay.querySelector('.loading-text');
+    if (loadingText) {
+      loadingText.textContent = message;
+    }
+  }
+}
+
+function hideLoadingOverlay() {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+  }
+}
+
 async function initializeApp() {
-  await I18n.init();
-
-  setupLanguageSelector();
-
-  if (!checkBrowserCompatibility()) {
-    return;
-  }
-
-  const startedMsg = t('message.started', { version: OPENBLINK_WEBIDE_VERSION }) 
-    || `OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`;
-  UIManager.appendToConsole(startedMsg);
-  UIManager.initialize();
+  showLoadingOverlay('Loading translations...');
   
-  await BoardManager.loadBoards();
-  const defaultBoard = BoardManager.getCurrentBoard();
-  if (defaultBoard) {
-    const loadedMsg = t('message.boardLoaded', { boardName: defaultBoard.displayName })
-      || `Loaded board: ${defaultBoard.displayName}`;
-    UIManager.appendToConsole(loadedMsg);
-  }
+  try {
+    await I18n.init();
+    
+    updateLoadingMessage(t('loading.setup') || 'Setting up...');
+    setupLanguageSelector();
 
-  FileManager.initialize(window.editor);
-  HistoryManager.initialize();
+    if (!checkBrowserCompatibility()) {
+      hideLoadingOverlay();
+      return;
+    }
+
+    const startedMsg = t('message.started', { version: OPENBLINK_WEBIDE_VERSION }) 
+      || `OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`;
+    UIManager.appendToConsole(startedMsg);
+    UIManager.initialize();
+    
+    updateLoadingMessage(t('loading.boards') || 'Loading boards...');
+    await BoardManager.loadBoards();
+    const defaultBoard = BoardManager.getCurrentBoard();
+    if (defaultBoard) {
+      const loadedMsg = t('message.boardLoaded', { boardName: defaultBoard.displayName })
+        || `Loaded board: ${defaultBoard.displayName}`;
+      UIManager.appendToConsole(loadedMsg);
+    }
+
+    FileManager.initialize(window.editor);
+    HistoryManager.initialize();
+  } finally {
+    hideLoadingOverlay();
+  }
 }
 
 function setupLanguageSelector() {
@@ -102,9 +139,16 @@ function setupLanguageSelector() {
     I18n.setLanguage(e.target.value);
   });
 
-  document.addEventListener('languageChanged', function() {
-    BoardManager.reloadReferenceForLanguage();
-  });
+    let isReloadingReference = false;
+    document.addEventListener('languageChanged', async function() {
+      if (isReloadingReference) return;
+      isReloadingReference = true;
+      try {
+        await BoardManager.reloadReferenceForLanguage();
+      } finally {
+        isReloadingReference = false;
+      }
+    });
 }
 
 window.addEventListener('DOMContentLoaded', () => {
