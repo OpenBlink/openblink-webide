@@ -20,7 +20,6 @@ const BLEProtocol = (function() {
   let programCharacteristic = null;
   let negotiatedMtuCharacteristic = null;
   let consoleCharacteristic = null;
-  let isConnected = false;
   let connectedDevice = null;
   let userInitiatedDisconnect = false;
   let reconnectAttempts = 0;
@@ -128,7 +127,6 @@ const BLEProtocol = (function() {
     await consoleCharacteristic.startNotifications();
 
     connectedDevice = device;
-    isConnected = true;
     UIManager.updateConnectionStatus("connected");
     UIManager.appendToConsole("Connected to device: " + device.name);
   }
@@ -145,7 +143,6 @@ const BLEProtocol = (function() {
     if (userInitiatedDisconnect) {
       userInitiatedDisconnect = false;
       reconnectAttempts = 0;
-      isConnected = false;
       UIManager.updateConnectionStatus("disconnected");
       return;
     }
@@ -156,7 +153,6 @@ const BLEProtocol = (function() {
       UIManager.appendToConsole("Max reconnection attempts reached. Please reconnect manually.");
       connectedDevice = null;
       reconnectAttempts = 0;
-      isConnected = false;
       UIManager.updateConnectionStatus("disconnected");
     }
   }
@@ -171,7 +167,6 @@ const BLEProtocol = (function() {
     setTimeout(async () => {
       if (userInitiatedDisconnect) {
         reconnectAttempts = 0;
-        isConnected = false;
         UIManager.updateConnectionStatus("disconnected");
         return;
       }
@@ -188,7 +183,6 @@ const BLEProtocol = (function() {
           } catch (disconnectError) {
             UIManager.appendToConsole("Error while enforcing user disconnect after reconnect: " + disconnectError.message);
           }
-          isConnected = false;
           reconnectAttempts = 0;
           UIManager.updateConnectionStatus("disconnected");
           return;
@@ -204,7 +198,6 @@ const BLEProtocol = (function() {
           UIManager.appendToConsole("Max reconnection attempts reached. Please reconnect manually.");
           connectedDevice = null;
           reconnectAttempts = 0;
-          isConnected = false;
           UIManager.updateConnectionStatus("disconnected");
         }
       }
@@ -217,7 +210,7 @@ const BLEProtocol = (function() {
     },
 
     isConnected: function() {
-      return isConnected;
+      return connectedDevice?.gatt?.connected === true;
     },
 
     isProgramCharacteristicAvailable: function() {
@@ -256,7 +249,6 @@ const BLEProtocol = (function() {
           UIManager.appendToConsole(ErrorHandler.getErrorMessage(error));
         }
         console.error("Error:", error);
-        isConnected = false;
         UIManager.updateConnectionStatus("disconnected");
       }
     },
@@ -275,13 +267,12 @@ const BLEProtocol = (function() {
       consoleCharacteristic = null;
       connectedDevice = null;
       negotiatedMTU = DEFAULT_MTU;
-      isConnected = false;
       UIManager.updateConnectionStatus("disconnected");
       UIManager.appendToConsole("Disconnected from device.");
     },
 
     sendReset: async function() {
-      if (!isConnected || !programCharacteristic) {
+      if (!this.isConnected() || !programCharacteristic) {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
       }
@@ -300,7 +291,7 @@ const BLEProtocol = (function() {
     },
 
     sendReload: async function() {
-      if (!isConnected || !programCharacteristic) {
+      if (!this.isConnected() || !programCharacteristic) {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
       }
@@ -319,7 +310,7 @@ const BLEProtocol = (function() {
     },
 
     sendFirmware: async function(mrbContent, slot, onProgress) {
-      if (!isConnected) {
+      if (!this.isConnected()) {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
       }
