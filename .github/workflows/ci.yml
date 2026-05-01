@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint and Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        id: eslint
+        run: npm run lint
+
+      - name: HTMLHint
+        id: htmlhint
+        run: npm run lint:html
+
+      - name: Validate JSON
+        id: json
+        run: npm run lint:json
+
+      - name: Validate static assets
+        id: static
+        run: npm run lint:static
+
+      - name: Check version consistency
+        id: version
+        run: npm run check-version
+
+      - name: Lint summary
+        if: always()
+        run: |
+          status() { [ "$1" = "success" ] && echo "✅" || echo "❌"; }
+          echo "## CI Validation Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| ESLint | $(status ${{ steps.eslint.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| HTMLHint | $(status ${{ steps.htmlhint.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| JSON validation | $(status ${{ steps.json.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Static assets | $(status ${{ steps.static.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Version | $(status ${{ steps.version.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
+
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.23
+
+      - name: Verify Emscripten
+        run: emcc --version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Build WebAssembly artifacts
+        run: make all
+
+      - name: Verify build artifacts
+        run: |
+          echo "## Build Artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "| File | Size |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|------|" >> "$GITHUB_STEP_SUMMARY"
+          for f in public_html/mrbc/mrbc.js public_html/mrbc/mrbc.wasm public_html/mrubyc/mrubyc.js public_html/mrubyc/mrubyc.wasm; do
+            size=$(stat -c%s "$f")
+            echo "| \`$f\` | ${size} bytes |" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$size" -lt 1000 ]; then
+              echo "::error::$f is suspiciously small (${size} bytes)"
+              exit 1
+            fi
+          done
+
+      - name: Upload public_html artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openblink-webide-public-html
+          path: public_html/
+          retention-days: 30
