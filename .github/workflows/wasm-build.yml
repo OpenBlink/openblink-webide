@@ -1,0 +1,62 @@
+name: WASM Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Makefile'
+      - 'emscripten.rb'
+      - 'src/**'
+      - 'mruby'
+      - 'mrubyc'
+      - 'emsdk'
+      - '.gitmodules'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wasm-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.23
+
+      - name: Verify Emscripten
+        run: emcc --version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+
+      - name: Build WebAssembly artifacts
+        run: make all
+
+      - name: Verify output
+        run: |
+          ls -la public_html/mrbc/mrbc.js public_html/mrbc/mrbc.wasm
+          ls -la public_html/mrubyc/mrubyc.js public_html/mrubyc/mrubyc.wasm
+
+      - name: Upload WASM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openblink-webide-wasm
+          path: |
+            public_html/mrbc/mrbc.js
+            public_html/mrbc/mrbc.wasm
+            public_html/mrubyc/mrubyc.js
+            public_html/mrubyc/mrubyc.wasm
+          retention-days: 30

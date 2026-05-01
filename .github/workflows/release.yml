@@ -1,0 +1,150 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check release version
+        run: npm run check-version
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: HTMLHint
+        run: npm run lint:html
+
+      - name: Validate JSON
+        run: npm run lint:json
+
+      - name: Validate static assets
+        run: npm run lint:static
+
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+  build:
+    name: Build Release Artifact
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.23
+
+      - name: Verify Emscripten
+        run: emcc --version
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Build WebAssembly artifacts
+        run: make all
+
+      - name: Verify build artifacts
+        run: |
+          for f in public_html/mrbc/mrbc.js public_html/mrbc/mrbc.wasm public_html/mrubyc/mrubyc.js public_html/mrubyc/mrubyc.wasm; do
+            size=$(stat -c%s "$f")
+            if [ "$size" -lt 1000 ]; then
+              echo "::error::$f is suspiciously small (${size} bytes)"
+              exit 1
+            fi
+            echo "✓ $f (${size} bytes)"
+          done
+
+      - name: Install 7-Zip
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+      - name: Create release archive
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          7z a -tzip -mm=Deflate -mx=9 "openblink-webide-${VERSION}.zip" ./public_html/*
+
+      - name: Verify release archive
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          archive="openblink-webide-${VERSION}.zip"
+          7z t "$archive"
+          methods=$(7z l -slt "$archive" | awk -F' = ' '/^Method = / { print $2 }' | sort -u)
+          echo "$methods"
+          if echo "$methods" | grep -Ev '^(|Store|Deflate)$'; then
+            echo "::error::Archive contains a non-compatible ZIP compression method"
+            exit 1
+          fi
+
+      - name: Generate checksums
+        run: |
+          sha256sum openblink-webide-*.zip > checksums-sha256.txt
+          cat checksums-sha256.txt
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: |
+            openblink-webide-*.zip
+            checksums-sha256.txt
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release
+
+      - name: List release files
+        run: ls -la openblink-webide-*.zip checksums-sha256.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            openblink-webide-*.zip
+            checksums-sha256.txt
+
+      - name: Release summary
+        if: always()
+        run: |
+          echo "## Release ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### SHA-256 Checksums" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat checksums-sha256.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

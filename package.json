@@ -1,0 +1,20 @@
+{
+  "name": "openblink-webide",
+  "private": true,
+  "version": "0.3.4",
+  "description": "OpenBlink WebIDE - browser-based Ruby development for OpenBlink devices",
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "lint": "eslint public_html/js public_html/lib public_html/boards scripts",
+    "lint:html": "htmlhint \"public_html/**/*.html\"",
+    "lint:json": "node scripts/validate-json.js",
+    "lint:static": "node scripts/validate-static-assets.js",
+    "check-version": "node scripts/check-version.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "globals": "^15.0.0",
+    "htmlhint": "^1.1.0"
+  }
+}
