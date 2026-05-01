@@ -73,7 +73,7 @@ jobs:
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: 4.0.23
+          version: 5.0.7
 
       - name: Verify Emscripten
         run: emcc --version
@@ -81,7 +81,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.3'
+          ruby-version: "3.3"
 
       - name: Build WebAssembly artifacts
         run: make all
