@@ -232,6 +232,13 @@ const BLEConnection = (function () {
    */
   function awaitDisconnect(device, timeoutMs) {
     return new Promise((resolve) => {
+      // Guard: device may be null if handleDisconnect ran concurrently during tearDown
+      if (!device) {
+        log.warn("awaitDisconnect: device is null, resolving as timeout");
+        resolve("timeout");
+        return;
+      }
+
       const timer = setTimeout(() => {
         log.warn(`awaitDisconnect: timeout after ${timeoutMs}ms`);
         resolve("timeout");
