@@ -71,13 +71,22 @@ const BLECommandQueue = (function () {
     pendingCount++;
     const gen = generation;
     const p = tail.then(() => _withTimeout(fn, timeoutMs, label));
-    tail = p.catch(() => {});
-    p.finally(() => {
+    // Catch errors on the tail to prevent unhandled rejections in the chain
+    tail = p.catch((err) => {
+      // Log errors but don't propagate to avoid unhandled rejections
+      log.debug(`Queue operation failed [${label}]:`, err.message);
+    });
+    // Also catch on the returned promise to prevent unhandled rejections
+    const handledPromise = p.catch((err) => {
+      // Return undefined to resolve the promise instead of rejecting
+      return undefined;
+    });
+    handledPromise.finally(() => {
       if (generation === gen) {
         pendingCount = Math.max(0, pendingCount - 1);
       }
     });
-    return p;
+    return handledPromise;
   }
 
   /**

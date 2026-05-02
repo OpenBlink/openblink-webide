@@ -170,6 +170,13 @@ const BLEConnection = (function () {
     const server = await device.gatt.connect();
     _checkSignalAborted(signal);
 
+    // Verify GATT connection is actually established
+    if (!server || !server.connected) {
+      throw new Error(
+        "GATT connection failed: server not connected after connect()",
+      );
+    }
+
     const service = await server.getPrimaryService(Config.ble.serviceUUID);
     _checkSignalAborted(signal);
 

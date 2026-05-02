@@ -5,6 +5,9 @@
 
 const OPENBLINK_WEBIDE_VERSION = "0.3.4";
 
+// Track if initializeApp has been called to prevent duplicate initialization
+let isInitialized = false;
+
 // Note: Global t() helper is defined in i18n.js
 
 function checkBrowserCompatibility() {
@@ -102,6 +105,13 @@ function hideLoadingOverlay() {
 }
 
 async function initializeApp() {
+  // Prevent duplicate initialization
+  if (isInitialized) {
+    Logger.scope("main").warn("initializeApp called multiple times, skipping");
+    return;
+  }
+  isInitialized = true;
+
   showLoadingOverlay("Loading translations...");
 
   try {
@@ -150,7 +160,12 @@ async function initializeApp() {
     }
 
     // Phase 3C: populate Known Devices list on startup
-    UIManager.refreshKnownDevices();
+    UIManager.refreshKnownDevices().catch((err) => {
+      Logger.scope("main").warn(
+        "refreshKnownDevices failed on startup:",
+        err.message,
+      );
+    });
 
     const startedMsg =
       t("message.started", { version: OPENBLINK_WEBIDE_VERSION }) ||
@@ -276,12 +291,24 @@ function setupEventWiring() {
 
   EventBus.on("BLE:CONNECTED", ({ deviceName }) => {
     UIManager.appendToConsole("Connected to device: " + deviceName);
-    UIManager.refreshKnownDevices();
+    // Refresh known devices asynchronously to avoid blocking connect flow
+    UIManager.refreshKnownDevices().catch((err) => {
+      Logger.scope("main").warn(
+        "refreshKnownDevices failed on connect:",
+        err.message,
+      );
+    });
   });
 
   EventBus.on("BLE:DISCONNECTED", () => {
     UIManager.appendToConsole("Disconnected from device.");
-    UIManager.refreshKnownDevices();
+    // Refresh known devices asynchronously to avoid blocking disconnect flow
+    UIManager.refreshKnownDevices().catch((err) => {
+      Logger.scope("main").warn(
+        "refreshKnownDevices failed on disconnect:",
+        err.message,
+      );
+    });
   });
 
   EventBus.on("BLE:CONNECT_FAILED", ({ error }) => {
@@ -299,7 +326,12 @@ function setupEventWiring() {
   });
 
   EventBus.on("BLE:DEVICE_FORGOTTEN", () => {
-    UIManager.refreshKnownDevices();
+    UIManager.refreshKnownDevices().catch((err) => {
+      Logger.scope("main").warn(
+        "refreshKnownDevices failed on device forgotten:",
+        err.message,
+      );
+    });
   });
 
   EventBus.on("BLE:RECONNECTING", ({ attempt, maxAttempts, delay }) => {
@@ -407,3 +439,18 @@ Module.onRuntimeInitialized = () => {
   Logger.scope("main").info("Emscripten runtime initialized.");
   initializeApp();
 };
+
+// Fallback: if Module.onRuntimeInitialized is not called within 3 seconds, initialize anyway
+setTimeout(() => {
+  if (typeof Module !== "undefined" && Module.calledRun !== true) {
+    Logger.scope("main").error(
+      "Emscripten runtime initialization timeout, forcing initialization",
+    );
+    initializeApp();
+  } else if (typeof Module !== "undefined" && Module.calledRun === true) {
+    Logger.scope("main").info(
+      "Emscripten runtime already initialized, calling initializeApp",
+    );
+    initializeApp();
+  }
+}, 3000);

@@ -73,7 +73,23 @@ const BLEStateMachine = (function () {
         timeout: Config.timeouts.bleRead,
       });
     } catch (err) {
-      log.warn("Heartbeat failed:", err.message);
+      // If GATT disconnection error, detect lost connection and trigger reconnection
+      if (
+        err.message.includes("disconnected") ||
+        err.message.includes("GATT Server is disconnected") ||
+        err.name === "NotSupportedError" ||
+        err.name === "NetworkError"
+      ) {
+        log.warn(
+          "Heartbeat detected GATT error, triggering disconnect handler:",
+          err.message,
+        );
+        if (connectedDevice && connectedDevice.gatt) {
+          handleDisconnect({ target: connectedDevice });
+        }
+      } else {
+        log.warn("Heartbeat failed:", err.message);
+      }
     }
   }
 
@@ -416,7 +432,8 @@ const BLEStateMachine = (function () {
         _emit("BLE:RESET_SENT", {});
       } catch (error) {
         _emit("BLE:RESET_FAILED", { error });
-        throw error;
+        // Don't throw error to prevent unhandled promise rejection in UI
+        log.warn("Reset command failed:", error.message);
       }
     },
 
@@ -436,7 +453,8 @@ const BLEStateMachine = (function () {
         _emit("BLE:RELOAD_SENT", {});
       } catch (error) {
         _emit("BLE:RELOAD_FAILED", { error });
-        throw error;
+        // Don't throw error to prevent unhandled promise rejection in UI
+        log.warn("Reload command failed:", error.message);
       }
     },
 

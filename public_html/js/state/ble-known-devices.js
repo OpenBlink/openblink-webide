@@ -24,11 +24,16 @@ const BLEKnownDevices = (function () {
    * @returns {boolean}
    */
   function isSupported() {
-    return (
-      typeof navigator !== "undefined" &&
-      navigator.bluetooth != null &&
-      typeof navigator.bluetooth.getDevices === "function"
-    );
+    try {
+      return (
+        typeof navigator !== "undefined" &&
+        navigator.bluetooth != null &&
+        typeof navigator.bluetooth.getDevices === "function"
+      );
+    } catch (err) {
+      log.debug("isSupported() check failed:", err.message);
+      return false;
+    }
   }
 
   /**
@@ -44,7 +49,12 @@ const BLEKnownDevices = (function () {
         (d) => d.name && d.name.startsWith(Config.ble.namePrefix),
       );
     } catch (err) {
-      log.warn("getDevices() failed:", err.message);
+      // NotSupportedError is a browser limitation, treat it as non-critical
+      if (err.name === "NotSupportedError") {
+        log.debug("getDevices() not supported in this browser");
+      } else {
+        log.warn("getDevices() failed:", err.message);
+      }
       return [];
     }
   }
