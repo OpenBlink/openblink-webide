@@ -9,10 +9,10 @@ const OPENBLINK_WEBIDE_VERSION = "0.3.4";
 
 function checkBrowserCompatibility() {
   const features = {
-    webBluetooth: 'bluetooth' in navigator,
-    webAssembly: typeof WebAssembly !== 'undefined',
-    localStorage: typeof localStorage !== 'undefined',
-    sessionStorage: typeof sessionStorage !== 'undefined'
+    webBluetooth: "bluetooth" in navigator,
+    webAssembly: typeof WebAssembly !== "undefined",
+    localStorage: typeof localStorage !== "undefined",
+    sessionStorage: typeof sessionStorage !== "undefined",
   };
 
   const missingFeatures = Object.entries(features)
@@ -27,50 +27,57 @@ function checkBrowserCompatibility() {
 }
 
 function showCompatibilityWarning(missingFeatures) {
-  const warningDiv = document.getElementById('compatibility-warning');
+  const warningDiv = document.getElementById("compatibility-warning");
   if (!warningDiv) return;
 
   const featureKeyMap = {
-    webBluetooth: 'compatibility.feature.webBluetooth',
-    webAssembly: 'compatibility.feature.webAssembly',
-    localStorage: 'compatibility.feature.localStorage',
-    sessionStorage: 'compatibility.feature.sessionStorage'
+    webBluetooth: "compatibility.feature.webBluetooth",
+    webAssembly: "compatibility.feature.webAssembly",
+    localStorage: "compatibility.feature.localStorage",
+    sessionStorage: "compatibility.feature.sessionStorage",
   };
 
   const fallbackNames = {
-    webBluetooth: 'Web Bluetooth API',
-    webAssembly: 'WebAssembly',
-    localStorage: 'Local Storage',
-    sessionStorage: 'Session Storage'
+    webBluetooth: "Web Bluetooth API",
+    webAssembly: "WebAssembly",
+    localStorage: "Local Storage",
+    sessionStorage: "Session Storage",
   };
 
-  const missingNames = missingFeatures.map(f => {
+  const missingNames = missingFeatures.map((f) => {
     const translated = t(featureKeyMap[f]);
-    return (translated && translated !== featureKeyMap[f]) ? translated : (fallbackNames[f] || f);
+    return translated && translated !== featureKeyMap[f]
+      ? translated
+      : fallbackNames[f] || f;
   });
 
-  const warningTitle = t('compatibility.warning.title') || 'Browser Compatibility Warning';
-  const warningMessage = t('compatibility.warning.message') || 'Your browser does not support the following required features:';
-  const warningSuggestion = t('compatibility.warning.suggestion') || 'Please use a compatible browser such as Chrome or Edge.';
-  
+  const warningTitle =
+    t("compatibility.warning.title") || "Browser Compatibility Warning";
+  const warningMessage =
+    t("compatibility.warning.message") ||
+    "Your browser does not support the following required features:";
+  const warningSuggestion =
+    t("compatibility.warning.suggestion") ||
+    "Please use a compatible browser such as Chrome or Edge.";
+
   warningDiv.innerHTML = `
     <div class="warning-content">
       <strong>${Utils.escapeHtml(warningTitle)}</strong>
       <p>${Utils.escapeHtml(warningMessage)}</p>
       <ul>
-        ${missingNames.map(name => `<li>${Utils.escapeHtml(name)}</li>`).join('')}
+        ${missingNames.map((name) => `<li>${Utils.escapeHtml(name)}</li>`).join("")}
       </ul>
       <p>${Utils.escapeHtml(warningSuggestion)}</p>
     </div>
   `;
-  warningDiv.style.display = 'block';
+  warningDiv.style.display = "block";
 }
 
 function showLoadingOverlay(message) {
-  const overlay = document.getElementById('loading-overlay');
+  const overlay = document.getElementById("loading-overlay");
   if (overlay) {
-    overlay.classList.remove('hidden');
-    const loadingText = overlay.querySelector('.loading-text');
+    overlay.classList.remove("hidden");
+    const loadingText = overlay.querySelector(".loading-text");
     if (loadingText && message) {
       loadingText.textContent = message;
     }
@@ -78,9 +85,9 @@ function showLoadingOverlay(message) {
 }
 
 function updateLoadingMessage(message) {
-  const overlay = document.getElementById('loading-overlay');
+  const overlay = document.getElementById("loading-overlay");
   if (overlay) {
-    const loadingText = overlay.querySelector('.loading-text');
+    const loadingText = overlay.querySelector(".loading-text");
     if (loadingText) {
       loadingText.textContent = message;
     }
@@ -88,19 +95,19 @@ function updateLoadingMessage(message) {
 }
 
 function hideLoadingOverlay() {
-  const overlay = document.getElementById('loading-overlay');
+  const overlay = document.getElementById("loading-overlay");
   if (overlay) {
-    overlay.classList.add('hidden');
+    overlay.classList.add("hidden");
   }
 }
 
 async function initializeApp() {
-  showLoadingOverlay('Loading translations...');
-  
+  showLoadingOverlay("Loading translations...");
+
   try {
     await I18n.init();
-    
-    updateLoadingMessage(t('loading.setup') || 'Setting up...');
+
+    updateLoadingMessage(t("loading.setup") || "Setting up...");
     setupLanguageSelector();
 
     if (!checkBrowserCompatibility()) {
@@ -108,17 +115,19 @@ async function initializeApp() {
       return;
     }
 
-    const startedMsg = t('message.started', { version: OPENBLINK_WEBIDE_VERSION }) 
-      || `OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`;
+    const startedMsg =
+      t("message.started", { version: OPENBLINK_WEBIDE_VERSION }) ||
+      `OpenBlink WebIDE v${OPENBLINK_WEBIDE_VERSION} started.`;
     UIManager.appendToConsole(startedMsg);
     UIManager.initialize();
-    
-    updateLoadingMessage(t('loading.boards') || 'Loading boards...');
+
+    updateLoadingMessage(t("loading.boards") || "Loading boards...");
     await BoardManager.loadBoards();
     const defaultBoard = BoardManager.getCurrentBoard();
     if (defaultBoard) {
-      const loadedMsg = t('message.boardLoaded', { boardName: defaultBoard.displayName })
-        || `Loaded board: ${defaultBoard.displayName}`;
+      const loadedMsg =
+        t("message.boardLoaded", { boardName: defaultBoard.displayName }) ||
+        `Loaded board: ${defaultBoard.displayName}`;
       UIManager.appendToConsole(loadedMsg);
     }
 
@@ -130,40 +139,42 @@ async function initializeApp() {
 }
 
 function setupLanguageSelector() {
-  const selector = document.getElementById('language-selector');
+  const selector = document.getElementById("language-selector");
   if (!selector) return;
 
   selector.value = I18n.getLanguage();
 
-  selector.addEventListener('change', function(e) {
+  selector.addEventListener("change", function (e) {
     I18n.setLanguage(e.target.value);
   });
 
-    let isReloadingReference = false;
-    document.addEventListener('languageChanged', async function() {
-      if (isReloadingReference) return;
-      isReloadingReference = true;
-      try {
-        await BoardManager.reloadReferenceForLanguage();
-      } finally {
-        isReloadingReference = false;
-      }
-    });
+  let isReloadingReference = false;
+  document.addEventListener("languageChanged", async function () {
+    if (isReloadingReference) return;
+    isReloadingReference = true;
+    try {
+      await BoardManager.reloadReferenceForLanguage();
+    } finally {
+      isReloadingReference = false;
+    }
+  });
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  window.onerror = function(message, source, lineno, colno, error) {
-    const errorMsg = t('message.lineError', { message: message, line: lineno })
-      || ('Error: ' + message + ' (at line ' + lineno + ')');
+window.addEventListener("DOMContentLoaded", () => {
+  window.onerror = function (message, source, lineno, colno, error) {
+    const errorMsg =
+      t("message.lineError", { message: message, line: lineno }) ||
+      "Error: " + message + " (at line " + lineno + ")";
     UIManager.appendToConsole(errorMsg);
     return false;
   };
 
-  window.addEventListener('unhandledrejection', function(event) {
+  window.addEventListener("unhandledrejection", function (event) {
     const reason = event.reason;
     const message = reason?.message ?? String(reason);
-    const errorMsg = t('message.promiseError', { message: message })
-      || ('Promise Error: ' + message);
+    const errorMsg =
+      t("message.promiseError", { message: message }) ||
+      "Promise Error: " + message;
     UIManager.appendToConsole(errorMsg);
   });
 });

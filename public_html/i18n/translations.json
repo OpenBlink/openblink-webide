@@ -2,7 +2,7 @@
   "en": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE is a tool for writing Ruby code and transferring it to OpenBlink devices.",
-    
+
     "connection.title": "Connection",
     "connection.connect": "Connect to device",
     "connection.disconnect": "Disconnect",
@@ -10,13 +10,13 @@
     "connection.status.disconnected": "Disconnected",
     "connection.status.connecting": "Connecting...",
     "connection.status.reconnecting": "Reconnecting...",
-    
+
     "editor.title": "Editor",
     "editor.board": "Board:",
     "editor.loadFile": "Load .rb File",
     "editor.download": "Download",
     "editor.filenamePlaceholder": "filename.rb",
-    
+
     "build.title": "Build & Blink",
     "build.buildAndBlink": "Build & Blink",
     "build.runSimulator": "Run Simulator",
@@ -24,23 +24,23 @@
     "build.slot1": "Slot 1",
     "build.slot2": "Slot 2",
     "build.softReset": "Soft RESET",
-    
+
     "console.title": "Console Output",
     "console.clear": "Clear",
-    
+
     "metrics.title": "Performance Metrics",
     "metrics.compileTime": "Compile Time",
     "metrics.transferTime": "Transfer Time",
     "metrics.programSize": "Program Size",
-    
+
     "history.title": "Build History",
     "history.empty": "No build history yet",
-    
+
     "reference.title": "Function Reference",
     "reference.noDoc": "No reference documentation available for this board.",
-    
+
     "language.selector": "Language",
-    
+
     "error.notConnected": "Not connected to device",
     "error.characteristicNotAvailable": "Program characteristic not available. Please reconnect.",
     "error.deviceNotFound": "Device not found. Please make sure your OpenBlink device is turned on and nearby.",
@@ -60,7 +60,7 @@
     "error.simulatorNotAvailable": "Simulator not available for this board",
     "error.loadingSimulator": "Loading simulator...",
     "error.loadingSimulatorFailed": "Error loading simulator: {message}",
-    
+
     "compiler.success": "mrbc success!: ({time}ms)",
     "compiler.sendComplete": "Sending bytecode: Complete! ({time}ms)",
     "compiler.error": "Error: {message}",
@@ -68,7 +68,7 @@
     "compiler.errorPrefix": "Compiler Error: ",
     "compiler.error.prefix": "",
     "compiler.error.suffix": "",
-    
+
     "compatibility.warning.title": "Browser Compatibility Warning",
     "compatibility.warning.message": "Your browser does not support the following required features:",
     "compatibility.warning.suggestion": "Please use a compatible browser such as Chrome or Edge.",
@@ -76,35 +76,35 @@
     "compatibility.feature.webAssembly": "WebAssembly",
     "compatibility.feature.localStorage": "Local Storage",
     "compatibility.feature.sessionStorage": "Session Storage",
-    
-      "message.started": "OpenBlink WebIDE v{version} started.",
-      "message.boardLoaded": "Loaded board: {boardName}",
-      "message.boardSwitched": "Switched to board: {boardName}",
-      "message.promiseError": "Promise Error: {message}",
-      "message.lineError": "Error: {message} (at line {line})",
-      "message.loadingSimulator": "Loading simulator...",
-    
-      "status.connected": "Connected",
-      "status.disconnected": "Disconnected",
-      "status.connecting": "Connecting...",
-      "status.reconnecting": "Reconnecting...",
-    
-              "simulator.available": "Run code in browser simulator",
-              "simulator.unavailable": "Simulator not available for this board",
-              "simulator.showVMStatistics": "Show VM Statistics",
-              "simulator.clear": "Clear",
-              "simulator.title": "WebSimulator (Experimental)",
-              "simulator.close": "Close",
-              "simulator.output": "Simulator Output",
-        
-              "loading.setup": "Setting up...",
-              "loading.boards": "Loading boards..."
-            },
-  
-    "zh-CN": {
+
+    "message.started": "OpenBlink WebIDE v{version} started.",
+    "message.boardLoaded": "Loaded board: {boardName}",
+    "message.boardSwitched": "Switched to board: {boardName}",
+    "message.promiseError": "Promise Error: {message}",
+    "message.lineError": "Error: {message} (at line {line})",
+    "message.loadingSimulator": "Loading simulator...",
+
+    "status.connected": "Connected",
+    "status.disconnected": "Disconnected",
+    "status.connecting": "Connecting...",
+    "status.reconnecting": "Reconnecting...",
+
+    "simulator.available": "Run code in browser simulator",
+    "simulator.unavailable": "Simulator not available for this board",
+    "simulator.showVMStatistics": "Show VM Statistics",
+    "simulator.clear": "Clear",
+    "simulator.title": "WebSimulator (Experimental)",
+    "simulator.close": "Close",
+    "simulator.output": "Simulator Output",
+
+    "loading.setup": "Setting up...",
+    "loading.boards": "Loading boards..."
+  },
+
+  "zh-CN": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE 是一个用于编写 Ruby 代码并将其传输到 OpenBlink 设备的工具。",
-    
+
     "connection.title": "连接",
     "connection.connect": "连接设备",
     "connection.disconnect": "断开连接",
@@ -112,13 +112,13 @@
     "connection.status.disconnected": "未连接",
     "connection.status.connecting": "连接中...",
     "connection.status.reconnecting": "重新连接中...",
-    
+
     "editor.title": "编辑器",
     "editor.board": "开发板：",
     "editor.loadFile": "加载 .rb 文件",
     "editor.download": "下载",
     "editor.filenamePlaceholder": "文件名.rb",
-    
+
     "build.title": "Build & Blink",
     "build.buildAndBlink": "构建并烧录",
     "build.runSimulator": "运行模拟器",
@@ -126,23 +126,23 @@
     "build.slot1": "插槽 1",
     "build.slot2": "插槽 2",
     "build.softReset": "软复位",
-    
+
     "console.title": "控制台输出",
     "console.clear": "清除",
-    
+
     "metrics.title": "性能指标",
     "metrics.compileTime": "编译时间",
     "metrics.transferTime": "传输时间",
     "metrics.programSize": "程序大小",
-    
+
     "history.title": "构建历史",
     "history.empty": "暂无构建历史",
-    
+
     "reference.title": "函数参考",
     "reference.noDoc": "此开发板暂无参考文档。",
-    
+
     "language.selector": "语言",
-    
+
     "error.notConnected": "未连接到设备",
     "error.characteristicNotAvailable": "程序特征不可用。请重新连接。",
     "error.deviceNotFound": "未找到设备。请确保您的 OpenBlink 设备已开启并在附近。",
@@ -162,7 +162,7 @@
     "error.simulatorNotAvailable": "此开发板不支持模拟器",
     "error.loadingSimulator": "正在加载模拟器...",
     "error.loadingSimulatorFailed": "加载模拟器失败：{message}",
-    
+
     "compiler.success": "mrbc 编译成功！({time}ms)",
     "compiler.sendComplete": "字节码发送完成！({time}ms)",
     "compiler.error": "错误：{message}",
@@ -170,7 +170,7 @@
     "compiler.errorPrefix": "编译器错误：",
     "compiler.error.prefix": "",
     "compiler.error.suffix": "",
-    
+
     "compatibility.warning.title": "浏览器兼容性警告",
     "compatibility.warning.message": "您的浏览器不支持以下必需功能：",
     "compatibility.warning.suggestion": "请使用兼容的浏览器，如 Chrome 或 Edge。",
@@ -178,35 +178,35 @@
     "compatibility.feature.webAssembly": "WebAssembly",
     "compatibility.feature.localStorage": "本地存储",
     "compatibility.feature.sessionStorage": "会话存储",
-    
-      "message.started": "OpenBlink WebIDE v{version} 已启动。",
-      "message.boardLoaded": "已加载开发板：{boardName}",
-      "message.boardSwitched": "已切换到开发板：{boardName}",
-      "message.promiseError": "Promise 错误：{message}",
-      "message.lineError": "错误：{message}（第 {line} 行）",
-      "message.loadingSimulator": "正在加载模拟器...",
-    
-      "status.connected": "已连接",
-      "status.disconnected": "未连接",
-      "status.connecting": "连接中...",
-      "status.reconnecting": "重新连接中...",
-    
-                  "simulator.available": "在浏览器模拟器中运行代码",
-                  "simulator.unavailable": "此开发板不支持模拟器",
-                  "simulator.showVMStatistics": "显示 VM 统计",
-                  "simulator.clear": "清除",
-                  "simulator.title": "网页模拟器（实验性）",
-                  "simulator.close": "关闭",
-                  "simulator.output": "模拟器输出",
-          
-                  "loading.setup": "正在设置...",
-                  "loading.boards": "正在加载开发板..."
-                },
-  
-        "zh-TW": {
+
+    "message.started": "OpenBlink WebIDE v{version} 已启动。",
+    "message.boardLoaded": "已加载开发板：{boardName}",
+    "message.boardSwitched": "已切换到开发板：{boardName}",
+    "message.promiseError": "Promise 错误：{message}",
+    "message.lineError": "错误：{message}（第 {line} 行）",
+    "message.loadingSimulator": "正在加载模拟器...",
+
+    "status.connected": "已连接",
+    "status.disconnected": "未连接",
+    "status.connecting": "连接中...",
+    "status.reconnecting": "重新连接中...",
+
+    "simulator.available": "在浏览器模拟器中运行代码",
+    "simulator.unavailable": "此开发板不支持模拟器",
+    "simulator.showVMStatistics": "显示 VM 统计",
+    "simulator.clear": "清除",
+    "simulator.title": "网页模拟器（实验性）",
+    "simulator.close": "关闭",
+    "simulator.output": "模拟器输出",
+
+    "loading.setup": "正在设置...",
+    "loading.boards": "正在加载开发板..."
+  },
+
+  "zh-TW": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE 是一個用於編寫 Ruby 程式碼並將其傳輸到 OpenBlink 裝置的工具。",
-    
+
     "connection.title": "連線",
     "connection.connect": "連接裝置",
     "connection.disconnect": "中斷連線",
@@ -214,13 +214,13 @@
     "connection.status.disconnected": "未連線",
     "connection.status.connecting": "連線中...",
     "connection.status.reconnecting": "重新連線中...",
-    
+
     "editor.title": "編輯器",
     "editor.board": "開發板：",
     "editor.loadFile": "載入 .rb 檔案",
     "editor.download": "下載",
     "editor.filenamePlaceholder": "檔案名稱.rb",
-    
+
     "build.title": "Build & Blink",
     "build.buildAndBlink": "建置並燒錄",
     "build.runSimulator": "執行模擬器",
@@ -228,23 +228,23 @@
     "build.slot1": "插槽 1",
     "build.slot2": "插槽 2",
     "build.softReset": "軟體重置",
-    
+
     "console.title": "主控台輸出",
     "console.clear": "清除",
-    
+
     "metrics.title": "效能指標",
     "metrics.compileTime": "編譯時間",
     "metrics.transferTime": "傳輸時間",
     "metrics.programSize": "程式大小",
-    
+
     "history.title": "建置歷史",
     "history.empty": "尚無建置歷史",
-    
+
     "reference.title": "函式參考",
     "reference.noDoc": "此開發板暫無參考文件。",
-    
+
     "language.selector": "語言",
-    
+
     "error.notConnected": "未連接到裝置",
     "error.characteristicNotAvailable": "程式特徵不可用。請重新連線。",
     "error.deviceNotFound": "找不到裝置。請確保您的 OpenBlink 裝置已開啟並在附近。",
@@ -264,7 +264,7 @@
     "error.simulatorNotAvailable": "此開發板不支援模擬器",
     "error.loadingSimulator": "正在載入模擬器...",
     "error.loadingSimulatorFailed": "載入模擬器失敗：{message}",
-    
+
     "compiler.success": "mrbc 編譯成功！({time}ms)",
     "compiler.sendComplete": "位元組碼傳送完成！({time}ms)",
     "compiler.error": "錯誤：{message}",
@@ -272,7 +272,7 @@
     "compiler.errorPrefix": "編譯器錯誤：",
     "compiler.error.prefix": "",
     "compiler.error.suffix": "",
-    
+
     "compatibility.warning.title": "瀏覽器相容性警告",
     "compatibility.warning.message": "您的瀏覽器不支援以下必要功能：",
     "compatibility.warning.suggestion": "請使用相容的瀏覽器，如 Chrome 或 Edge。",
@@ -280,35 +280,35 @@
     "compatibility.feature.webAssembly": "WebAssembly",
     "compatibility.feature.localStorage": "本機儲存",
     "compatibility.feature.sessionStorage": "工作階段儲存",
-    
-      "message.started": "OpenBlink WebIDE v{version} 已啟動。",
-      "message.boardLoaded": "已載入開發板：{boardName}",
-      "message.boardSwitched": "已切換到開發板：{boardName}",
-      "message.promiseError": "Promise 錯誤：{message}",
-      "message.lineError": "錯誤：{message}（第 {line} 行）",
-      "message.loadingSimulator": "正在載入模擬器...",
-    
-      "status.connected": "已連線",
-      "status.disconnected": "未連線",
-      "status.connecting": "連線中...",
-      "status.reconnecting": "重新連線中...",
-    
-                  "simulator.available": "在瀏覽器模擬器中執行程式碼",
-                  "simulator.unavailable": "此開發板不支援模擬器",
-                  "simulator.showVMStatistics": "顯示 VM 統計",
-                  "simulator.clear": "清除",
-                  "simulator.title": "網頁模擬器（實驗性）",
-                  "simulator.close": "關閉",
-                  "simulator.output": "模擬器輸出",
-          
-                  "loading.setup": "正在設定...",
-                  "loading.boards": "正在載入開發板..."
-                },
-  
-        "ja": {
+
+    "message.started": "OpenBlink WebIDE v{version} 已啟動。",
+    "message.boardLoaded": "已載入開發板：{boardName}",
+    "message.boardSwitched": "已切換到開發板：{boardName}",
+    "message.promiseError": "Promise 錯誤：{message}",
+    "message.lineError": "錯誤：{message}（第 {line} 行）",
+    "message.loadingSimulator": "正在載入模擬器...",
+
+    "status.connected": "已連線",
+    "status.disconnected": "未連線",
+    "status.connecting": "連線中...",
+    "status.reconnecting": "重新連線中...",
+
+    "simulator.available": "在瀏覽器模擬器中執行程式碼",
+    "simulator.unavailable": "此開發板不支援模擬器",
+    "simulator.showVMStatistics": "顯示 VM 統計",
+    "simulator.clear": "清除",
+    "simulator.title": "網頁模擬器（實驗性）",
+    "simulator.close": "關閉",
+    "simulator.output": "模擬器輸出",
+
+    "loading.setup": "正在設定...",
+    "loading.boards": "正在載入開發板..."
+  },
+
+  "ja": {
     "app.title": "OpenBlink WebIDE",
     "app.description": "OpenBlink WebIDE は、Ruby コードを書いて OpenBlink デバイスに転送するためのツールです。",
-    
+
     "connection.title": "接続",
     "connection.connect": "デバイスに接続",
     "connection.disconnect": "切断",
@@ -316,13 +316,13 @@
     "connection.status.disconnected": "未接続",
     "connection.status.connecting": "接続中...",
     "connection.status.reconnecting": "再接続中...",
-    
+
     "editor.title": "エディタ",
     "editor.board": "ボード：",
     "editor.loadFile": ".rb ファイルを読み込む",
     "editor.download": "ダウンロード",
     "editor.filenamePlaceholder": "ファイル名.rb",
-    
+
     "build.title": "Build & Blink",
     "build.buildAndBlink": "ビルド＆転送",
     "build.runSimulator": "シミュレータを実行",
@@ -330,23 +330,23 @@
     "build.slot1": "スロット 1",
     "build.slot2": "スロット 2",
     "build.softReset": "ソフトリセット",
-    
+
     "console.title": "コンソール出力",
     "console.clear": "クリア",
-    
+
     "metrics.title": "パフォーマンス指標",
     "metrics.compileTime": "コンパイル時間",
     "metrics.transferTime": "転送時間",
     "metrics.programSize": "プログラムサイズ",
-    
+
     "history.title": "ビルド履歴",
     "history.empty": "ビルド履歴はまだありません",
-    
+
     "reference.title": "関数リファレンス",
     "reference.noDoc": "このボードのリファレンスドキュメントはありません。",
-    
+
     "language.selector": "言語",
-    
+
     "error.notConnected": "デバイスに接続されていません",
     "error.characteristicNotAvailable": "プログラム特性が利用できません。再接続してください。",
     "error.deviceNotFound": "デバイスが見つかりません。OpenBlink デバイスの電源が入っていて、近くにあることを確認してください。",
@@ -366,7 +366,7 @@
     "error.simulatorNotAvailable": "このボードではシミュレータを利用できません",
     "error.loadingSimulator": "シミュレータを読み込み中...",
     "error.loadingSimulatorFailed": "シミュレータの読み込みに失敗しました：{message}",
-    
+
     "compiler.success": "mrbc 成功！({time}ms)",
     "compiler.sendComplete": "バイトコード送信完了！({time}ms)",
     "compiler.error": "エラー：{message}",
@@ -374,7 +374,7 @@
     "compiler.errorPrefix": "コンパイラエラー：",
     "compiler.error.prefix": "",
     "compiler.error.suffix": "",
-    
+
     "compatibility.warning.title": "ブラウザ互換性の警告",
     "compatibility.warning.message": "お使いのブラウザは以下の必要な機能をサポートしていません：",
     "compatibility.warning.suggestion": "Chrome や Edge などの互換性のあるブラウザをご使用ください。",
@@ -382,35 +382,35 @@
     "compatibility.feature.webAssembly": "WebAssembly",
     "compatibility.feature.localStorage": "ローカルストレージ",
     "compatibility.feature.sessionStorage": "セッションストレージ",
-    
-      "message.started": "OpenBlink WebIDE v{version} が起動しました。",
-      "message.boardLoaded": "ボードを読み込みました：{boardName}",
-      "message.boardSwitched": "ボードを切り替えました：{boardName}",
-      "message.promiseError": "Promise エラー：{message}",
-      "message.lineError": "エラー：{message}（{line} 行目）",
-      "message.loadingSimulator": "シミュレータを読み込み中...",
-    
-      "status.connected": "接続済み",
-      "status.disconnected": "未接続",
-      "status.connecting": "接続中...",
-      "status.reconnecting": "再接続中...",
-    
-                  "simulator.available": "ブラウザシミュレータでコードを実行",
-                  "simulator.unavailable": "このボードではシミュレータを利用できません",
-                  "simulator.showVMStatistics": "VM 統計を表示",
-                  "simulator.clear": "クリア",
-                  "simulator.title": "Webシミュレータ（実験的）",
-                  "simulator.close": "閉じる",
-                  "simulator.output": "シミュレータ出力",
-          
-                  "loading.setup": "設定中...",
-                  "loading.boards": "ボードを読み込み中..."
-                },
-  
-        "ja-easy": {
+
+    "message.started": "OpenBlink WebIDE v{version} が起動しました。",
+    "message.boardLoaded": "ボードを読み込みました：{boardName}",
+    "message.boardSwitched": "ボードを切り替えました：{boardName}",
+    "message.promiseError": "Promise エラー：{message}",
+    "message.lineError": "エラー：{message}（{line} 行目）",
+    "message.loadingSimulator": "シミュレータを読み込み中...",
+
+    "status.connected": "接続済み",
+    "status.disconnected": "未接続",
+    "status.connecting": "接続中...",
+    "status.reconnecting": "再接続中...",
+
+    "simulator.available": "ブラウザシミュレータでコードを実行",
+    "simulator.unavailable": "このボードではシミュレータを利用できません",
+    "simulator.showVMStatistics": "VM 統計を表示",
+    "simulator.clear": "クリア",
+    "simulator.title": "Webシミュレータ（実験的）",
+    "simulator.close": "閉じる",
+    "simulator.output": "シミュレータ出力",
+
+    "loading.setup": "設定中...",
+    "loading.boards": "ボードを読み込み中..."
+  },
+
+  "ja-easy": {
     "app.title": "🌟 オープンブリンク",
     "app.description": "オープンブリンクは、プログラムを かいて、デバイスに おくる どうぐです。",
-    
+
     "connection.title": "🔌 つなぐ",
     "connection.connect": "🔗 デバイスと つなぐ",
     "connection.disconnect": "✂️ きる",
@@ -418,13 +418,13 @@
     "connection.status.disconnected": "🔴 つながっていません",
     "connection.status.connecting": "🔄 つないでいます...",
     "connection.status.reconnecting": "🔄 もういちど つないでいます...",
-    
+
     "editor.title": "✏️ プログラムを かく",
     "editor.board": "🎛️ ボード：",
     "editor.loadFile": "📂 ファイルを ひらく",
     "editor.download": "💾 ほぞんする",
     "editor.filenamePlaceholder": "ファイルのなまえ.rb",
-    
+
     "build.title": "ビルド & ブリンク",
     "build.buildAndBlink": "✨ つくって おくる",
     "build.runSimulator": "🎮 ためしに うごかす",
@@ -432,23 +432,23 @@
     "build.slot1": "ばしょ 1",
     "build.slot2": "ばしょ 2",
     "build.softReset": "🔄 やりなおす",
-    
+
     "console.title": "💬 メッセージ",
     "console.clear": "🧹 けす",
-    
+
     "metrics.title": "⏱️ じかんの きろく",
     "metrics.compileTime": "🔨 つくる じかん",
     "metrics.transferTime": "📤 おくる じかん",
     "metrics.programSize": "📏 プログラムの おおきさ",
-    
+
     "history.title": "📜 きろく",
     "history.empty": "まだ きろくは ありません",
-    
+
     "reference.title": "📖 つかいかた",
     "reference.noDoc": "このボードの つかいかたは まだ ありません。",
-    
+
     "language.selector": "🌐 ことば",
-    
+
     "error.notConnected": "😢 デバイスと つながって いません",
     "error.characteristicNotAvailable": "🔄 つなぎなおして ください。",
     "error.deviceNotFound": "🔍 デバイスが みつかりません。でんげんを いれて、ちかくに おいて ください。",
@@ -468,7 +468,7 @@
     "error.simulatorNotAvailable": "😢 このボードでは ためしに うごかせません",
     "error.loadingSimulator": "⏳ じゅんびしています...",
     "error.loadingSimulatorFailed": "😢 じゅんびが うまく いきませんでした：{message}",
-    
+
     "compiler.success": "🎉 できました！({time}ミリびょう)",
     "compiler.sendComplete": "🚀 おくりました！({time}ミリびょう)",
     "compiler.error": "⚠️ エラー：{message}",
@@ -476,7 +476,7 @@
     "compiler.errorPrefix": "⚠️ プログラムの まちがい：",
     "compiler.error.prefix": "😢 プログラムに まちがいが あります：",
     "compiler.error.suffix": "👨‍👩‍👧 おとなの ひとに きいて ください。",
-    
+
     "compatibility.warning.title": "⚠️ このブラウザでは つかえません",
     "compatibility.warning.message": "つぎの きのうが たりません：",
     "compatibility.warning.suggestion": "💡 Chrome か Edge を つかって ください。",
@@ -484,19 +484,19 @@
     "compatibility.feature.webAssembly": "⚙️ ウェブアセンブリ",
     "compatibility.feature.localStorage": "💾 ローカルストレージ",
     "compatibility.feature.sessionStorage": "💾 セッションストレージ",
-    
+
     "message.started": "🎉 オープンブリンク v{version} が はじまりました！",
     "message.boardLoaded": "📦 ボードを よみこみました：{boardName}",
     "message.boardSwitched": "🔄 ボードを かえました：{boardName}",
     "message.promiseError": "⚠️ エラー：{message}",
     "message.lineError": "⚠️ エラー：{message}（{line}ぎょうめ）",
     "message.loadingSimulator": "⏳ じゅんびしています...",
-    
+
     "status.connected": "🟢 つながっています",
     "status.disconnected": "🔴 つながっていません",
     "status.connecting": "🔄 つないでいます...",
     "status.reconnecting": "🔄 もういちど つないでいます...",
-    
+
     "simulator.available": "🎮 ためしに うごかす",
     "simulator.unavailable": "😢 このボードでは ためしに うごかせません",
     "simulator.showVMStatistics": "📊 VMの じょうたいを みる",
@@ -504,7 +504,7 @@
     "simulator.title": "🎮 シミュレータ（ためしよう）",
     "simulator.close": "❌ とじる",
     "simulator.output": "📝 シミュレータの メッセージ",
-    
+
     "loading.setup": "⏳ じゅんびしています...",
     "loading.boards": "📦 ボードを よみこんでいます..."
   }

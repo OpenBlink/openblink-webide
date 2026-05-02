@@ -3,6 +3,7 @@
 ## LED Control
 
 ### LED.set(color)
+
 Sets the built-in RGB LED to the specified color.
 
 - `color` - An array of three integers [R, G, B], each ranging from 0 to 255
@@ -15,6 +16,7 @@ Sets the built-in RGB LED to the specified color.
 ## Timer Functions
 
 ### sleep(seconds)
+
 Pauses program execution for the specified number of seconds.
 
 - `seconds` - Number of seconds to wait (can be a decimal)
@@ -22,6 +24,7 @@ Pauses program execution for the specified number of seconds.
 - Example: `sleep 0.5` - Wait for 0.5 seconds
 
 ### sleep_ms(milliseconds)
+
 Pauses program execution for the specified number of milliseconds.
 
 - `milliseconds` - Number of milliseconds to wait
