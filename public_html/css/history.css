@@ -104,7 +104,7 @@
 
 .diff-view {
   margin: 8px 0;
-  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-family: "Fira Code", "Monaco", "Menlo", monospace;
   font-size: 11px;
   background: #1e1e1e;
   border-radius: 4px;
@@ -326,7 +326,7 @@
   background-color: #3c3c3c;
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Fira Code', 'Monaco', 'Menlo', monospace;
+  font-family: "Fira Code", "Monaco", "Menlo", monospace;
   font-size: 12px;
   color: #ce9178;
 }

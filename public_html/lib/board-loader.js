@@ -14,7 +14,7 @@ class BoardLoader {
     this.currentBoard = null;
     this.currentBoardId = null;
     this.loadedScripts = [];
-    
+
     // Available boards registry - populated from board configs
     this.availableBoards = [];
   }
@@ -32,7 +32,7 @@ class BoardLoader {
         return;
       }
 
-      const script = document.createElement('script');
+      const script = document.createElement("script");
       script.src = path;
       script.onload = () => {
         this.loadedScripts.push(script);
@@ -75,7 +75,7 @@ class BoardLoader {
    * @returns {Promise<boolean>} True if switch was successful
    */
   async switchBoard(boardId, uiContainer) {
-    const boardInfo = this.availableBoards.find(b => b.id === boardId);
+    const boardInfo = this.availableBoards.find((b) => b.id === boardId);
     if (!boardInfo) {
       console.error(`Board not found: ${boardId}`);
       return false;
@@ -91,7 +91,7 @@ class BoardLoader {
       this.currentBoard = window.BOARD_CONFIG;
       this.currentBoardId = boardId;
 
-      if (typeof window.createBoardUI === 'function' && uiContainer) {
+      if (typeof window.createBoardUI === "function" && uiContainer) {
         window.createBoardUI(uiContainer, this.currentBoard);
       }
 
@@ -107,7 +107,7 @@ class BoardLoader {
    * @param {HTMLElement} uiContainer - Container for board UI
    */
   cleanupBoard(uiContainer) {
-    if (typeof window.cleanupBoardUI === 'function' && uiContainer) {
+    if (typeof window.cleanupBoardUI === "function" && uiContainer) {
       window.cleanupBoardUI(uiContainer);
     }
 
@@ -147,7 +147,7 @@ class BoardLoader {
    * @param {string} boardInfo.path - Path to board files
    */
   registerBoard(boardInfo) {
-    const existing = this.availableBoards.find(b => b.id === boardInfo.id);
+    const existing = this.availableBoards.find((b) => b.id === boardInfo.id);
     if (existing) {
       Object.assign(existing, boardInfo);
     } else {
@@ -156,6 +156,6 @@ class BoardLoader {
   }
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.BoardLoader = BoardLoader;
 }

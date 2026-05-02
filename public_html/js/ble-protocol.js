@@ -3,11 +3,14 @@
  * SPDX-FileCopyrightText: Copyright (c) 2025 ViXion Inc. All Rights Reserved.
  */
 
-const BLEProtocol = (function() {
+const BLEProtocol = (function () {
   const OPENBLINK_SERVICE_UUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
-  const OPENBLINK_PROGRAM_CHARACTERISTIC_UUID = "ad9fdd56-1135-4a84-923c-ce5a244385e7";
-  const OPENBLINK_CONSOLE_CHARACTERISTIC_UUID = "a015b3de-185a-4252-aa04-7a87d38ce148";
-  const OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID = "ca141151-3113-448b-b21a-6a6203d253ff";
+  const OPENBLINK_PROGRAM_CHARACTERISTIC_UUID =
+    "ad9fdd56-1135-4a84-923c-ce5a244385e7";
+  const OPENBLINK_CONSOLE_CHARACTERISTIC_UUID =
+    "a015b3de-185a-4252-aa04-7a87d38ce148";
+  const OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID =
+    "ca141151-3113-448b-b21a-6a6203d253ff";
 
   const DATA_HEADER_SIZE = 6;
   const PROGRAM_HEADER_SIZE = 8;
@@ -33,9 +36,16 @@ const BLEProtocol = (function() {
   }
 
   async function negotiateMTU() {
-    if (!programCharacteristic || !programCharacteristic.service || !programCharacteristic.service.device) {
+    if (
+      !programCharacteristic ||
+      !programCharacteristic.service ||
+      !programCharacteristic.service.device
+    ) {
       console.warn("Cannot negotiate MTU: characteristic not available");
-      UIManager.appendToConsole("MTU negotiation skipped: device not ready. Using default MTU: " + DEFAULT_MTU);
+      UIManager.appendToConsole(
+        "MTU negotiation skipped: device not ready. Using default MTU: " +
+          DEFAULT_MTU,
+      );
       negotiatedMTU = DEFAULT_MTU;
       return;
     }
@@ -46,8 +56,12 @@ const BLEProtocol = (function() {
         negotiatedMTU = await gattServer.requestMTU(REQUESTED_MTU);
         console.log(`Negotiated MTU: ${negotiatedMTU}`);
       } catch (error) {
-        console.warn(`MTU negotiation failed: ${error.message}. Using default MTU: ${DEFAULT_MTU}`);
-        UIManager.appendToConsole("MTU negotiation failed. Using default MTU: " + DEFAULT_MTU);
+        console.warn(
+          `MTU negotiation failed: ${error.message}. Using default MTU: ${DEFAULT_MTU}`,
+        );
+        UIManager.appendToConsole(
+          "MTU negotiation failed. Using default MTU: " + DEFAULT_MTU,
+        );
         negotiatedMTU = DEFAULT_MTU;
       }
     } else {
@@ -58,44 +72,50 @@ const BLEProtocol = (function() {
         console.log("Device negotiated MTU(uint16):", devicemtu);
       } catch (error) {
         console.error("Device negotiated MTU Error:", error);
-        UIManager.appendToConsole("Failed to read device MTU. Using default MTU: " + DEFAULT_MTU);
+        UIManager.appendToConsole(
+          "Failed to read device MTU. Using default MTU: " + DEFAULT_MTU,
+        );
         negotiatedMTU = DEFAULT_MTU;
       }
       console.log(
-        `MTU negotiation not supported. Using device's negotiated MTU: ${negotiatedMTU}`
+        `MTU negotiation not supported. Using device's negotiated MTU: ${negotiatedMTU}`,
       );
     }
   }
 
-    async function writeCharacteristicWithTimeout(characteristic, buffer, timeout = WRITE_TIMEOUT) {
-      if (!characteristic) {
-        throw new Error("Characteristic not available");
-      }
-    
-      return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-          reject(new Error(`BLE write timeout after ${timeout}ms`));
-        }, timeout);
-      
-        const writePromise = characteristic.properties.writeWithoutResponse
-          ? characteristic.writeValueWithoutResponse(buffer)
-          : characteristic.writeValue(buffer);
-      
-        writePromise
-          .then(() => {
-            clearTimeout(timeoutId);
-            resolve();
-          })
-          .catch((error) => {
-            clearTimeout(timeoutId);
-            reject(error);
-          });
-      });
+  async function writeCharacteristicWithTimeout(
+    characteristic,
+    buffer,
+    timeout = WRITE_TIMEOUT,
+  ) {
+    if (!characteristic) {
+      throw new Error("Characteristic not available");
     }
 
-    async function writeCharacteristic(characteristic, buffer) {
-      return writeCharacteristicWithTimeout(characteristic, buffer);
-    }
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`BLE write timeout after ${timeout}ms`));
+      }, timeout);
+
+      const writePromise = characteristic.properties.writeWithoutResponse
+        ? characteristic.writeValueWithoutResponse(buffer)
+        : characteristic.writeValue(buffer);
+
+      writePromise
+        .then(() => {
+          clearTimeout(timeoutId);
+          resolve();
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
+    });
+  }
+
+  async function writeCharacteristic(characteristic, buffer) {
+    return writeCharacteristicWithTimeout(characteristic, buffer);
+  }
 
   async function connectToDevice(device) {
     const server = await device.gatt.connect();
@@ -116,13 +136,22 @@ const BLEProtocol = (function() {
 
     console.log("Got console characteristic:", consoleCharacteristic);
     console.log("Got program characteristic:", programCharacteristic);
-    console.log("Got negotiatedMTU characteristic:", negotiatedMtuCharacteristic);
+    console.log(
+      "Got negotiatedMTU characteristic:",
+      negotiatedMtuCharacteristic,
+    );
 
     await negotiateMTU();
 
     // Remove old listener before adding new one to avoid duplicates during reconnection
-    consoleCharacteristic.removeEventListener("characteristicvaluechanged", handleConsoleValueChanged);
-    consoleCharacteristic.addEventListener("characteristicvaluechanged", handleConsoleValueChanged);
+    consoleCharacteristic.removeEventListener(
+      "characteristicvaluechanged",
+      handleConsoleValueChanged,
+    );
+    consoleCharacteristic.addEventListener(
+      "characteristicvaluechanged",
+      handleConsoleValueChanged,
+    );
 
     await consoleCharacteristic.startNotifications();
 
@@ -150,7 +179,9 @@ const BLEProtocol = (function() {
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
       attemptReconnect(device);
     } else {
-      UIManager.appendToConsole("Max reconnection attempts reached. Please reconnect manually.");
+      UIManager.appendToConsole(
+        "Max reconnection attempts reached. Please reconnect manually.",
+      );
       connectedDevice = null;
       reconnectAttempts = 0;
       UIManager.updateConnectionStatus("disconnected");
@@ -161,7 +192,9 @@ const BLEProtocol = (function() {
     reconnectAttempts++;
     const delay = INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1);
 
-    UIManager.appendToConsole(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`);
+    UIManager.appendToConsole(
+      `Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`,
+    );
     UIManager.updateConnectionStatus("reconnecting");
 
     setTimeout(async () => {
@@ -177,11 +210,18 @@ const BLEProtocol = (function() {
         if (userInitiatedDisconnect) {
           UIManager.appendToConsole("Reconnect attempt was cancelled by user.");
           try {
-            if (connectedDevice && connectedDevice.gatt && connectedDevice.gatt.connected) {
+            if (
+              connectedDevice &&
+              connectedDevice.gatt &&
+              connectedDevice.gatt.connected
+            ) {
               connectedDevice.gatt.disconnect();
             }
           } catch (disconnectError) {
-            UIManager.appendToConsole("Error while enforcing user disconnect after reconnect: " + disconnectError.message);
+            UIManager.appendToConsole(
+              "Error while enforcing user disconnect after reconnect: " +
+                disconnectError.message,
+            );
           }
           reconnectAttempts = 0;
           UIManager.updateConnectionStatus("disconnected");
@@ -195,7 +235,9 @@ const BLEProtocol = (function() {
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
           attemptReconnect(device);
         } else {
-          UIManager.appendToConsole("Max reconnection attempts reached. Please reconnect manually.");
+          UIManager.appendToConsole(
+            "Max reconnection attempts reached. Please reconnect manually.",
+          );
           connectedDevice = null;
           reconnectAttempts = 0;
           UIManager.updateConnectionStatus("disconnected");
@@ -205,19 +247,19 @@ const BLEProtocol = (function() {
   }
 
   return {
-    getServiceUUID: function() {
+    getServiceUUID: function () {
       return OPENBLINK_SERVICE_UUID;
     },
 
-    isConnected: function() {
+    isConnected: function () {
       return connectedDevice?.gatt?.connected === true;
     },
 
-    isProgramCharacteristicAvailable: function() {
+    isProgramCharacteristicAvailable: function () {
       return programCharacteristic !== null;
     },
 
-    connect: async function() {
+    connect: async function () {
       UIManager.appendToConsole("Connecting to device...");
       UIManager.updateConnectionStatus("connecting");
       userInitiatedDisconnect = false;
@@ -232,18 +274,21 @@ const BLEProtocol = (function() {
         });
 
         UIManager.appendToConsole("Selected device: " + device.name);
-        
+
         if (deviceWithDisconnectListener !== device) {
           if (deviceWithDisconnectListener) {
-            deviceWithDisconnectListener.removeEventListener('gattserverdisconnected', handleDisconnect);
+            deviceWithDisconnectListener.removeEventListener(
+              "gattserverdisconnected",
+              handleDisconnect,
+            );
           }
-          device.addEventListener('gattserverdisconnected', handleDisconnect);
+          device.addEventListener("gattserverdisconnected", handleDisconnect);
           deviceWithDisconnectListener = device;
         }
-        
+
         await connectToDevice(device);
       } catch (error) {
-        if (error.name === 'NotFoundError') {
+        if (error.name === "NotFoundError") {
           UIManager.appendToConsole("Connection cancelled: No device selected");
         } else {
           UIManager.appendToConsole(ErrorHandler.getErrorMessage(error));
@@ -253,7 +298,7 @@ const BLEProtocol = (function() {
       }
     },
 
-    disconnect: function() {
+    disconnect: function () {
       userInitiatedDisconnect = true;
       reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
 
@@ -271,7 +316,7 @@ const BLEProtocol = (function() {
       UIManager.appendToConsole("Disconnected from device.");
     },
 
-    sendReset: async function() {
+    sendReset: async function () {
       if (!this.isConnected() || !programCharacteristic) {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
@@ -290,7 +335,7 @@ const BLEProtocol = (function() {
       }
     },
 
-    sendReload: async function() {
+    sendReload: async function () {
       if (!this.isConnected() || !programCharacteristic) {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
@@ -309,14 +354,16 @@ const BLEProtocol = (function() {
       }
     },
 
-    sendFirmware: async function(mrbContent, slot, onProgress) {
+    sendFirmware: async function (mrbContent, slot, onProgress) {
       if (!this.isConnected()) {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
       }
 
       if (!programCharacteristic) {
-        UIManager.appendToConsole("Error: Program characteristic not available");
+        UIManager.appendToConsole(
+          "Error: Program characteristic not available",
+        );
         console.error("no program characteristic");
         return;
       }
@@ -325,14 +372,21 @@ const BLEProtocol = (function() {
       const crc16 = crc16_reflect(0xd175, 0xffff, mrbContent);
 
       UIManager.appendToConsole(
-        `Sending bytecode: slot=${slot}, length=${contentLength}bytes, CRC16=${crc16.toString(16)}, MTU=${negotiatedMTU}`
+        `Sending bytecode: slot=${slot}, length=${contentLength}bytes, CRC16=${crc16.toString(16)}, MTU=${negotiatedMTU}`,
       );
 
       const DATA_PAYLOAD_SIZE = negotiatedMTU - DATA_HEADER_SIZE;
       console.log(`DATA_PAYLOAD_SIZE: ${DATA_PAYLOAD_SIZE} Bytes`);
 
-      for (let offset = 0; offset < contentLength; offset += DATA_PAYLOAD_SIZE) {
-        const chunkDataSize = Math.min(DATA_PAYLOAD_SIZE, contentLength - offset);
+      for (
+        let offset = 0;
+        offset < contentLength;
+        offset += DATA_PAYLOAD_SIZE
+      ) {
+        const chunkDataSize = Math.min(
+          DATA_PAYLOAD_SIZE,
+          contentLength - offset,
+        );
         const buffer = new ArrayBuffer(DATA_HEADER_SIZE + chunkDataSize);
         const view = new DataView(buffer);
 
@@ -347,13 +401,15 @@ const BLEProtocol = (function() {
         try {
           await writeCharacteristic(programCharacteristic, buffer);
           UIManager.appendToConsole(
-            `Send [D]ata Ok: Offset=${offset}, Size=${chunkDataSize}`
+            `Send [D]ata Ok: Offset=${offset}, Size=${chunkDataSize}`,
           );
           if (onProgress) {
             onProgress(offset + chunkDataSize, contentLength);
           }
         } catch (error) {
-          UIManager.appendToConsole(`Send [D]ata Error: Offset=${offset}, Error: ${error.message}`);
+          UIManager.appendToConsole(
+            `Send [D]ata Error: Offset=${offset}, Error: ${error.message}`,
+          );
           return;
         }
       }
@@ -375,6 +431,6 @@ const BLEProtocol = (function() {
       } catch (error) {
         UIManager.appendToConsole("Send [P]rogram Error: " + error.message);
       }
-    }
+    },
   };
 })();

@@ -3,50 +3,50 @@
  * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
-const FileManager = (function() {
+const FileManager = (function () {
   let editor = null;
   let currentFile = null;
   let isDirty = false;
 
   function setupChangeTracking() {
     if (editor) {
-      editor.on('change', () => {
+      editor.on("change", () => {
         isDirty = true;
       });
     }
   }
 
   function setupBeforeUnload() {
-    window.addEventListener('beforeunload', (e) => {
+    window.addEventListener("beforeunload", (e) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Do you want to leave?';
+        e.returnValue = "You have unsaved changes. Do you want to leave?";
         return e.returnValue;
       }
     });
   }
 
   return {
-    initialize: function(editorInstance) {
+    initialize: function (editorInstance) {
       editor = editorInstance;
       setupChangeTracking();
       setupBeforeUnload();
     },
 
-    loadFile: function() {
+    loadFile: function () {
       if (!this.checkUnsavedChanges()) {
         return;
       }
 
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.rb';
-      
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".rb";
+
       input.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (!file.name.endsWith('.rb')) {
+        if (!file.name.endsWith(".rb")) {
           UIManager.appendToConsole("Error: Please select a .rb file");
           return;
         }
@@ -71,24 +71,24 @@ const FileManager = (function() {
       input.click();
     },
 
-    saveFile: function() {
+    saveFile: function () {
       if (!editor) return;
 
-      const filenameInput = document.getElementById('filename-input');
-      let filename = filenameInput ? filenameInput.value.trim() : '';
-      
+      const filenameInput = document.getElementById("filename-input");
+      let filename = filenameInput ? filenameInput.value.trim() : "";
+
       if (!filename) {
-        filename = 'program.rb';
+        filename = "program.rb";
       }
-      if (!filename.endsWith('.rb')) {
-        filename += '.rb';
+      if (!filename.endsWith(".rb")) {
+        filename += ".rb";
       }
 
       const content = editor.getValue();
-      const blob = new Blob([content], { type: 'text/plain' });
+      const blob = new Blob([content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
+
+      const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
@@ -101,35 +101,35 @@ const FileManager = (function() {
       UIManager.appendToConsole(`Downloaded file: ${filename}`);
     },
 
-    checkUnsavedChanges: function() {
+    checkUnsavedChanges: function () {
       if (isDirty) {
-        return confirm('You have unsaved changes. Do you want to continue?');
+        return confirm("You have unsaved changes. Do you want to continue?");
       }
       return true;
     },
 
-    markClean: function() {
+    markClean: function () {
       isDirty = false;
     },
 
-    isDirty: function() {
+    isDirty: function () {
       return isDirty;
     },
 
-    getCurrentFileName: function() {
+    getCurrentFileName: function () {
       return currentFile;
     },
 
-    updateFilenameInput: function() {
-      const filenameInput = document.getElementById('filename-input');
+    updateFilenameInput: function () {
+      const filenameInput = document.getElementById("filename-input");
       if (filenameInput) {
-        filenameInput.value = currentFile || 'program.rb';
+        filenameInput.value = currentFile || "program.rb";
       }
     },
 
-    setCurrentFileName: function(name) {
+    setCurrentFileName: function (name) {
       currentFile = name;
       this.updateFilenameInput();
-    }
+    },
   };
 })();

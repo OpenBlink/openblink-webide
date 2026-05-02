@@ -3,7 +3,7 @@
  * SPDX-FileCopyrightText: Copyright (c) 2025 ViXion Inc. All Rights Reserved.
  */
 
-const UIManager = (function() {
+const UIManager = (function () {
   let connectButton = null;
   let disconnectButton = null;
   let runMainButton = null;
@@ -13,16 +13,16 @@ const UIManager = (function() {
   let saveFileButton = null;
   let slotSelector = null;
   let boardSelector = null;
-    let simulatorLoaded = false;
-    let simulatorLoading = false;
-    let simulatorLoadPromise = null;
+  let simulatorLoaded = false;
+  let simulatorLoading = false;
+  let simulatorLoadPromise = null;
 
-    const MAX_METRICS_HISTORY = 100;
+  const MAX_METRICS_HISTORY = 100;
 
   let metricsHistory = {
     compile: [],
     transfer: [],
-    size: []
+    size: [],
   };
 
   // Note: Global t() helper is defined in i18n.js
@@ -53,7 +53,7 @@ const UIManager = (function() {
   }
 
   return {
-    appendToConsole: function(message) {
+    appendToConsole: function (message) {
       if (message === undefined || message === null) {
         return;
       }
@@ -63,14 +63,14 @@ const UIManager = (function() {
       }
       const consoleOutput = document.getElementById("consoleOutput");
       if (!consoleOutput) return;
-      
+
       const line = document.createElement("div");
       line.textContent = msgStr;
       consoleOutput.appendChild(line);
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
     },
 
-    updateConnectionStatus: function(status) {
+    updateConnectionStatus: function (status) {
       const statusElement = document.getElementById("connectionStatus");
       if (!statusElement) return;
 
@@ -78,7 +78,7 @@ const UIManager = (function() {
 
       switch (status) {
         case "connected":
-          statusElement.textContent = t('status.connected') || "Connected";
+          statusElement.textContent = t("status.connected") || "Connected";
           statusElement.classList.add("connected");
           if (connectButton) connectButton.disabled = true;
           if (disconnectButton) disconnectButton.disabled = false;
@@ -86,7 +86,8 @@ const UIManager = (function() {
           if (softResetButton) softResetButton.disabled = false;
           break;
         case "disconnected":
-          statusElement.textContent = t('status.disconnected') || "Disconnected";
+          statusElement.textContent =
+            t("status.disconnected") || "Disconnected";
           statusElement.classList.add("disconnected");
           if (connectButton) connectButton.disabled = false;
           if (disconnectButton) disconnectButton.disabled = true;
@@ -94,7 +95,7 @@ const UIManager = (function() {
           if (softResetButton) softResetButton.disabled = true;
           break;
         case "connecting":
-          statusElement.textContent = t('status.connecting') || "Connecting...";
+          statusElement.textContent = t("status.connecting") || "Connecting...";
           statusElement.classList.add("connecting");
           if (connectButton) connectButton.disabled = true;
           if (disconnectButton) disconnectButton.disabled = true;
@@ -102,7 +103,8 @@ const UIManager = (function() {
           if (softResetButton) softResetButton.disabled = true;
           break;
         case "reconnecting":
-          statusElement.textContent = t('status.reconnecting') || "Reconnecting...";
+          statusElement.textContent =
+            t("status.reconnecting") || "Reconnecting...";
           statusElement.classList.add("connecting");
           if (connectButton) connectButton.disabled = true;
           if (disconnectButton) disconnectButton.disabled = false;
@@ -112,7 +114,7 @@ const UIManager = (function() {
       }
     },
 
-    updateMetrics: function(metrics) {
+    updateMetrics: function (metrics) {
       const metricsPanel = document.getElementById("metrics-panel");
       if (!metricsPanel) return;
 
@@ -133,7 +135,8 @@ const UIManager = (function() {
       const updateCurrent = (id, value, unit, decimals) => {
         const el = document.getElementById(id);
         if (el && value !== undefined) {
-          el.textContent = (decimals !== undefined ? value.toFixed(decimals) : value) + unit;
+          el.textContent =
+            (decimals !== undefined ? value.toFixed(decimals) : value) + unit;
         }
       };
 
@@ -157,13 +160,27 @@ const UIManager = (function() {
           return Math.max(0, Math.min(100, val));
         };
 
-        const minPercent = clampPercent(displayRange > 0 ? ((stats.min - displayMin) / displayRange) * 100 : 0);
-        const maxPercent = clampPercent(displayRange > 0 ? ((stats.max - displayMin) / displayRange) * 100 : 100);
-        const avgPercent = clampPercent(displayRange > 0 ? ((stats.avg - displayMin) / displayRange) * 100 : 50);
+        const minPercent = clampPercent(
+          displayRange > 0
+            ? ((stats.min - displayMin) / displayRange) * 100
+            : 0,
+        );
+        const maxPercent = clampPercent(
+          displayRange > 0
+            ? ((stats.max - displayMin) / displayRange) * 100
+            : 100,
+        );
+        const avgPercent = clampPercent(
+          displayRange > 0
+            ? ((stats.avg - displayMin) / displayRange) * 100
+            : 50,
+        );
 
         const formatValue = (val) => {
-          if (!Number.isFinite(val)) return '--';
-          return decimals !== undefined ? val.toFixed(decimals) : Math.round(val);
+          if (!Number.isFinite(val)) return "--";
+          return decimals !== undefined
+            ? val.toFixed(decimals)
+            : Math.round(val);
         };
 
         chart.innerHTML = `
@@ -186,7 +203,7 @@ const UIManager = (function() {
 
     getSelectedSlot: getSelectedSlot,
 
-    initialize: function() {
+    initialize: function () {
       connectButton = document.getElementById("ble-connect");
       disconnectButton = document.getElementById("ble-disconnect");
       runMainButton = document.getElementById("run-main");
@@ -214,7 +231,7 @@ const UIManager = (function() {
       if (softResetButton) {
         softResetButton.addEventListener("click", () => {
           if (!BLEProtocol.isConnected()) {
-            const msg = t('error.notConnected') || "Not connected to device";
+            const msg = t("error.notConnected") || "Not connected to device";
             this.appendToConsole("Error: " + msg);
             return;
           }
@@ -254,14 +271,20 @@ const UIManager = (function() {
       if (runSimulatorButton) {
         runSimulatorButton.addEventListener("click", async () => {
           const currentBoard = BoardManager.getCurrentBoard();
-          if (!currentBoard || !BoardManager.hasSimulatorSupport(currentBoard)) {
-            const msg = t('error.simulatorNotAvailable') || "Simulator not available for this board";
+          if (
+            !currentBoard ||
+            !BoardManager.hasSimulatorSupport(currentBoard)
+          ) {
+            const msg =
+              t("error.simulatorNotAvailable") ||
+              "Simulator not available for this board";
             this.appendToConsole("Error: " + msg);
             return;
           }
 
           runSimulatorButton.disabled = true;
-          const loadingMsg = t('message.loadingSimulator') || "Loading simulator...";
+          const loadingMsg =
+            t("message.loadingSimulator") || "Loading simulator...";
           this.appendToConsole(loadingMsg);
 
           try {
@@ -271,7 +294,9 @@ const UIManager = (function() {
               await Simulator.runFromEditor();
             }
           } catch (error) {
-            const errorMsg = t('error.loadingSimulatorFailed', { message: error.message }) || ("Error loading simulator: " + error.message);
+            const errorMsg =
+              t("error.loadingSimulatorFailed", { message: error.message }) ||
+              "Error loading simulator: " + error.message;
             this.appendToConsole(errorMsg);
           } finally {
             this.updateSimulatorButton(BoardManager.getCurrentBoard());
@@ -280,11 +305,11 @@ const UIManager = (function() {
       }
     },
 
-    populateBoardSelector: function(boards) {
+    populateBoardSelector: function (boards) {
       if (!boardSelector) return;
-      
+
       boardSelector.innerHTML = "";
-      boards.forEach(board => {
+      boards.forEach((board) => {
         const option = document.createElement("option");
         option.value = board.name;
         option.textContent = board.displayName;
@@ -292,89 +317,100 @@ const UIManager = (function() {
       });
     },
 
-    setRunButtonEnabled: function(enabled) {
+    setRunButtonEnabled: function (enabled) {
       if (runMainButton) {
         runMainButton.disabled = !enabled || !BLEProtocol.isConnected();
       }
     },
 
-    updateSimulatorButton: function(board) {
+    updateSimulatorButton: function (board) {
       if (!runSimulatorButton) return;
-      
+
       const hasSimulator = BoardManager.hasSimulatorSupport(board);
       runSimulatorButton.disabled = !hasSimulator;
-      const availableTitle = t('simulator.available') || "Run code in browser simulator";
-      const unavailableTitle = t('simulator.unavailable') || "Simulator not available for this board";
-      runSimulatorButton.title = hasSimulator ? availableTitle : unavailableTitle;
+      const availableTitle =
+        t("simulator.available") || "Run code in browser simulator";
+      const unavailableTitle =
+        t("simulator.unavailable") || "Simulator not available for this board";
+      runSimulatorButton.title = hasSimulator
+        ? availableTitle
+        : unavailableTitle;
     },
 
-                loadSimulatorResources: async function() {
-                  if (simulatorLoaded) return Promise.resolve();
-      
-                  if (simulatorLoading && simulatorLoadPromise) {
-                    return simulatorLoadPromise;
-                  }
+    loadSimulatorResources: async function () {
+      if (simulatorLoaded) return Promise.resolve();
 
-                  simulatorLoading = true;
-      
-                  const SCRIPT_TIMEOUT = 30000;
-                  const MAX_RETRIES = 3;
-                  const INITIAL_RETRY_DELAY = 1000;
-          
-                  const loadScriptWithRetry = async (src) => {
-                    let lastError = null;
-            
-                    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-                      try {
-                        await new Promise((resolve, reject) => {
-                          const script = document.createElement("script");
-                          script.src = src;
-                  
-                          const timeoutId = setTimeout(() => {
-                            reject(new Error(`Script load timeout after ${SCRIPT_TIMEOUT}ms: ${src}`));
-                          }, SCRIPT_TIMEOUT);
-                  
-                          script.onload = () => {
-                            clearTimeout(timeoutId);
-                            resolve();
-                          };
-                          script.onerror = () => {
-                            clearTimeout(timeoutId);
-                            reject(new Error("Failed to load " + src));
-                          };
-                          document.body.appendChild(script);
-                        });
-                        return;
-                      } catch (error) {
-                        lastError = error;
-                        console.warn(`Script load attempt ${attempt + 1}/${MAX_RETRIES} failed for ${src}:`, error.message);
-                
-                        if (attempt < MAX_RETRIES - 1) {
-                          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-                          await new Promise(resolve => setTimeout(resolve, delay));
-                        }
-                      }
-                    }
-            
-                    throw lastError;
-                  };
+      if (simulatorLoading && simulatorLoadPromise) {
+        return simulatorLoadPromise;
+      }
 
-                  simulatorLoadPromise = (async () => {
-                    try {
-                      await loadScriptWithRetry("mrubyc/mrubyc.js");
-                      await loadScriptWithRetry("lib/board-loader.js");
-                      await loadScriptWithRetry("js/simulator.js");
-                      simulatorLoaded = true;
-                    } catch (error) {
-                      simulatorLoading = false;
-                      simulatorLoadPromise = null;
-                      throw error;
-                    } finally {
-                      simulatorLoading = false;
-                    }
-                  })();
+      simulatorLoading = true;
 
-                  return simulatorLoadPromise;
-                }
+      const SCRIPT_TIMEOUT = 30000;
+      const MAX_RETRIES = 3;
+      const INITIAL_RETRY_DELAY = 1000;
+
+      const loadScriptWithRetry = async (src) => {
+        let lastError = null;
+
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          try {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement("script");
+              script.src = src;
+
+              const timeoutId = setTimeout(() => {
+                reject(
+                  new Error(
+                    `Script load timeout after ${SCRIPT_TIMEOUT}ms: ${src}`,
+                  ),
+                );
+              }, SCRIPT_TIMEOUT);
+
+              script.onload = () => {
+                clearTimeout(timeoutId);
+                resolve();
+              };
+              script.onerror = () => {
+                clearTimeout(timeoutId);
+                reject(new Error("Failed to load " + src));
+              };
+              document.body.appendChild(script);
+            });
+            return;
+          } catch (error) {
+            lastError = error;
+            console.warn(
+              `Script load attempt ${attempt + 1}/${MAX_RETRIES} failed for ${src}:`,
+              error.message,
+            );
+
+            if (attempt < MAX_RETRIES - 1) {
+              const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+          }
+        }
+
+        throw lastError;
+      };
+
+      simulatorLoadPromise = (async () => {
+        try {
+          await loadScriptWithRetry("mrubyc/mrubyc.js");
+          await loadScriptWithRetry("lib/board-loader.js");
+          await loadScriptWithRetry("js/simulator.js");
+          simulatorLoaded = true;
+        } catch (error) {
+          simulatorLoading = false;
+          simulatorLoadPromise = null;
+          throw error;
+        } finally {
+          simulatorLoading = false;
+        }
+      })();
+
+      return simulatorLoadPromise;
+    },
   };
 })();

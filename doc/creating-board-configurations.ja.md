@@ -113,15 +113,15 @@ const BOARD_CONFIG = {
   name: "Your Board Name",
   id: "your-board-id",
   description: "Description of your board",
-  
+
   ui: {
     matrixWidth: 10,
     matrixHeight: 6,
-    totalPixels: 60
-  }
+    totalPixels: 60,
+  },
 };
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.BOARD_CONFIG = BOARD_CONFIG;
 }
 ```
@@ -144,15 +144,19 @@ class MrubycWasmAPI {
 
   defineClass(name, superClass) {
     return this.module.ccall(
-      'mrbc_wasm_define_class', 'number',
-      ['string', 'number'], [name, superClass]
+      "mrbc_wasm_define_class",
+      "number",
+      ["string", "number"],
+      [name, superClass],
     );
   }
 
   defineMethod(cls, name, func) {
     this.module.ccall(
-      'mrbc_wasm_define_method', null,
-      ['number', 'string', 'number'], [cls, name, func]
+      "mrbc_wasm_define_method",
+      null,
+      ["number", "string", "number"],
+      [cls, name, func],
     );
   }
 
@@ -190,8 +194,10 @@ class MrubycWasmAPI {
 
   setGlobalConst(name, value) {
     this.module.ccall(
-      'mrbc_wasm_set_global_const', null,
-      ['string', 'number'], [name, value]
+      "mrbc_wasm_set_global_const",
+      null,
+      ["string", "number"],
+      [name, value],
     );
   }
 
@@ -211,9 +217,9 @@ class MrubycWasmAPI {
 function defineYourAPI(mrubycModule) {
   const api = new MrubycWasmAPI(mrubycModule);
   const classObject = api.getClassObject();
-  
-  const yourClass = api.defineClass('YourClass', classObject);
-  
+
+  const yourClass = api.defineClass("YourClass", classObject);
+
   const methodCallback = api.addFunction((vmPtr, vPtr, argc) => {
     if (api.isNumericArg(vPtr, 1)) {
       const arg1 = api.getIntArg(vPtr, 1);
@@ -221,14 +227,14 @@ function defineYourAPI(mrubycModule) {
     } else {
       api.setReturnBool(vPtr, false);
     }
-  }, 'viii');
-  
+  }, "viii");
+
   registeredCallbacks.push(methodCallback);
-  api.defineMethod(yourClass, 'method_name', methodCallback);
-  
+  api.defineMethod(yourClass, "method_name", methodCallback);
+
   const instance = api.instanceNew(yourClass);
   if (instance) {
-    api.setGlobalConst('YOUR_CONSTANT', instance);
+    api.setGlobalConst("YOUR_CONSTANT", instance);
   }
 }
 
@@ -241,7 +247,7 @@ function cleanupYourAPI(mrubycModule) {
   registeredCallbacks = [];
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.defineYourAPI = defineYourAPI;
   window.cleanupYourAPI = cleanupYourAPI;
 }
@@ -253,39 +259,39 @@ if (typeof window !== 'undefined') {
 
 ```javascript
 function createBoardUI(container, config) {
-  container.innerHTML = '';
-  
-  const title = document.createElement('div');
+  container.innerHTML = "";
+
+  const title = document.createElement("div");
   title.textContent = `${config.ui.matrixWidth}x${config.ui.matrixHeight} RGB MATRIX for ${config.name}`;
   container.appendChild(title);
-  
-  const dotContainer = document.createElement('div');
-  dotContainer.id = 'simulator-dot-container';
+
+  const dotContainer = document.createElement("div");
+  dotContainer.id = "simulator-dot-container";
   container.appendChild(dotContainer);
-  
+
   for (let i = 0; i < config.ui.totalPixels; i++) {
-    const dot = document.createElement('div');
-    dot.id = 'simulator-pixel-' + i;
-    dot.className = 'simulator-dot';
+    const dot = document.createElement("div");
+    dot.id = "simulator-pixel-" + i;
+    dot.className = "simulator-dot";
     dot.textContent = i;
     dotContainer.appendChild(dot);
   }
 }
 
 function setPixelColor(id, red, green, blue) {
-  const targetDot = document.getElementById('simulator-pixel-' + id);
+  const targetDot = document.getElementById("simulator-pixel-" + id);
   if (targetDot) {
     targetDot.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
     const brightness = red + green + blue;
-    targetDot.style.color = brightness > 128 * 3 ? '#666' : 'white';
+    targetDot.style.color = brightness > 128 * 3 ? "#666" : "white";
   }
 }
 
 function cleanupBoardUI(container) {
-  container.innerHTML = '';
+  container.innerHTML = "";
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.createBoardUI = createBoardUI;
   window.setPixelColor = setPixelColor;
   window.cleanupBoardUI = cleanupBoardUI;
@@ -308,21 +314,21 @@ if (typeof window !== 'undefined') {
 
 ## WASM API リファレンス
 
-| C 関数 | JavaScript API | 説明 |
-|--------|----------------|------|
-| `mrbc_wasm_get_class_object()` | `api.getClassObject()` | Object クラスポインタを取得 |
-| `mrbc_wasm_define_class()` | `api.defineClass(name, super)` | 新しいクラスを定義 |
-| `mrbc_wasm_define_method()` | `api.defineMethod(cls, name, func)` | メソッドを定義 |
-| `mrbc_wasm_get_int_arg()` | `api.getIntArg(vPtr, index)` | 整数引数を取得 |
-| `mrbc_wasm_get_float_arg()` | `api.getFloatArg(vPtr, index)` | 浮動小数点引数を取得 |
-| `mrbc_wasm_is_numeric_arg()` | `api.isNumericArg(vPtr, index)` | 引数が数値かチェック |
-| `mrbc_wasm_set_return_bool()` | `api.setReturnBool(vPtr, val)` | ブール値を返す |
-| `mrbc_wasm_set_return_nil()` | `api.setReturnNil(vPtr)` | nil を返す |
-| `mrbc_wasm_set_return_int()` | `api.setReturnInt(vPtr, val)` | 整数値を返す |
-| `mrbc_wasm_set_return_float()` | `api.setReturnFloat(vPtr, val)` | 浮動小数点値を返す |
-| `mrbc_wasm_instance_new()` | `api.instanceNew(cls)` | 新しいクラスインスタンスを作成 |
-| `mrbc_wasm_set_global_const()` | `api.setGlobalConst(name, value)` | グローバル定数を設定 |
-| `mrbc_wasm_free_instance()` | `api.freeInstance(instance)` | インスタンスメモリを解放 |
+| C 関数                         | JavaScript API                      | 説明                           |
+| ------------------------------ | ----------------------------------- | ------------------------------ |
+| `mrbc_wasm_get_class_object()` | `api.getClassObject()`              | Object クラスポインタを取得    |
+| `mrbc_wasm_define_class()`     | `api.defineClass(name, super)`      | 新しいクラスを定義             |
+| `mrbc_wasm_define_method()`    | `api.defineMethod(cls, name, func)` | メソッドを定義                 |
+| `mrbc_wasm_get_int_arg()`      | `api.getIntArg(vPtr, index)`        | 整数引数を取得                 |
+| `mrbc_wasm_get_float_arg()`    | `api.getFloatArg(vPtr, index)`      | 浮動小数点引数を取得           |
+| `mrbc_wasm_is_numeric_arg()`   | `api.isNumericArg(vPtr, index)`     | 引数が数値かチェック           |
+| `mrbc_wasm_set_return_bool()`  | `api.setReturnBool(vPtr, val)`      | ブール値を返す                 |
+| `mrbc_wasm_set_return_nil()`   | `api.setReturnNil(vPtr)`            | nil を返す                     |
+| `mrbc_wasm_set_return_int()`   | `api.setReturnInt(vPtr, val)`       | 整数値を返す                   |
+| `mrbc_wasm_set_return_float()` | `api.setReturnFloat(vPtr, val)`     | 浮動小数点値を返す             |
+| `mrbc_wasm_instance_new()`     | `api.instanceNew(cls)`              | 新しいクラスインスタンスを作成 |
+| `mrbc_wasm_set_global_const()` | `api.setGlobalConst(name, value)`   | グローバル定数を設定           |
+| `mrbc_wasm_free_instance()`    | `api.freeInstance(instance)`        | インスタンスメモリを解放       |
 
 ## 重要な注意事項
 

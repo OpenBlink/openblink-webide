@@ -3,6 +3,7 @@
 ## LED 控制
 
 ### LED.set(color)
+
 设置内置 RGB LED 的颜色。
 
 - `color` - 包含三个整数的数组 [R, G, B]，每个值范围为 0 到 255
@@ -15,6 +16,7 @@
 ## 定时器函数
 
 ### sleep(seconds)
+
 暂停程序执行指定的秒数。
 
 - `seconds` - 等待的秒数（可以是小数）
@@ -22,6 +24,7 @@
 - 示例：`sleep 0.5` - 等待 0.5 秒
 
 ### sleep_ms(milliseconds)
+
 暂停程序执行指定的毫秒数。
 
 - `milliseconds` - 等待的毫秒数

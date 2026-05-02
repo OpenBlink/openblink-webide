@@ -91,8 +91,13 @@
 }
 
 @keyframes simulator-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .simulator-board-ui {
@@ -149,7 +154,7 @@
 .simulator-output {
   background-color: #1e1e1e;
   color: #d4d4d4;
-  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-family: "Fira Code", "Consolas", "Monaco", monospace;
   font-size: 12px;
   padding: 12px;
   min-height: 120px;

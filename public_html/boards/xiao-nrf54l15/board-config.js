@@ -11,14 +11,14 @@ const BOARD_CONFIG = {
   name: "XIAO nRF54L15",
   id: "xiao-nrf54l15",
   description: "6x10 RGB Matrix for XIAO nRF54L15",
-  
+
   ui: {
     matrixWidth: 10,
     matrixHeight: 6,
-    totalPixels: 60
-  }
+    totalPixels: 60,
+  },
 };
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   window.BOARD_CONFIG = BOARD_CONFIG;
 }
