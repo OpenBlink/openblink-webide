@@ -18,24 +18,30 @@ MRuby::Build.new('emscripten') do |conf|
   # WebAssembly settings
   conf.linker.flags << '-s WASM=1'
   conf.linker.flags << '-s ENVIRONMENT=web'
+  conf.linker.flags << '-s WASM_BIGINT=1'              # Use BigInt for i64 (Emscripten 5.0.7)
+  conf.linker.flags << '-s WASM_ASYNC_COMPILATION=1'  # Async compilation (Emscripten 5.0.7)
 
   # Memory settings
   conf.linker.flags << '-s ALLOW_MEMORY_GROWTH=1'
-  conf.linker.flags << '-s INITIAL_MEMORY=33554432'    # 32MB
-  conf.linker.flags << '-s MAXIMUM_MEMORY=268435456'   # 256MB
-  conf.linker.flags << '-s STACK_SIZE=5242880'         # 5MB
-  conf.linker.flags << '-s MALLOC=emmalloc'
+  conf.linker.flags << '-s INITIAL_HEAP=33554432'      # 32MB (INITIAL_HEAP is recommended over INITIAL_MEMORY)
+  conf.linker.flags << '-s MAXIMUM_MEMORY=268435456'   # 256MB (default is 2GB)
+  conf.linker.flags << '-s STACK_SIZE=5242880'         # 5MB (default is 64KB)
+  conf.linker.flags << '-s MALLOC=emmalloc'            # Small and compact allocator suitable for emscripten
+  conf.linker.flags << '-s MEMORY_GROWTH_GEOMETRIC_STEP=0.20'  # 20% overgrowth (default is 0.20)
+  conf.linker.flags << '-s MEMORY_GROWTH_GEOMETRIC_CAP=100663296'  # 96MB cap (default is 96MB)
 
   # Filesystem settings
   conf.linker.flags << '-s FORCE_FILESYSTEM=1'
   conf.linker.flags << '-s INVOKE_RUN=0'
 
   # Performance settings
-  conf.linker.flags << '-s ASSERTIONS=0'
+  conf.linker.flags << '-s ASSERTIONS=0'              # Disabled for performance (default is 0 at -O1+)
   conf.linker.flags << '-s DISABLE_EXCEPTION_CATCHING=1'
+  conf.linker.flags << '-s EVAL_CTORS=1'               # Evaluate constructors at compile time (default is 0)
+  conf.linker.flags << '-s TEXTDECODER=2'              # Assume TextDecoder is available, no fallback (default is 1, 2 in -Oz)
 
   # Stability settings
-  conf.linker.flags << '-s STACK_OVERFLOW_CHECK=1'
+  conf.linker.flags << '-s STACK_OVERFLOW_CHECK=1'     # Security cookie with zero performance overhead (default is 0)
 
   # Export settings
   conf.linker.flags << '-s EXPORTED_FUNCTIONS=["_main","_malloc","_free"]'
