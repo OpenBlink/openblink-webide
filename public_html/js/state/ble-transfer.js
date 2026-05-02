@@ -57,18 +57,6 @@ const BLETransfer = (function () {
   }
 
   /**
-   * Build an L-command (reload) buffer.
-   * @returns {ArrayBuffer}
-   */
-  function _buildReloadCommand() {
-    const buf = new ArrayBuffer(2);
-    const view = new DataView(buf);
-    view.setUint8(0, 0x01);
-    view.setUint8(1, "L".charCodeAt(0));
-    return buf;
-  }
-
-  /**
    * Run the full firmware transfer sequence.
    *
    * @param {BluetoothRemoteGATTCharacteristic} programChar
@@ -82,9 +70,15 @@ const BLETransfer = (function () {
   async function run(programChar, bytecode, slot, mtu, signal, onProgress) {
     const total = bytecode.length;
     const payloadSize = mtu - Config.ble.dataHeaderSize;
-    const crc16 = crc16_reflect(Config.ble.crcPoly, Config.ble.crcInit, bytecode);
+    const crc16 = crc16_reflect(
+      Config.ble.crcPoly,
+      Config.ble.crcInit,
+      bytecode,
+    );
 
-    log.info(`Transfer start: ${total} bytes, slot=${slot}, MTU=${mtu}, CRC=0x${crc16.toString(16)}`);
+    log.info(
+      `Transfer start: ${total} bytes, slot=${slot}, MTU=${mtu}, CRC=0x${crc16.toString(16)}`,
+    );
 
     for (let offset = 0; offset < total; offset += payloadSize) {
       if (signal) signal.throwIfAborted();
@@ -113,7 +107,7 @@ const BLETransfer = (function () {
 
     if (signal) signal.throwIfAborted();
 
-    const reloadBuf = _buildReloadCommand();
+    const reloadBuf = BLEProtocol.buildReloadCommand();
     await BLECommandQueue.enqueueWrite(programChar, reloadBuf, {
       label: "reloadCmd",
       mode: "response",

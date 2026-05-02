@@ -98,7 +98,14 @@
     "simulator.output": "Simulator Output",
 
     "loading.setup": "Setting up...",
-    "loading.boards": "Loading boards..."
+    "loading.boards": "Loading boards...",
+
+    "device.knownDevices": "Known devices",
+    "device.noKnownDevices": "No known devices",
+    "device.connectKnown": "Connect",
+    "device.forget": "Forget device",
+    "device.forgetConfirm": "Forget this device? You'll need to re-pair.",
+    "device.forgetSuccess": "Device forgotten:"
   },
 
   "zh-CN": {
@@ -200,7 +207,14 @@
     "simulator.output": "模拟器输出",
 
     "loading.setup": "正在设置...",
-    "loading.boards": "正在加载开发板..."
+    "loading.boards": "正在加载开发板...",
+
+    "device.knownDevices": "已知设备",
+    "device.noKnownDevices": "无已知设备",
+    "device.connectKnown": "连接",
+    "device.forget": "忘记设备",
+    "device.forgetConfirm": "忘记此设备？下次需要重新配对。",
+    "device.forgetSuccess": "已忘记设备："
   },
 
   "zh-TW": {
@@ -302,7 +316,14 @@
     "simulator.output": "模擬器輸出",
 
     "loading.setup": "正在設定...",
-    "loading.boards": "正在載入開發板..."
+    "loading.boards": "正在載入開發板...",
+
+    "device.knownDevices": "已知裝置",
+    "device.noKnownDevices": "無已知裝置",
+    "device.connectKnown": "連接",
+    "device.forget": "忘記裝置",
+    "device.forgetConfirm": "忘記此裝置？下次需要重新配對。",
+    "device.forgetSuccess": "已忘記裝置："
   },
 
   "ja": {
@@ -404,7 +425,14 @@
     "simulator.output": "シミュレータ出力",
 
     "loading.setup": "設定中...",
-    "loading.boards": "ボードを読み込み中..."
+    "loading.boards": "ボードを読み込み中...",
+
+    "device.knownDevices": "接続したことがあるデバイス",
+    "device.noKnownDevices": "接続したことがあるデバイスはありません",
+    "device.connectKnown": "接続",
+    "device.forget": "このデバイスを忘れる",
+    "device.forgetConfirm": "このデバイスを忘れますか？再接続するには再ペアリングが必要です。",
+    "device.forgetSuccess": "デバイスを忘れました："
   },
 
   "ja-easy": {
@@ -506,6 +534,13 @@
     "simulator.output": "📝 シミュレータの メッセージ",
 
     "loading.setup": "⏳ じゅんびしています...",
-    "loading.boards": "📦 ボードを よみこんでいます..."
+    "loading.boards": "📦 ボードを よみこんでいます...",
+
+    "device.knownDevices": "📱 つないだことがある デバイス",
+    "device.noKnownDevices": "デバイスは まだ ありません",
+    "device.connectKnown": "つなぐ",
+    "device.forget": "わすれる",
+    "device.forgetConfirm": "このデバイスを わすれますか？もういちど つなぐには ペアリングが ひつようです。",
+    "device.forgetSuccess": "デバイスを わすれました："
   }
 }

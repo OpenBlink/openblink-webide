@@ -19,6 +19,7 @@ const Config = Object.freeze({
     bleStatePollInterval: 2000,
     bleReconnectInitialDelay: 1000,
     fetchRequest: 15000,
+    fetchRetryInitialDelay: 1000,
     scriptLoad: 30000,
   }),
   retries: Object.freeze({

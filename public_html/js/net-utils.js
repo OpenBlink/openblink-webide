@@ -92,7 +92,7 @@ const NetUtils = (function () {
 
         if (attempt < maxAttempts - 1) {
           const delay =
-            Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
+            Config.timeouts.fetchRetryInitialDelay * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }

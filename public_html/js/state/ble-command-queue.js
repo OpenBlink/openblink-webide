@@ -23,6 +23,7 @@ const BLECommandQueue = (function () {
 
   let tail = Promise.resolve();
   let pendingCount = 0;
+  let generation = 0;
 
   /**
    * Wrap an async operation with a per-operation timeout.
@@ -69,10 +70,13 @@ const BLECommandQueue = (function () {
    */
   function _enqueue(fn, timeoutMs, label) {
     pendingCount++;
+    const gen = generation;
     const p = tail.then(() => _withTimeout(fn, timeoutMs, label));
     tail = p.catch(() => {});
     p.finally(() => {
-      pendingCount = Math.max(0, pendingCount - 1);
+      if (generation === gen) {
+        pendingCount = Math.max(0, pendingCount - 1);
+      }
     });
     return p;
   }
@@ -157,6 +161,7 @@ const BLECommandQueue = (function () {
     log.info(`Queue cleared: ${reason} (pending=${pendingCount})`);
     tail = Promise.resolve();
     pendingCount = 0;
+    generation++;
   }
 
   /**
