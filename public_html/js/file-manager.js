@@ -20,8 +20,6 @@ const FileManager = (function () {
     window.addEventListener("beforeunload", (e) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = "You have unsaved changes. Do you want to leave?";
-        return e.returnValue;
       }
     });
   }

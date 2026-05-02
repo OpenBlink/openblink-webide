@@ -10,27 +10,11 @@ const HistoryManager = (function () {
   let history = [];
 
   function sanitizeContent(content) {
-    if (typeof content !== "string") {
-      return "";
-    }
-    return content
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return Utils.escapeHtml(content);
   }
 
   function unsanitizeContent(content) {
-    if (typeof content !== "string") {
-      return "";
-    }
-    return content
-      .replace(/&#039;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&gt;/g, ">")
-      .replace(/&lt;/g, "<")
-      .replace(/&amp;/g, "&");
+    return Utils.unescapeHtml(content);
   }
 
   function computeDiff(oldCode, newCode) {
@@ -86,14 +70,18 @@ const HistoryManager = (function () {
     } catch (e) {
       log.error("Failed to save history:", e);
       if (e.name === "QuotaExceededError") {
-        while (history.length > 0) {
+        for (
+          let trim = 0;
+          trim < MAX_CHECKPOINTS && history.length > 0;
+          trim++
+        ) {
           history.shift();
           try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
             break;
           } catch (retryError) {
-            log.error("Failed to save history after trimming:", retryError);
             if (retryError.name !== "QuotaExceededError") {
+              log.error("Failed to save history after trimming:", retryError);
               break;
             }
           }

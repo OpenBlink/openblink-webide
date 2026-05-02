@@ -16,5 +16,17 @@ const Utils = (function () {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     },
+
+    unescapeHtml: function (text) {
+      if (typeof text !== "string") {
+        return "";
+      }
+      return text
+        .replace(/&#039;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&gt;/g, ">")
+        .replace(/&lt;/g, "<")
+        .replace(/&amp;/g, "&");
+    },
   };
 })();

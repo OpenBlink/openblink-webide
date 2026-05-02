@@ -168,6 +168,7 @@ const BoardManager = (function () {
 
     parseMarkdown: function (markdown) {
       // Simple line-oriented markdown parser for headings, lists, paragraphs and inline code
+      // XSS safety: applyInlineFormatting() calls Utils.escapeHtml() before any HTML is emitted.
       const lines = markdown.split("\n");
       let html = "";
       let inParagraph = false;
