@@ -16,7 +16,13 @@
  *   log.warn('something happened');
  */
 const Logger = (function () {
-  const LEVELS = Object.freeze({ debug: 0, info: 1, warn: 2, error: 3, fatal: 4 });
+  const LEVELS = Object.freeze({
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+    fatal: 4,
+  });
   const CONSOLE_METHODS = Object.freeze({
     debug: "debug",
     info: "info",
@@ -41,7 +47,9 @@ const Logger = (function () {
       if (stored && LEVELS[stored] !== undefined) {
         return LEVELS[stored];
       }
-    } catch (_e) {}
+    } catch (_storageErr) {
+      return _resolveLevel(Config.logging.defaultLevel);
+    }
     return _resolveLevel(Config.logging.defaultLevel);
   }
 
@@ -52,11 +60,15 @@ const Logger = (function () {
       if (name) {
         localStorage.setItem(Config.logging.storageKey, name);
       }
-    } catch (_e) {}
+    } catch (_storageErr) {
+      return;
+    }
   }
 
   function getLevel() {
-    return Object.keys(LEVELS).find((k) => LEVELS[k] === currentLevel) || "warn";
+    return (
+      Object.keys(LEVELS).find((k) => LEVELS[k] === currentLevel) || "warn"
+    );
   }
 
   function _emit(levelName, prefix, args) {
@@ -64,15 +76,24 @@ const Logger = (function () {
     if (levelNum < currentLevel) return;
     const method = CONSOLE_METHODS[levelName];
     const tag = prefix ? `[${prefix}]` : "[OpenBlink]";
-    // eslint-disable-next-line no-console
     console[method](tag, ...args);
   }
 
-  function debug(...args) { _emit("debug", null, args); }
-  function info(...args) { _emit("info", null, args); }
-  function warn(...args) { _emit("warn", null, args); }
-  function error(...args) { _emit("error", null, args); }
-  function fatal(...args) { _emit("fatal", null, args); }
+  function debug(...args) {
+    _emit("debug", null, args);
+  }
+  function info(...args) {
+    _emit("info", null, args);
+  }
+  function warn(...args) {
+    _emit("warn", null, args);
+  }
+  function error(...args) {
+    _emit("error", null, args);
+  }
+  function fatal(...args) {
+    _emit("fatal", null, args);
+  }
 
   /**
    * Create a scoped logger that prefixes all messages with the given name.
@@ -91,5 +112,14 @@ const Logger = (function () {
 
   currentLevel = _readStoredLevel();
 
-  return Object.freeze({ setLevel, getLevel, debug, info, warn, error, fatal, scope });
+  return Object.freeze({
+    setLevel,
+    getLevel,
+    debug,
+    info,
+    warn,
+    error,
+    fatal,
+    scope,
+  });
 })();
