@@ -25,6 +25,8 @@ const browserGlobals = {
   CRC16: "readonly",
   ErrorHandler: "readonly",
   crc16_reflect: "readonly",
+  EventBus: "readonly",
+  BLEStateMachine: "readonly",
 };
 
 export default [
@@ -55,7 +57,7 @@ export default [
         {
           argsIgnorePattern: "^_|^(argc|colno|error)$",
           varsIgnorePattern:
-            "^_|^(BLEProtocol|BoardManager|Compiler|FileManager|HistoryManager|I18n|Simulator|UIManager|Utils|crc16_reflect|t)$",
+            "^_|^(BLEProtocol|BLEStateMachine|BoardManager|Compiler|EventBus|FileManager|HistoryManager|I18n|Simulator|UIManager|Utils|crc16_reflect|t)$",
           caughtErrorsIgnorePattern: "^_|^e$",
         },
       ],

@@ -17,6 +17,7 @@ const UIManager = (function () {
   let simulatorLoaded = false;
   let simulatorLoading = false;
   let simulatorLoadPromise = null;
+  let eventBus = null;
 
   const MAX_METRICS_HISTORY = 100;
 
@@ -204,7 +205,13 @@ const UIManager = (function () {
 
     getSelectedSlot: getSelectedSlot,
 
-    initialize: function () {
+    /**
+     * Initialize UIManager with EventBus
+     * @param {Object} bus - EventBus instance for decoupled communication
+     */
+    initialize: function (bus) {
+      eventBus = bus;
+
       connectButton = document.getElementById("ble-connect");
       disconnectButton = document.getElementById("ble-disconnect");
       runMainButton = document.getElementById("run-main");
@@ -219,26 +226,30 @@ const UIManager = (function () {
 
       if (connectButton) {
         connectButton.addEventListener("click", () => {
-          BLEProtocol.connect();
+          if (eventBus) {
+            eventBus.emit("UI:CONNECT_CLICKED", {});
+          }
         });
       }
 
       if (disconnectButton) {
         disconnectButton.addEventListener("click", () => {
-          BLEProtocol.disconnect();
+          if (eventBus) {
+            eventBus.emit("UI:DISCONNECT_CLICKED", {});
+          }
         });
       }
 
       if (softResetButton) {
         softResetButton.addEventListener("click", () => {
-          if (!BLEProtocol.isConnected()) {
+          if (!BLEStateMachine.isConnected()) {
             const msg = t("error.notConnected") || "Not connected to device";
             this.appendToConsole("Error: " + msg);
             return;
           }
           softResetButton.disabled = true;
-          BLEProtocol.sendReset().finally(() => {
-            if (BLEProtocol.isConnected()) {
+          BLEStateMachine.sendReset().finally(() => {
+            if (BLEStateMachine.isConnected()) {
               softResetButton.disabled = false;
             }
           });
@@ -247,7 +258,9 @@ const UIManager = (function () {
 
       if (runMainButton) {
         runMainButton.addEventListener("click", () => {
-          Compiler.buildAndBlink();
+          if (eventBus) {
+            eventBus.emit("UI:BUILD_CLICKED", {});
+          }
         });
       }
 
@@ -320,7 +333,7 @@ const UIManager = (function () {
 
     setRunButtonEnabled: function (enabled) {
       if (runMainButton) {
-        runMainButton.disabled = !enabled || !BLEProtocol.isConnected();
+        runMainButton.disabled = !enabled || !BLEStateMachine.isConnected();
       }
     },
 

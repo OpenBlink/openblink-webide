@@ -4,7 +4,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+/**
+ * BLEProtocol - Stateless BLE protocol operations
+ * This module provides pure protocol functions with no internal state.
+ * All state management is handled by BLEStateMachine.
+ */
+
 const BLEProtocol = (function () {
+  // Protocol constants (not state)
   const OPENBLINK_SERVICE_UUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
   const OPENBLINK_PROGRAM_CHARACTERISTIC_UUID =
     "ad9fdd56-1135-4a84-923c-ce5a244385e7";
@@ -17,81 +24,127 @@ const BLEProtocol = (function () {
   const PROGRAM_HEADER_SIZE = 8;
   const DEFAULT_MTU = 20;
   const REQUESTED_MTU = 512;
-  const MAX_RECONNECT_ATTEMPTS = 5;
-  const INITIAL_RECONNECT_DELAY = 1000;
-  const WRITE_TIMEOUT = 10000;
-  const HEARTBEAT_INTERVAL = 3000; // 3 seconds - shorter than BLE supervision timeout (6s) to maintain connection
 
-  let programCharacteristic = null;
-  let negotiatedMtuCharacteristic = null;
-  let consoleCharacteristic = null;
-  let connectedDevice = null;
-  let userInitiatedDisconnect = false;
-  let reconnectAttempts = 0;
-  let deviceWithDisconnectListener = null;
-  let negotiatedMTU = DEFAULT_MTU;
-  let heartbeatTimer = null; // Timer for keep-alive heartbeat
-  let isTransferring = false; // Flag to pause heartbeat during firmware transfer
-
-  // Named function for console characteristic event listener to avoid duplicates
-  function handleConsoleValueChanged(event) {
-    const value = new TextDecoder().decode(event.target.value);
-    UIManager.appendToConsole(value);
+  /**
+   * Request a BLE device with OpenBlink service filter
+   * @returns {Promise<BluetoothDevice>} Selected device
+   */
+  async function requestDevice() {
+    return navigator.bluetooth.requestDevice({
+      filters: [
+        { namePrefix: "OpenBlink" },
+        { services: [OPENBLINK_SERVICE_UUID] },
+      ],
+    });
   }
 
-  async function negotiateMTU() {
-    if (
-      !programCharacteristic ||
-      !programCharacteristic.service ||
-      !programCharacteristic.service.device
-    ) {
-      console.warn("Cannot negotiate MTU: characteristic not available");
-      UIManager.appendToConsole(
-        "MTU negotiation skipped: device not ready. Using default MTU: " +
-          DEFAULT_MTU,
-      );
-      negotiatedMTU = DEFAULT_MTU;
-      return;
+  /**
+   * Connect to a BLE device and get all characteristics
+   * @param {BluetoothDevice} device - BLE device to connect
+   * @returns {Promise<Object>} Object containing device, server, service, and characteristics
+   */
+  async function connectToDevice(device) {
+    const server = await device.gatt.connect();
+
+    const service = await server.getPrimaryService(OPENBLINK_SERVICE_UUID);
+
+    const [consoleCharacteristic, programCharacteristic, mtuCharacteristic] =
+      await Promise.all([
+        service.getCharacteristic(OPENBLINK_CONSOLE_CHARACTERISTIC_UUID),
+        service.getCharacteristic(OPENBLINK_PROGRAM_CHARACTERISTIC_UUID),
+        service.getCharacteristic(OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID),
+      ]);
+
+    return {
+      device: device,
+      server: server,
+      service: service,
+      consoleCharacteristic: consoleCharacteristic,
+      programCharacteristic: programCharacteristic,
+      negotiatedMtuCharacteristic: mtuCharacteristic,
+    };
+  }
+
+  /**
+   * Negotiate MTU with the device
+   * @param {BluetoothRemoteGATTCharacteristic} programChar - Program characteristic (for device reference)
+   * @param {BluetoothRemoteGATTCharacteristic} mtuChar - MTU characteristic
+   * @returns {Promise<number>} Negotiated MTU value
+   */
+  async function negotiateMTU(programChar, mtuChar) {
+    if (!programChar || !programChar.service || !programChar.service.device) {
+      return DEFAULT_MTU;
     }
 
-    const gattServer = programCharacteristic.service.device.gatt;
+    const gattServer = programChar.service.device.gatt;
     if (gattServer.requestMTU) {
       try {
-        negotiatedMTU = await gattServer.requestMTU(REQUESTED_MTU);
-        console.log(`Negotiated MTU: ${negotiatedMTU}`);
-      } catch (error) {
-        console.warn(
-          `MTU negotiation failed: ${error.message}. Using default MTU: ${DEFAULT_MTU}`,
-        );
-        UIManager.appendToConsole(
-          "MTU negotiation failed. Using default MTU: " + DEFAULT_MTU,
-        );
-        negotiatedMTU = DEFAULT_MTU;
+        const mtu = await gattServer.requestMTU(REQUESTED_MTU);
+        return mtu;
+      } catch (_error) {
+        return DEFAULT_MTU;
       }
     } else {
       try {
-        const valueDataView = await negotiatedMtuCharacteristic.readValue();
-        const devicemtu = valueDataView.getUint16(0, true);
-        negotiatedMTU = devicemtu - 3;
-        console.log("Device negotiated MTU(uint16):", devicemtu);
-      } catch (error) {
-        console.error("Device negotiated MTU Error:", error);
-        UIManager.appendToConsole(
-          "Failed to read device MTU. Using default MTU: " + DEFAULT_MTU,
-        );
-        negotiatedMTU = DEFAULT_MTU;
+        const valueDataView = await mtuChar.readValue();
+        const deviceMTU = valueDataView.getUint16(0, true);
+        return deviceMTU - 3;
+      } catch (_error) {
+        return DEFAULT_MTU;
       }
-      console.log(
-        `MTU negotiation not supported. Using device's negotiated MTU: ${negotiatedMTU}`,
-      );
     }
   }
 
-  async function writeCharacteristicWithTimeout(
-    characteristic,
-    buffer,
-    timeout = WRITE_TIMEOUT,
-  ) {
+  /**
+   * Start console notifications
+   * @param {BluetoothRemoteGATTCharacteristic} consoleChar - Console characteristic
+   * @param {Function} onConsoleMessage - Callback for console messages
+   * @returns {Promise<void>}
+   */
+  async function startConsoleNotifications(consoleChar, onConsoleMessage) {
+    if (!consoleChar) {
+      throw new Error("Console characteristic not available");
+    }
+
+    const handler = function (event) {
+      const value = new TextDecoder().decode(event.target.value);
+      if (onConsoleMessage) {
+        onConsoleMessage(value);
+      }
+    };
+
+    // Store handler reference for cleanup
+    consoleChar._consoleHandler = handler;
+    consoleChar.addEventListener("characteristicvaluechanged", handler);
+    await consoleChar.startNotifications();
+  }
+
+  /**
+   * Stop console notifications
+   * @param {BluetoothRemoteGATTCharacteristic} consoleChar - Console characteristic
+   */
+  function stopConsoleNotifications(consoleChar) {
+    if (!consoleChar) {
+      return;
+    }
+
+    if (consoleChar._consoleHandler) {
+      consoleChar.removeEventListener(
+        "characteristicvaluechanged",
+        consoleChar._consoleHandler,
+      );
+      delete consoleChar._consoleHandler;
+    }
+  }
+
+  /**
+   * Write to a characteristic with timeout
+   * @param {BluetoothRemoteGATTCharacteristic} characteristic - Target characteristic
+   * @param {ArrayBuffer} buffer - Data to write
+   * @param {number} timeout - Timeout in milliseconds
+   * @returns {Promise<void>}
+   */
+  async function writeWithTimeout(characteristic, buffer, timeout) {
     if (!characteristic) {
       throw new Error("Characteristic not available");
     }
@@ -117,414 +170,138 @@ const BLEProtocol = (function () {
     });
   }
 
-  async function writeCharacteristic(characteristic, buffer) {
-    return writeCharacteristicWithTimeout(characteristic, buffer);
+  /**
+   * Read heartbeat (MTU characteristic)
+   * @param {BluetoothRemoteGATTCharacteristic} mtuChar - MTU characteristic
+   * @returns {Promise<DataView>} Read value
+   */
+  async function readHeartbeat(mtuChar) {
+    if (!mtuChar) {
+      throw new Error("MTU characteristic not available");
+    }
+    return mtuChar.readValue();
   }
 
-  // Heartbeat/keep-alive functions to prevent idle disconnections
-  async function sendHeartbeat() {
-    if (!negotiatedMtuCharacteristic || isTransferring) {
-      return; // Skip heartbeat during transfer or if characteristic not available
-    }
+  /**
+   * Build a data chunk buffer
+   * @param {number} offset - Byte offset in the firmware
+   * @param {number} chunkSize - Size of this chunk
+   * @param {Uint8Array} mrbContent - Full firmware content
+   * @returns {ArrayBuffer} Buffer ready to send
+   */
+  function buildDataChunk(offset, chunkSize, mrbContent) {
+    const actualChunkSize = Math.min(chunkSize, mrbContent.length - offset);
 
-    try {
-      await negotiatedMtuCharacteristic.readValue();
-      // Silent success - no logging needed for normal heartbeat
-    } catch (error) {
-      console.warn("Heartbeat failed:", error.message);
-      // Don't force disconnect on heartbeat failure - just log and continue
-    }
+    const buffer = new ArrayBuffer(DATA_HEADER_SIZE + actualChunkSize);
+    const view = new DataView(buffer);
+
+    view.setUint8(0, 0x01);
+    view.setUint8(1, "D".charCodeAt(0));
+    view.setUint16(2, offset, true);
+    view.setUint16(4, actualChunkSize, true);
+
+    const payload = new Uint8Array(buffer, DATA_HEADER_SIZE, actualChunkSize);
+    payload.set(mrbContent.subarray(offset, offset + actualChunkSize));
+
+    return buffer;
   }
 
-  function startKeepAlive() {
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-    }
-    heartbeatTimer = setInterval(() => {
-      sendHeartbeat();
-    }, HEARTBEAT_INTERVAL);
-    console.log(
-      `Keep-alive heartbeat started (interval: ${HEARTBEAT_INTERVAL}ms)`,
-    );
+  /**
+   * Build a program command buffer
+   * @param {number} contentLength - Total firmware size
+   * @param {number} crc16 - CRC16 value
+   * @param {number} slot - Target slot (1 or 2)
+   * @returns {ArrayBuffer} Buffer ready to send
+   */
+  function buildProgramCommand(contentLength, crc16, slot) {
+    const buffer = new ArrayBuffer(PROGRAM_HEADER_SIZE);
+    const view = new DataView(buffer);
+
+    view.setUint8(0, 0x01);
+    view.setUint8(1, "P".charCodeAt(0));
+    view.setUint16(2, contentLength, true);
+    view.setUint16(4, crc16, true);
+    view.setUint8(6, slot);
+    view.setUint8(7, 0);
+
+    return buffer;
   }
 
-  function stopKeepAlive() {
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-      heartbeatTimer = null;
-      console.log("Keep-alive heartbeat stopped");
-    }
+  /**
+   * Build a reset command buffer
+   * @returns {ArrayBuffer} Buffer ready to send
+   */
+  function buildResetCommand() {
+    const buffer = new ArrayBuffer(2);
+    const view = new DataView(buffer);
+    view.setUint8(0, 0x01);
+    view.setUint8(1, "R".charCodeAt(0));
+    return buffer;
   }
 
-  // Cleanup device references and event listeners
-  function cleanupDevice() {
-    // Stop keep-alive heartbeat
-    stopKeepAlive();
-
-    // Reset transfer flag
-    isTransferring = false;
-
-    // Reset disconnect flag
-    userInitiatedDisconnect = false;
-
-    // Remove gattserverdisconnected event listener from device
-    if (deviceWithDisconnectListener) {
-      deviceWithDisconnectListener.removeEventListener(
-        "gattserverdisconnected",
-        handleDisconnect,
-      );
-      deviceWithDisconnectListener = null;
-    }
-
-    // Remove console characteristic event listener
-    if (consoleCharacteristic) {
-      consoleCharacteristic.removeEventListener(
-        "characteristicvaluechanged",
-        handleConsoleValueChanged,
-      );
-    }
-
-    // Clear all device references
-    programCharacteristic = null;
-    negotiatedMtuCharacteristic = null;
-    consoleCharacteristic = null;
-    connectedDevice = null;
-    negotiatedMTU = DEFAULT_MTU;
+  /**
+   * Build a reload command buffer
+   * @returns {ArrayBuffer} Buffer ready to send
+   */
+  function buildReloadCommand() {
+    const buffer = new ArrayBuffer(2);
+    const view = new DataView(buffer);
+    view.setUint8(0, 0x01);
+    view.setUint8(1, "L".charCodeAt(0));
+    return buffer;
   }
 
-  async function connectToDevice(device) {
-    const server = await device.gatt.connect();
-    console.log("Connected to GATT server");
-
-    const service = await server.getPrimaryService(OPENBLINK_SERVICE_UUID);
-    console.log("Got service:", service);
-
-    const characteristics = await Promise.all([
-      service.getCharacteristic(OPENBLINK_CONSOLE_CHARACTERISTIC_UUID),
-      service.getCharacteristic(OPENBLINK_PROGRAM_CHARACTERISTIC_UUID),
-      service.getCharacteristic(OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID),
-    ]);
-
-    consoleCharacteristic = characteristics[0];
-    programCharacteristic = characteristics[1];
-    negotiatedMtuCharacteristic = characteristics[2];
-
-    console.log("Got console characteristic:", consoleCharacteristic);
-    console.log("Got program characteristic:", programCharacteristic);
-    console.log(
-      "Got negotiatedMTU characteristic:",
-      negotiatedMtuCharacteristic,
-    );
-
-    await negotiateMTU();
-
-    // Remove old listener before adding new one to avoid duplicates during reconnection
-    consoleCharacteristic.removeEventListener(
-      "characteristicvaluechanged",
-      handleConsoleValueChanged,
-    );
-    consoleCharacteristic.addEventListener(
-      "characteristicvaluechanged",
-      handleConsoleValueChanged,
-    );
-
-    await consoleCharacteristic.startNotifications();
-
-    // Add gattserverdisconnected event listener
-    if (deviceWithDisconnectListener !== device) {
-      if (deviceWithDisconnectListener) {
-        deviceWithDisconnectListener.removeEventListener(
-          "gattserverdisconnected",
-          handleDisconnect,
-        );
-      }
-      device.addEventListener("gattserverdisconnected", handleDisconnect);
-      deviceWithDisconnectListener = device;
-    }
-
-    connectedDevice = device;
-    UIManager.updateConnectionStatus("connected");
-    UIManager.appendToConsole("Connected to device: " + device.name);
-
-    // Start keep-alive heartbeat to prevent idle disconnections
-    startKeepAlive();
+  /**
+   * Check if device is connected
+   * @param {BluetoothDevice} device - BLE device
+   * @returns {boolean}
+   */
+  function isConnected(device) {
+    return device?.gatt?.connected === true;
   }
 
-  function handleDisconnect(event) {
-    const device = event.target;
-    UIManager.appendToConsole("Device disconnected: " + device.name);
-
-    if (userInitiatedDisconnect) {
-      userInitiatedDisconnect = false;
-      reconnectAttempts = 0;
-      // Cleanup all device references and event listeners
-      cleanupDevice();
-      UIManager.updateConnectionStatus("disconnected");
-      return;
+  /**
+   * Disconnect from device
+   * @param {BluetoothDevice} device - BLE device to disconnect
+   */
+  function disconnect(device) {
+    if (device && device.gatt && device.gatt.connected) {
+      device.gatt.disconnect();
     }
-
-    if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-      attemptReconnect(device);
-    } else {
-      UIManager.appendToConsole(
-        "Max reconnection attempts reached. Please reconnect manually.",
-      );
-      // Cleanup all device references and event listeners
-      cleanupDevice();
-      reconnectAttempts = 0;
-      UIManager.updateConnectionStatus("disconnected");
-    }
-  }
-
-  function attemptReconnect(device) {
-    reconnectAttempts++;
-    const delay = INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1);
-
-    UIManager.appendToConsole(
-      `Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms...`,
-    );
-    UIManager.updateConnectionStatus("reconnecting");
-
-    setTimeout(async () => {
-      if (userInitiatedDisconnect) {
-        reconnectAttempts = 0;
-        // Cleanup all device references and event listeners
-        cleanupDevice();
-        UIManager.updateConnectionStatus("disconnected");
-        return;
-      }
-
-      try {
-        await connectToDevice(device);
-
-        if (userInitiatedDisconnect) {
-          UIManager.appendToConsole("Reconnect attempt was cancelled by user.");
-          try {
-            if (
-              connectedDevice &&
-              connectedDevice.gatt &&
-              connectedDevice.gatt.connected
-            ) {
-              connectedDevice.gatt.disconnect();
-            }
-          } catch (disconnectError) {
-            UIManager.appendToConsole(
-              "Error while enforcing user disconnect after reconnect: " +
-                disconnectError.message,
-            );
-          }
-          reconnectAttempts = 0;
-          // Cleanup all device references and event listeners
-          cleanupDevice();
-          UIManager.updateConnectionStatus("disconnected");
-          return;
-        }
-
-        reconnectAttempts = 0;
-        UIManager.appendToConsole("Reconnected successfully!");
-      } catch (error) {
-        UIManager.appendToConsole("Reconnection failed: " + error.message);
-        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          attemptReconnect(device);
-        } else {
-          UIManager.appendToConsole(
-            "Max reconnection attempts reached. Please reconnect manually.",
-          );
-          // Cleanup all device references and event listeners
-          cleanupDevice();
-          reconnectAttempts = 0;
-          UIManager.updateConnectionStatus("disconnected");
-        }
-      }
-    }, delay);
   }
 
   return {
+    // Constants
     getServiceUUID: function () {
       return OPENBLINK_SERVICE_UUID;
     },
-
-    isConnected: function () {
-      return connectedDevice?.gatt?.connected === true;
+    getDefaultMTU: function () {
+      return DEFAULT_MTU;
+    },
+    getDataHeaderSize: function () {
+      return DATA_HEADER_SIZE;
+    },
+    getProgramHeaderSize: function () {
+      return PROGRAM_HEADER_SIZE;
     },
 
-    isProgramCharacteristicAvailable: function () {
-      return programCharacteristic !== null;
-    },
+    // Protocol operations
+    requestDevice: requestDevice,
+    connectToDevice: connectToDevice,
+    negotiateMTU: negotiateMTU,
+    startConsoleNotifications: startConsoleNotifications,
+    stopConsoleNotifications: stopConsoleNotifications,
+    writeWithTimeout: writeWithTimeout,
+    readHeartbeat: readHeartbeat,
 
-    // Public cleanup function for page unload scenarios
-    cleanup: function () {
-      cleanupDevice();
-    },
+    // Buffer builders
+    buildDataChunk: buildDataChunk,
+    buildProgramCommand: buildProgramCommand,
+    buildResetCommand: buildResetCommand,
+    buildReloadCommand: buildReloadCommand,
 
-    connect: async function () {
-      UIManager.appendToConsole("Connecting to device...");
-      UIManager.updateConnectionStatus("connecting");
-      userInitiatedDisconnect = false;
-      reconnectAttempts = 0;
-
-      try {
-        const device = await navigator.bluetooth.requestDevice({
-          filters: [
-            { namePrefix: "OpenBlink" },
-            { services: [OPENBLINK_SERVICE_UUID] },
-          ],
-        });
-
-        UIManager.appendToConsole("Selected device: " + device.name);
-
-        await connectToDevice(device);
-      } catch (error) {
-        if (error.name === "NotFoundError") {
-          UIManager.appendToConsole("Connection cancelled: No device selected");
-        } else {
-          UIManager.appendToConsole(ErrorHandler.getErrorMessage(error));
-        }
-        console.error("Error:", error);
-        UIManager.updateConnectionStatus("disconnected");
-      }
-    },
-
-    disconnect: function () {
-      userInitiatedDisconnect = true;
-      reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
-
-      if (connectedDevice && connectedDevice.gatt.connected) {
-        UIManager.appendToConsole("Disconnecting from device...");
-        try {
-          connectedDevice.gatt.disconnect();
-        } catch (error) {
-          console.error("Disconnect error:", error);
-        }
-      } else {
-        // If not connected, still need to cleanup
-        cleanupDevice();
-        UIManager.updateConnectionStatus("disconnected");
-        UIManager.appendToConsole("Disconnected from device.");
-      }
-    },
-
-    sendReset: async function () {
-      if (!this.isConnected() || !programCharacteristic) {
-        UIManager.appendToConsole("Error: Not connected to device");
-        return;
-      }
-
-      const buffer = new ArrayBuffer(2);
-      const view = new DataView(buffer);
-      view.setUint8(0, 0x01);
-      view.setUint8(1, "R".charCodeAt(0));
-
-      try {
-        await programCharacteristic.writeValue(buffer);
-        UIManager.appendToConsole("Send [R]eset Complete");
-      } catch (error) {
-        UIManager.appendToConsole("Send [R]eset Error: " + error.message);
-      }
-    },
-
-    sendReload: async function () {
-      if (!this.isConnected() || !programCharacteristic) {
-        UIManager.appendToConsole("Error: Not connected to device");
-        return;
-      }
-
-      const buffer = new ArrayBuffer(2);
-      const view = new DataView(buffer);
-      view.setUint8(0, 0x01);
-      view.setUint8(1, "L".charCodeAt(0));
-
-      try {
-        await writeCharacteristic(programCharacteristic, buffer);
-        UIManager.appendToConsole("Send re[L]oad Complete");
-      } catch (error) {
-        UIManager.appendToConsole("Send re[L]oad Error: " + error.message);
-      }
-    },
-
-    sendFirmware: async function (mrbContent, slot, onProgress) {
-      if (!this.isConnected()) {
-        UIManager.appendToConsole("Error: Not connected to device");
-        return;
-      }
-
-      // Pause heartbeat during firmware transfer to avoid interference
-      isTransferring = true;
-
-      if (!programCharacteristic) {
-        UIManager.appendToConsole(
-          "Error: Program characteristic not available",
-        );
-        console.error("no program characteristic");
-        return;
-      }
-
-      const contentLength = mrbContent.length;
-      const crc16 = crc16_reflect(0xd175, 0xffff, mrbContent);
-
-      UIManager.appendToConsole(
-        `Sending bytecode: slot=${slot}, length=${contentLength}bytes, CRC16=${crc16.toString(16)}, MTU=${negotiatedMTU}`,
-      );
-
-      const DATA_PAYLOAD_SIZE = negotiatedMTU - DATA_HEADER_SIZE;
-      console.log(`DATA_PAYLOAD_SIZE: ${DATA_PAYLOAD_SIZE} Bytes`);
-
-      for (
-        let offset = 0;
-        offset < contentLength;
-        offset += DATA_PAYLOAD_SIZE
-      ) {
-        const chunkDataSize = Math.min(
-          DATA_PAYLOAD_SIZE,
-          contentLength - offset,
-        );
-        const buffer = new ArrayBuffer(DATA_HEADER_SIZE + chunkDataSize);
-        const view = new DataView(buffer);
-
-        view.setUint8(0, 0x01);
-        view.setUint8(1, "D".charCodeAt(0));
-        view.setUint16(2, offset, true);
-        view.setUint16(4, chunkDataSize, true);
-
-        const payload = new Uint8Array(buffer, DATA_HEADER_SIZE, chunkDataSize);
-        payload.set(mrbContent.subarray(offset, offset + chunkDataSize));
-
-        try {
-          await writeCharacteristic(programCharacteristic, buffer);
-          UIManager.appendToConsole(
-            `Send [D]ata Ok: Offset=${offset}, Size=${chunkDataSize}`,
-          );
-          if (onProgress) {
-            onProgress(offset + chunkDataSize, contentLength);
-          }
-        } catch (error) {
-          UIManager.appendToConsole(
-            `Send [D]ata Error: Offset=${offset}, Error: ${error.message}`,
-          );
-          return;
-        }
-      }
-
-      const programBuffer = new ArrayBuffer(PROGRAM_HEADER_SIZE);
-      const programView = new DataView(programBuffer);
-
-      programView.setUint8(0, 0x01);
-      programView.setUint8(1, "P".charCodeAt(0));
-      programView.setUint16(2, contentLength, true);
-      programView.setUint16(4, crc16, true);
-      programView.setUint8(6, slot);
-      programView.setUint8(7, 0);
-
-      try {
-        await writeCharacteristic(programCharacteristic, programBuffer);
-        UIManager.appendToConsole("Send [P]rogram Complete");
-        await this.sendReload();
-      } catch (error) {
-        UIManager.appendToConsole("Send [P]rogram Error: " + error.message);
-      } finally {
-        // Resume heartbeat after firmware transfer completes
-        isTransferring = false;
-      }
-    },
+    // Connection helpers
+    isConnected: isConnected,
+    disconnect: disconnect,
   };
 })();
