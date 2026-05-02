@@ -1,9 +1,12 @@
 /*
- * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2025 ViXion Inc. All Rights Reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 const UIManager = (function () {
+  const log = Logger.scope("UIManager");
+
   let connectButton = null;
   let disconnectButton = null;
   let runMainButton = null;
@@ -16,6 +19,7 @@ const UIManager = (function () {
   let simulatorLoaded = false;
   let simulatorLoading = false;
   let simulatorLoadPromise = null;
+  let eventBus = null;
 
   const MAX_METRICS_HISTORY = 100;
 
@@ -111,6 +115,105 @@ const UIManager = (function () {
           if (runMainButton) runMainButton.disabled = true;
           if (softResetButton) softResetButton.disabled = true;
           break;
+        case "unavailable":
+          statusElement.textContent =
+            t("status.unavailable") || "Bluetooth unavailable";
+          statusElement.classList.add("disconnected");
+          if (connectButton) connectButton.disabled = true;
+          if (disconnectButton) disconnectButton.disabled = true;
+          if (runMainButton) runMainButton.disabled = true;
+          if (softResetButton) softResetButton.disabled = true;
+          break;
+      }
+    },
+
+    /**
+     * Phase 3C/3D: Refresh the Known Devices list panel.
+     * Calls BLEKnownDevices.list() and renders connect/forget buttons.
+     * No-ops silently if the panel element is absent or getDevices() is unsupported.
+     */
+    refreshKnownDevices: async function () {
+      const panel = document.getElementById("known-devices-list");
+      if (!panel) return;
+
+      if (!BLEKnownDevices.isSupported()) {
+        panel.style.display = "none";
+        return;
+      }
+
+      try {
+        panel.style.display = "";
+        const devices = await BLEKnownDevices.list();
+
+        if (devices.length === 0) {
+          panel.innerHTML =
+            "<span class='known-devices-empty'>" +
+            (t("device.noKnownDevices") || "No known devices") +
+            "</span>";
+          return;
+        }
+
+        const isConnected = BLEStateMachine.getState() !== "DISCONNECTED";
+        panel.innerHTML = "";
+
+        devices.forEach((device) => {
+          const row = document.createElement("div");
+          row.className = "known-device-row";
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "known-device-name";
+          nameSpan.textContent = device.name || device.id;
+          row.appendChild(nameSpan);
+
+          const connectBtn = document.createElement("button");
+          connectBtn.className = "secondary known-device-connect";
+          connectBtn.textContent = t("device.connectKnown") || "Connect";
+          connectBtn.disabled = isConnected;
+          connectBtn.addEventListener("click", () => {
+            connectBtn.disabled = true;
+            BLEKnownDevices.connectKnown(device).catch((err) => {
+              UIManager.appendToConsole("Error: " + err.message);
+              connectBtn.disabled = false;
+            });
+          });
+          row.appendChild(connectBtn);
+
+          if (typeof device.forget === "function") {
+            const forgetBtn = document.createElement("button");
+            forgetBtn.className = "danger known-device-forget";
+            forgetBtn.textContent = "\u00D7";
+            forgetBtn.title = t("device.forget") || "Forget device";
+            forgetBtn.addEventListener("click", async () => {
+              const confirmMsg =
+                t("device.forgetConfirm") ||
+                "Forget this device? You'll need to re-pair.";
+              if (!window.confirm(confirmMsg)) return;
+              forgetBtn.disabled = true;
+              try {
+                await BLEKnownDevices.forget(device);
+                if (eventBus) eventBus.emit("BLE:DEVICE_FORGOTTEN", { device });
+                UIManager.appendToConsole(
+                  t("device.forgetSuccess", {
+                    deviceName: device.name || device.id,
+                  }) || "Device forgotten: " + (device.name || device.id),
+                );
+              } catch (err) {
+                UIManager.appendToConsole("Error: " + err.message);
+                forgetBtn.disabled = false;
+              }
+            });
+            row.appendChild(forgetBtn);
+          }
+
+          panel.appendChild(row);
+        });
+      } catch (error) {
+        // Handle errors silently (known devices list is not a critical feature)
+        Logger.scope("UIManager").warn(
+          "refreshKnownDevices failed:",
+          error.message,
+        );
+        panel.style.display = "none";
       }
     },
 
@@ -203,7 +306,13 @@ const UIManager = (function () {
 
     getSelectedSlot: getSelectedSlot,
 
-    initialize: function () {
+    /**
+     * Initialize UIManager with EventBus
+     * @param {Object} bus - EventBus instance for decoupled communication
+     */
+    initialize: function (bus) {
+      eventBus = bus;
+
       connectButton = document.getElementById("ble-connect");
       disconnectButton = document.getElementById("ble-disconnect");
       runMainButton = document.getElementById("run-main");
@@ -218,35 +327,48 @@ const UIManager = (function () {
 
       if (connectButton) {
         connectButton.addEventListener("click", () => {
-          BLEProtocol.connect();
+          if (eventBus) {
+            eventBus.emit("UI:CONNECT_CLICKED", {});
+          }
         });
       }
 
       if (disconnectButton) {
         disconnectButton.addEventListener("click", () => {
-          BLEProtocol.disconnect();
+          if (eventBus) {
+            eventBus.emit("UI:DISCONNECT_CLICKED", {});
+          }
         });
       }
 
       if (softResetButton) {
         softResetButton.addEventListener("click", () => {
-          if (!BLEProtocol.isConnected()) {
+          if (!BLEStateMachine.isConnected()) {
             const msg = t("error.notConnected") || "Not connected to device";
             this.appendToConsole("Error: " + msg);
             return;
           }
           softResetButton.disabled = true;
-          BLEProtocol.sendReset().finally(() => {
-            if (BLEProtocol.isConnected()) {
-              softResetButton.disabled = false;
-            }
-          });
+          BLEStateMachine.sendReset()
+            .catch((err) => {
+              Logger.scope("UIManager").warn(
+                "Reset command failed:",
+                err.message,
+              );
+            })
+            .finally(() => {
+              if (BLEStateMachine.isConnected()) {
+                softResetButton.disabled = false;
+              }
+            });
         });
       }
 
       if (runMainButton) {
         runMainButton.addEventListener("click", () => {
-          Compiler.buildAndBlink();
+          if (eventBus) {
+            eventBus.emit("UI:BUILD_CLICKED", {});
+          }
         });
       }
 
@@ -319,7 +441,7 @@ const UIManager = (function () {
 
     setRunButtonEnabled: function (enabled) {
       if (runMainButton) {
-        runMainButton.disabled = !enabled || !BLEProtocol.isConnected();
+        runMainButton.disabled = !enabled || !BLEStateMachine.isConnected();
       }
     },
 
@@ -346,26 +468,27 @@ const UIManager = (function () {
 
       simulatorLoading = true;
 
-      const SCRIPT_TIMEOUT = 30000;
-      const MAX_RETRIES = 3;
-      const INITIAL_RETRY_DELAY = 1000;
-
       const loadScriptWithRetry = async (src) => {
         let lastError = null;
 
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        for (
+          let attempt = 0;
+          attempt < Config.retries.scriptLoadMaxAttempts;
+          attempt++
+        ) {
           try {
             await new Promise((resolve, reject) => {
               const script = document.createElement("script");
               script.src = src;
 
               const timeoutId = setTimeout(() => {
+                if (script.parentNode) script.parentNode.removeChild(script);
                 reject(
                   new Error(
-                    `Script load timeout after ${SCRIPT_TIMEOUT}ms: ${src}`,
+                    `Script load timeout after ${Config.timeouts.scriptLoad}ms: ${src}`,
                   ),
                 );
-              }, SCRIPT_TIMEOUT);
+              }, Config.timeouts.scriptLoad);
 
               script.onload = () => {
                 clearTimeout(timeoutId);
@@ -373,6 +496,7 @@ const UIManager = (function () {
               };
               script.onerror = () => {
                 clearTimeout(timeoutId);
+                if (script.parentNode) script.parentNode.removeChild(script);
                 reject(new Error("Failed to load " + src));
               };
               document.body.appendChild(script);
@@ -380,13 +504,14 @@ const UIManager = (function () {
             return;
           } catch (error) {
             lastError = error;
-            console.warn(
-              `Script load attempt ${attempt + 1}/${MAX_RETRIES} failed for ${src}:`,
+            log.warn(
+              `Script load attempt ${attempt + 1}/${Config.retries.scriptLoadMaxAttempts} failed for ${src}:`,
               error.message,
             );
 
-            if (attempt < MAX_RETRIES - 1) {
-              const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            if (attempt < Config.retries.scriptLoadMaxAttempts - 1) {
+              const delay =
+                Config.timeouts.fetchRetryInitialDelay * Math.pow(2, attempt);
               await new Promise((resolve) => setTimeout(resolve, delay));
             }
           }

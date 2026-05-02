@@ -1,35 +1,20 @@
 /*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const HistoryManager = (function () {
+  const log = Logger.scope("HistoryManager");
   const STORAGE_KEY = "openblink_history";
   const MAX_CHECKPOINTS = 20;
   let history = [];
 
   function sanitizeContent(content) {
-    if (typeof content !== "string") {
-      return "";
-    }
-    return content
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+    return Utils.escapeHtml(content);
   }
 
   function unsanitizeContent(content) {
-    if (typeof content !== "string") {
-      return "";
-    }
-    return content
-      .replace(/&#039;/g, "'")
-      .replace(/&quot;/g, '"')
-      .replace(/&gt;/g, ">")
-      .replace(/&lt;/g, "<")
-      .replace(/&amp;/g, "&");
+    return Utils.unescapeHtml(content);
   }
 
   function computeDiff(oldCode, newCode) {
@@ -65,7 +50,7 @@ const HistoryManager = (function () {
         }
       }
     } catch (e) {
-      console.error("Failed to load history:", e);
+      log.error("Failed to load history:", e);
       history = [];
     }
   }
@@ -83,16 +68,20 @@ const HistoryManager = (function () {
       }
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     } catch (e) {
-      console.error("Failed to save history:", e);
+      log.error("Failed to save history:", e);
       if (e.name === "QuotaExceededError") {
-        while (history.length > 0) {
+        for (
+          let trim = 0;
+          trim < MAX_CHECKPOINTS && history.length > 0;
+          trim++
+        ) {
           history.shift();
           try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
             break;
           } catch (retryError) {
-            console.error("Failed to save history after trimming:", retryError);
             if (retryError.name !== "QuotaExceededError") {
+              log.error("Failed to save history after trimming:", retryError);
               break;
             }
           }

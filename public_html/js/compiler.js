@@ -1,6 +1,7 @@
 /*
- * SPDX-License-Identifier: BSD-3-Clause
  * SPDX-FileCopyrightText: Copyright (c) 2025 ViXion Inc. All Rights Reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 const Compiler = (function () {
@@ -61,77 +62,6 @@ const Compiler = (function () {
         }
         if (argv !== null) {
           Module._free(argv);
-        }
-      }
-    },
-
-    buildAndBlink: async function () {
-      if (!BLEProtocol.isConnected()) {
-        const msg = t("error.notConnected") || "Not connected to device";
-        UIManager.appendToConsole("Error: " + msg);
-        return;
-      }
-
-      if (!BLEProtocol.isProgramCharacteristicAvailable()) {
-        const msg =
-          t("error.characteristicNotAvailable") ||
-          "Program characteristic not available. Please reconnect.";
-        UIManager.appendToConsole("Error: " + msg);
-        return;
-      }
-
-      UIManager.setRunButtonEnabled(false);
-
-      try {
-        const rubyCode = window.editor.getValue();
-        const slot = UIManager.getSelectedSlot();
-
-        const compileResult = this.compile(rubyCode);
-
-        if (!compileResult.success) {
-          UIManager.appendToConsole(compileResult.error);
-          return;
-        }
-
-        const successMsg =
-          t("compiler.success", {
-            time: compileResult.compileTime.toFixed(2),
-          }) ||
-          "mrbc success!: (" + compileResult.compileTime.toFixed(2) + "ms)";
-        UIManager.appendToConsole(successMsg);
-
-        const startSend = performance.now();
-
-        await BLEProtocol.sendFirmware(compileResult.bytecode, slot);
-
-        const endSend = performance.now();
-        const transferTime = endSend - startSend;
-
-        const completeMsg =
-          t("compiler.sendComplete", { time: transferTime.toFixed(2) }) ||
-          "Sending bytecode: Complete! (" + transferTime.toFixed(2) + "ms)";
-        UIManager.appendToConsole(completeMsg);
-
-        UIManager.updateMetrics({
-          compileTime: compileResult.compileTime,
-          transferTime: transferTime,
-          programSize: compileResult.size,
-        });
-
-        HistoryManager.createCheckpoint(rubyCode, {
-          compileTime: compileResult.compileTime,
-          transferTime: transferTime,
-          size: compileResult.size,
-          slot: slot,
-        });
-      } catch (error) {
-        const errorMsg =
-          t("compiler.error", { message: error.message }) ||
-          "Error: " + error.message;
-        UIManager.appendToConsole(errorMsg);
-      } finally {
-        if (BLEProtocol.isConnected()) {
-          UIManager.setRunButtonEnabled(true);
         }
       }
     },

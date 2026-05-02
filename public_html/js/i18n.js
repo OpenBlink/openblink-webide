@@ -1,6 +1,6 @@
 /*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 // Global translation helper function for use across all modules
@@ -12,70 +12,33 @@ function t(key, params) {
 }
 
 const I18n = (function () {
+  const log = Logger.scope("I18n");
+
   const STORAGE_KEY = "openblink_language";
   const SUPPORTED_LANGUAGES = ["en", "zh-CN", "zh-TW", "ja", "ja-easy"];
   const DEFAULT_LANGUAGE = "en";
-  const FETCH_TIMEOUT = 15000;
-  const MAX_RETRIES = 3;
-  const INITIAL_RETRY_DELAY = 1000;
 
   let translations = {};
   let translationsCache = null;
   let currentLanguage = DEFAULT_LANGUAGE;
   let initialized = false;
 
-  async function fetchWithTimeout(url, timeout) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === "AbortError") {
-        throw new Error(`Request timeout after ${timeout}ms`);
-      }
-      throw error;
-    }
-  }
-
   async function fetchTranslationsWithRetry() {
     if (translationsCache) {
       return translationsCache;
     }
 
-    let lastError = null;
+    const result = await NetUtils.fetchWithRetry("i18n/translations.json", {
+      parseAs: "json",
+    });
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        const response = await fetchWithTimeout(
-          "i18n/translations.json",
-          FETCH_TIMEOUT,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to load translations: " + response.status);
-        }
-        const result = await response.json();
-        translationsCache = result;
-        return result;
-      } catch (error) {
-        lastError = error;
-        console.warn(
-          `Translation fetch attempt ${attempt + 1}/${MAX_RETRIES} failed:`,
-          error.message,
-        );
-
-        if (attempt < MAX_RETRIES - 1) {
-          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
+    if (!result) {
+      log.error("Failed to load translations after all retries.");
+      return {};
     }
 
-    console.error("Failed to load translations after all retries:", lastError);
-    return {};
+    translationsCache = result;
+    return result;
   }
 
   function detectBrowserLanguage() {
@@ -101,7 +64,7 @@ const I18n = (function () {
         return saved;
       }
     } catch (e) {
-      console.warn("Failed to load saved language:", e);
+      log.warn("Failed to load saved language:", e);
     }
     return null;
   }
@@ -110,7 +73,7 @@ const I18n = (function () {
     try {
       localStorage.setItem(STORAGE_KEY, lang);
     } catch (e) {
-      console.warn("Failed to save language:", e);
+      log.warn("Failed to save language:", e);
     }
   }
 
@@ -188,7 +151,7 @@ const I18n = (function () {
 
     setLanguage: function (lang) {
       if (!SUPPORTED_LANGUAGES.includes(lang)) {
-        console.warn("Unsupported language:", lang);
+        log.warn("Unsupported language:", lang);
         return false;
       }
 

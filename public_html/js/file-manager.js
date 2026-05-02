@@ -1,6 +1,6 @@
 /*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const FileManager = (function () {
@@ -20,8 +20,7 @@ const FileManager = (function () {
     window.addEventListener("beforeunload", (e) => {
       if (isDirty) {
         e.preventDefault();
-        e.returnValue = "You have unsaved changes. Do you want to leave?";
-        return e.returnValue;
+        e.returnValue = "";
       }
     });
   }

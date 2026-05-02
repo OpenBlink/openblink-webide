@@ -1,9 +1,15 @@
 /*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
  * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: Copyright (c) 2026 OpenBlink.org
  */
 
 const ErrorHandler = (function () {
+  const log = Logger.scope("ErrorHandler");
+
+  /** Buffer for errors that arrive before UIManager is initialized. */
+  const _earlyBuffer = [];
+  let _uiReady = false;
+
   const errorKeyMap = {
     NotFoundError: "error.deviceNotFound",
     SecurityError: "error.securityError",
@@ -33,6 +39,18 @@ const ErrorHandler = (function () {
   };
 
   // Note: Global t() helper is defined in i18n.js
+
+  function _showInUI(message) {
+    if (
+      _uiReady &&
+      typeof UIManager !== "undefined" &&
+      UIManager.appendToConsole
+    ) {
+      UIManager.appendToConsole(message);
+    } else {
+      _earlyBuffer.push(message);
+    }
+  }
 
   return {
     getErrorMessage: function (error) {
@@ -75,15 +93,59 @@ const ErrorHandler = (function () {
       return `An error occurred: ${error.message || error.name || "Unknown error"}`;
     },
 
-    displayError: function (error, context) {
+    /**
+     * Report an error: log it and display a user-facing message.
+     * @param {Error|*} error
+     * @param {string} [context]
+     */
+    report: function (error, context) {
       const friendlyMessage = this.getErrorMessage(error);
-
-      const errorPrefix = "Error: ";
-      UIManager.appendToConsole(errorPrefix + friendlyMessage);
-
+      _showInUI("Error: " + friendlyMessage);
       if (error && error.message && error.message !== friendlyMessage) {
-        console.error(`[${context || "Error"}] Technical details:`, error);
+        log.error(`[${context || "Error"}] Technical details:`, error);
       }
+    },
+
+    /**
+     * Show a purely informational notification (no Error object).
+     * @param {string} messageKey  i18n key
+     * @param {Object} [params]    interpolation params
+     */
+    notify: function (messageKey, params) {
+      const msg = t(messageKey, params) || messageKey;
+      _showInUI(msg);
+    },
+
+    /**
+     * Log an error silently (no UI display).
+     * @param {Error|*} error
+     * @param {string} [context]
+     */
+    silent: function (error, context) {
+      log.error(`[${context || "Error"}]`, error);
+    },
+
+    /**
+     * Flush the early-error buffer to UIManager once it is ready.
+     * Call this after UIManager.initialize().
+     */
+    flush: function () {
+      _uiReady = true;
+      while (_earlyBuffer.length > 0) {
+        const msg = _earlyBuffer.shift();
+        if (typeof UIManager !== "undefined" && UIManager.appendToConsole) {
+          UIManager.appendToConsole(msg);
+        }
+      }
+    },
+
+    /**
+     * Backward-compatible alias for report().
+     * @param {Error|*} error
+     * @param {string} [context]
+     */
+    displayError: function (error, context) {
+      this.report(error, context);
     },
 
     wrapAsync: function (fn, context) {

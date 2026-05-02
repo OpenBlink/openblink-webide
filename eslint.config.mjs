@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
+// SPDX-License-Identifier: BSD-3-Clause
+
 import js from "@eslint/js";
 import globals from "globals";
 
@@ -22,6 +25,18 @@ const browserGlobals = {
   CRC16: "readonly",
   ErrorHandler: "readonly",
   crc16_reflect: "readonly",
+  EventBus: "readonly",
+  BLEStateMachine: "readonly",
+  Config: "readonly",
+  Logger: "readonly",
+  BLEState: "readonly",
+  BLE_VALID_TRANSITIONS: "readonly",
+  isBLETransitionValid: "readonly",
+  BLECommandQueue: "readonly",
+  BLEConnection: "readonly",
+  BLETransfer: "readonly",
+  BLEKnownDevices: "readonly",
+  NetUtils: "readonly",
 };
 
 export default [
@@ -52,7 +67,7 @@ export default [
         {
           argsIgnorePattern: "^_|^(argc|colno|error)$",
           varsIgnorePattern:
-            "^_|^(BLEProtocol|BoardManager|Compiler|FileManager|HistoryManager|I18n|Simulator|UIManager|Utils|crc16_reflect|t)$",
+            "^_|^(BLECommandQueue|BLEConnection|BLEKnownDevices|BLEProtocol|BLEState|BLEStateMachine|BLETransfer|BoardManager|Compiler|Config|EventBus|FileManager|HistoryManager|I18n|Logger|NetUtils|Simulator|UIManager|Utils|crc16_reflect|isBLETransitionValid|t)$",
           caughtErrorsIgnorePattern: "^_|^e$",
         },
       ],
