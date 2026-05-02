@@ -12,12 +12,11 @@ function t(key, params) {
 }
 
 const I18n = (function () {
+  const log = Logger.scope("I18n");
+
   const STORAGE_KEY = "openblink_language";
   const SUPPORTED_LANGUAGES = ["en", "zh-CN", "zh-TW", "ja", "ja-easy"];
   const DEFAULT_LANGUAGE = "en";
-  const FETCH_TIMEOUT = 15000;
-  const MAX_RETRIES = 3;
-  const INITIAL_RETRY_DELAY = 1000;
 
   let translations = {};
   let translationsCache = null;
@@ -48,11 +47,15 @@ const I18n = (function () {
 
     let lastError = null;
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    for (
+      let attempt = 0;
+      attempt < Config.retries.fetchMaxAttempts;
+      attempt++
+    ) {
       try {
         const response = await fetchWithTimeout(
           "i18n/translations.json",
-          FETCH_TIMEOUT,
+          Config.timeouts.fetchRequest,
         );
         if (!response.ok) {
           throw new Error("Failed to load translations: " + response.status);
@@ -62,19 +65,20 @@ const I18n = (function () {
         return result;
       } catch (error) {
         lastError = error;
-        console.warn(
-          `Translation fetch attempt ${attempt + 1}/${MAX_RETRIES} failed:`,
+        log.warn(
+          `Translation fetch attempt ${attempt + 1}/${Config.retries.fetchMaxAttempts} failed:`,
           error.message,
         );
 
-        if (attempt < MAX_RETRIES - 1) {
-          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+        if (attempt < Config.retries.fetchMaxAttempts - 1) {
+          const delay =
+            Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
-    console.error("Failed to load translations after all retries:", lastError);
+    log.error("Failed to load translations after all retries:", lastError);
     return {};
   }
 
@@ -101,7 +105,7 @@ const I18n = (function () {
         return saved;
       }
     } catch (e) {
-      console.warn("Failed to load saved language:", e);
+      log.warn("Failed to load saved language:", e);
     }
     return null;
   }
@@ -110,7 +114,7 @@ const I18n = (function () {
     try {
       localStorage.setItem(STORAGE_KEY, lang);
     } catch (e) {
-      console.warn("Failed to save language:", e);
+      log.warn("Failed to save language:", e);
     }
   }
 
@@ -188,7 +192,7 @@ const I18n = (function () {
 
     setLanguage: function (lang) {
       if (!SUPPORTED_LANGUAGES.includes(lang)) {
-        console.warn("Unsupported language:", lang);
+        log.warn("Unsupported language:", lang);
         return false;
       }
 

@@ -414,6 +414,6 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 Module.onRuntimeInitialized = () => {
-  console.log("Emscripten runtime initialized.");
+  Logger.scope("main").info("Emscripten runtime initialized.");
   initializeApp();
 };

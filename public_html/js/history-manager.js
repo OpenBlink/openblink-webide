@@ -4,6 +4,7 @@
  */
 
 const HistoryManager = (function () {
+  const log = Logger.scope("HistoryManager");
   const STORAGE_KEY = "openblink_history";
   const MAX_CHECKPOINTS = 20;
   let history = [];
@@ -65,7 +66,7 @@ const HistoryManager = (function () {
         }
       }
     } catch (e) {
-      console.error("Failed to load history:", e);
+      log.error("Failed to load history:", e);
       history = [];
     }
   }
@@ -83,7 +84,7 @@ const HistoryManager = (function () {
       }
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     } catch (e) {
-      console.error("Failed to save history:", e);
+      log.error("Failed to save history:", e);
       if (e.name === "QuotaExceededError") {
         while (history.length > 0) {
           history.shift();
@@ -91,7 +92,7 @@ const HistoryManager = (function () {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
             break;
           } catch (retryError) {
-            console.error("Failed to save history after trimming:", retryError);
+            log.error("Failed to save history after trimming:", retryError);
             if (retryError.name !== "QuotaExceededError") {
               break;
             }

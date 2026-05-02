@@ -4,6 +4,8 @@
  */
 
 const ErrorHandler = (function () {
+  const log = Logger.scope("ErrorHandler");
+
   const errorKeyMap = {
     NotFoundError: "error.deviceNotFound",
     SecurityError: "error.securityError",
@@ -82,7 +84,7 @@ const ErrorHandler = (function () {
       UIManager.appendToConsole(errorPrefix + friendlyMessage);
 
       if (error && error.message && error.message !== friendlyMessage) {
-        console.error(`[${context || "Error"}] Technical details:`, error);
+        log.error(`[${context || "Error"}] Technical details:`, error);
       }
     },
 

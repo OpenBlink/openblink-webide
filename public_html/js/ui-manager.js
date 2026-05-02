@@ -5,6 +5,8 @@
  */
 
 const UIManager = (function () {
+  const log = Logger.scope("UIManager");
+
   let connectButton = null;
   let disconnectButton = null;
   let runMainButton = null;
@@ -449,14 +451,14 @@ const UIManager = (function () {
 
       simulatorLoading = true;
 
-      const SCRIPT_TIMEOUT = 30000;
-      const MAX_RETRIES = 3;
-      const INITIAL_RETRY_DELAY = 1000;
-
       const loadScriptWithRetry = async (src) => {
         let lastError = null;
 
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        for (
+          let attempt = 0;
+          attempt < Config.retries.scriptLoadMaxAttempts;
+          attempt++
+        ) {
           try {
             await new Promise((resolve, reject) => {
               const script = document.createElement("script");
@@ -465,10 +467,10 @@ const UIManager = (function () {
               const timeoutId = setTimeout(() => {
                 reject(
                   new Error(
-                    `Script load timeout after ${SCRIPT_TIMEOUT}ms: ${src}`,
+                    `Script load timeout after ${Config.timeouts.scriptLoad}ms: ${src}`,
                   ),
                 );
-              }, SCRIPT_TIMEOUT);
+              }, Config.timeouts.scriptLoad);
 
               script.onload = () => {
                 clearTimeout(timeoutId);
@@ -483,13 +485,14 @@ const UIManager = (function () {
             return;
           } catch (error) {
             lastError = error;
-            console.warn(
-              `Script load attempt ${attempt + 1}/${MAX_RETRIES} failed for ${src}:`,
+            log.warn(
+              `Script load attempt ${attempt + 1}/${Config.retries.scriptLoadMaxAttempts} failed for ${src}:`,
               error.message,
             );
 
-            if (attempt < MAX_RETRIES - 1) {
-              const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            if (attempt < Config.retries.scriptLoadMaxAttempts - 1) {
+              const delay =
+                Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
               await new Promise((resolve) => setTimeout(resolve, delay));
             }
           }

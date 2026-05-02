@@ -9,15 +9,16 @@
  */
 
 const EventBus = (function () {
+  const log = Logger.scope("EventBus");
   const listeners = new Map();
-  let debugMode = false;
 
   /**
-   * Enable or disable debug logging
-   * @param {boolean} enabled - Whether to log events to console
+   * Enable or disable debug logging.
+   * Deprecated: use Logger.setLevel('debug') instead.
+   * Kept for backward compatibility.
    */
   function setDebugMode(enabled) {
-    debugMode = enabled;
+    if (enabled) Logger.setLevel("debug");
   }
 
   /**
@@ -28,11 +29,11 @@ const EventBus = (function () {
    */
   function on(event, handler) {
     if (typeof event !== "string" || event.length === 0) {
-      console.error("EventBus.on: event name must be a non-empty string");
+      log.error("EventBus.on: event name must be a non-empty string");
       return null;
     }
     if (typeof handler !== "function") {
-      console.error("EventBus.on: handler must be a function");
+      log.error("EventBus.on: handler must be a function");
       return null;
     }
 
@@ -72,13 +73,11 @@ const EventBus = (function () {
    */
   function emit(event, data) {
     if (typeof event !== "string" || event.length === 0) {
-      console.error("EventBus.emit: event name must be a non-empty string");
+      log.error("EventBus.emit: event name must be a non-empty string");
       return;
     }
 
-    if (debugMode) {
-      console.debug(`[EventBus] ${event}`, data);
-    }
+    log.debug(`emit ${event}`, data);
 
     if (!listeners.has(event)) {
       return;
@@ -92,8 +91,7 @@ const EventBus = (function () {
       try {
         handler(data);
       } catch (error) {
-        console.error(`[EventBus] Error in handler for ${event}:`, error);
-        // Continue to next handler - error isolation
+        log.error(`Error in handler for ${event}:`, error);
       }
     }
   }

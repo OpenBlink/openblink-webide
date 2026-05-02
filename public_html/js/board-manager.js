@@ -4,12 +4,10 @@
  */
 
 const BoardManager = (function () {
+  const log = Logger.scope("BoardManager");
+
   let boards = [];
   let currentBoard = null;
-
-  const FETCH_TIMEOUT = 15000;
-  const MAX_RETRIES = 3;
-  const INITIAL_RETRY_DELAY = 1000;
 
   const resourceCache = new Map();
 
@@ -32,8 +30,8 @@ const BoardManager = (function () {
 
   async function fetchWithRetry(url, options = {}) {
     const {
-      timeout = FETCH_TIMEOUT,
-      maxRetries = MAX_RETRIES,
+      timeout = Config.timeouts.fetchRequest,
+      maxRetries = Config.retries.fetchMaxAttempts,
       parseAs = "json",
       useCache = true,
     } = options;
@@ -61,19 +59,20 @@ const BoardManager = (function () {
         return result;
       } catch (error) {
         lastError = error;
-        console.warn(
+        log.warn(
           `Fetch attempt ${attempt + 1}/${maxRetries} failed for ${url}:`,
           error.message,
         );
 
         if (attempt < maxRetries - 1) {
-          const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+          const delay =
+            Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
-    console.error(
+    log.error(
       `Failed to fetch ${url} after ${maxRetries} attempts:`,
       lastError,
     );
@@ -106,7 +105,7 @@ const BoardManager = (function () {
           suffix = localizedSuffix;
         }
       } catch (error) {
-        console.error("Failed to get localized file suffix from I18n:", error);
+        log.error("Failed to get localized file suffix from I18n:", error);
       }
     }
 
