@@ -332,9 +332,10 @@ const BLEStateMachine = (function () {
 
       connectAbortController = new AbortController();
       const signal = connectAbortController.signal;
+      let device = null;
 
       try {
-        const device =
+        device =
           opts && opts.device ? opts.device : await BLEProtocol.requestDevice();
         const result = await BLEConnection.establish(
           device,
@@ -346,6 +347,9 @@ const BLEStateMachine = (function () {
         _afterConnected(device.name);
       } catch (error) {
         connectAbortController = null;
+        if (device?.gatt?.connected) {
+          await BLEConnection.tearDown(device).catch(() => {});
+        }
         cleanupResources();
         transition(BLEState.DISCONNECTED, { error });
         _emit("BLE:CONNECT_FAILED", { error });

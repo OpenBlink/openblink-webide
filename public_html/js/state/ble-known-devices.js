@@ -74,7 +74,6 @@ const BLEKnownDevices = (function () {
 
   /**
    * Forget a device: disconnect if currently connected, then call device.forget().
-   * Emits BLE:DEVICE_FORGOTTEN on the EventBus (if available via BLEStateMachine).
    * @param {BluetoothDevice} device
    * @returns {Promise<void>}
    */

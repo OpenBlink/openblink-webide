@@ -172,6 +172,7 @@ const UIManager = (function () {
           connectBtn.disabled = true;
           BLEKnownDevices.connectKnown(device).catch((err) => {
             UIManager.appendToConsole("Error: " + err.message);
+            connectBtn.disabled = false;
           });
         });
         row.appendChild(connectBtn);

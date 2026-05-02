@@ -30,11 +30,11 @@ const EventBus = (function () {
   function on(event, handler) {
     if (typeof event !== "string" || event.length === 0) {
       log.error("EventBus.on: event name must be a non-empty string");
-      return null;
+      return () => {};
     }
     if (typeof handler !== "function") {
       log.error("EventBus.on: handler must be a function");
-      return null;
+      return () => {};
     }
 
     if (!listeners.has(event)) {

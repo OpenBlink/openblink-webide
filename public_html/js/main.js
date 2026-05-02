@@ -206,17 +206,6 @@ function setupEventWiring() {
     BLEStateMachine.disconnect();
   });
 
-  EventBus.on("UI:RESET_CLICKED", () => {
-    if (!BLEStateMachine.isConnected()) {
-      const msg = t("error.notConnected") || "Not connected to device";
-      UIManager.appendToConsole("Error: " + msg);
-      return;
-    }
-    BLEStateMachine.sendReset().catch((error) => {
-      UIManager.appendToConsole(ErrorHandler.getErrorMessage(error));
-    });
-  });
-
   // UI:BUILD_CLICKED → Compile → Transfer
   EventBus.on("UI:BUILD_CLICKED", async () => {
     if (!BLEStateMachine.isConnected()) {
@@ -281,7 +270,7 @@ function setupEventWiring() {
   });
 
   // BLE events → UI updates
-  EventBus.on("BLE:STATE_CHANGED", ({ _from, to }) => {
+  EventBus.on("BLE:STATE_CHANGED", ({ to }) => {
     UIManager.updateConnectionStatus(to.toLowerCase());
   });
 
@@ -290,7 +279,7 @@ function setupEventWiring() {
     UIManager.refreshKnownDevices();
   });
 
-  EventBus.on("BLE:DISCONNECTED", ({ _reason }) => {
+  EventBus.on("BLE:DISCONNECTED", () => {
     UIManager.appendToConsole("Disconnected from device.");
     UIManager.refreshKnownDevices();
   });

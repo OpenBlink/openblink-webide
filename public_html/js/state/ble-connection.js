@@ -230,14 +230,14 @@ const BLEConnection = (function () {
         resolve("timeout");
       }, timeoutMs);
 
-      device.addEventListener(
-        "gattserverdisconnected",
-        () => {
-          clearTimeout(timer);
-          resolve("event");
-        },
-        { once: true },
-      );
+      const handler = () => {
+        clearTimeout(timer);
+        resolve("event");
+      };
+
+      device.addEventListener("gattserverdisconnected", handler, {
+        once: true,
+      });
     });
   }
 
