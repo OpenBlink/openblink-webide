@@ -23,7 +23,6 @@ const BLECommandQueue = (function () {
 
   let tail = Promise.resolve();
   let pendingCount = 0;
-  let clearRejectFn = null;
 
   /**
    * Wrap an async operation with a per-operation timeout.
@@ -40,7 +39,9 @@ const BLECommandQueue = (function () {
         timedOut = true;
         log.warn(`Timeout after ${timeoutMs}ms: ${label}`);
         tail = Promise.resolve();
-        reject(new Error(`BLE operation timed out after ${timeoutMs}ms: ${label}`));
+        reject(
+          new Error(`BLE operation timed out after ${timeoutMs}ms: ${label}`),
+        );
       }, timeoutMs);
 
       fn()
@@ -109,7 +110,11 @@ const BLECommandQueue = (function () {
    * @returns {Promise<void>}
    */
   function enqueueWrite(char, buffer, opts) {
-    const { timeout = Config.timeouts.bleWrite, label = "write", mode = "auto" } = opts || {};
+    const {
+      timeout = Config.timeouts.bleWrite,
+      label = "write",
+      mode = "auto",
+    } = opts || {};
     return _enqueue(() => _doWrite(char, buffer, mode), timeout, label);
   }
 
@@ -150,10 +155,6 @@ const BLECommandQueue = (function () {
   function clear(opts) {
     const { reason = "clear" } = opts || {};
     log.info(`Queue cleared: ${reason} (pending=${pendingCount})`);
-    if (clearRejectFn) {
-      clearRejectFn(new Error(`Queue cleared: ${reason}`));
-      clearRejectFn = null;
-    }
     tail = Promise.resolve();
     pendingCount = 0;
   }
@@ -166,5 +167,11 @@ const BLECommandQueue = (function () {
     return pendingCount;
   }
 
-  return Object.freeze({ enqueueWrite, enqueueRead, enqueueNotify, clear, size });
+  return Object.freeze({
+    enqueueWrite,
+    enqueueRead,
+    enqueueNotify,
+    clear,
+    size,
+  });
 })();

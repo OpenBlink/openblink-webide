@@ -39,8 +39,11 @@ const NetUtils = (function () {
       useCache = false,
     } = opts || {};
 
+    // Response objects are single-use (body is a ReadableStream), so caching
+    // them would hand a consumed object to the second caller.
+    const cacheable = useCache && parseAs !== "response";
     const cacheKey = `${url}:${parseAs}`;
-    if (useCache && _cache.has(cacheKey)) {
+    if (cacheable && _cache.has(cacheKey)) {
       return _cache.get(cacheKey);
     }
 
@@ -73,13 +76,14 @@ const NetUtils = (function () {
             result = response;
         }
 
-        if (useCache) _cache.set(cacheKey, result);
+        if (cacheable) _cache.set(cacheKey, result);
         return result;
       } catch (error) {
         clearTimeout(timeoutId);
-        lastError = error.name === "AbortError"
-          ? new Error(`Request timeout after ${timeout}ms: ${url}`)
-          : error;
+        lastError =
+          error.name === "AbortError"
+            ? new Error(`Request timeout after ${timeout}ms: ${url}`)
+            : error;
 
         log.warn(
           `Fetch attempt ${attempt + 1}/${maxAttempts} failed for ${url}:`,
@@ -87,13 +91,17 @@ const NetUtils = (function () {
         );
 
         if (attempt < maxAttempts - 1) {
-          const delay = Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
+          const delay =
+            Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
 
-    log.error(`Failed to fetch ${url} after ${maxAttempts} attempts:`, lastError);
+    log.error(
+      `Failed to fetch ${url} after ${maxAttempts} attempts:`,
+      lastError,
+    );
     return null;
   }
 

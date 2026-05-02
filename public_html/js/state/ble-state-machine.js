@@ -34,6 +34,7 @@ const BLEStateMachine = (function () {
   let reconnectHandle = null;
   let userInitiatedDisconnect = false;
   let connectAbortController = null;
+  let transferAbortController = null;
 
   // ── Heartbeat ───────────────────────────────────────────────────────────
   let heartbeatTimer = null;
@@ -144,6 +145,11 @@ const BLEStateMachine = (function () {
       connectAbortController = null;
     }
 
+    if (transferAbortController) {
+      transferAbortController.abort();
+      transferAbortController = null;
+    }
+
     userInitiatedDisconnect = false;
     reconnectAttempts = 0;
     connectedDevice = null;
@@ -179,6 +185,9 @@ const BLEStateMachine = (function () {
       _emit("BLE:RECONNECTING", {
         attempt: reconnectAttempts,
         maxAttempts: Config.retries.bleReconnectMaxAttempts,
+        delay:
+          Config.timeouts.bleReconnectInitialDelay *
+          Math.pow(2, reconnectAttempts - 1),
       });
       _scheduleReconnect(device, reconnectAttempts);
     } else {
@@ -236,12 +245,28 @@ const BLEStateMachine = (function () {
       },
       (_err) => {
         reconnectHandle = null;
-        cleanupResources();
-        transition(BLEState.DISCONNECTED, { reason: "reconnect_failed" });
-        _emit("BLE:DISCONNECTED", { reason: "reconnect_failed" });
-        _emit("BLE:RECONNECT_FAILED", {
-          attempts: Config.retries.bleReconnectMaxAttempts,
-        });
+        if (reconnectAttempts < Config.retries.bleReconnectMaxAttempts) {
+          reconnectAttempts++;
+          transition(BLEState.RECONNECTING, {
+            attempt: reconnectAttempts,
+            maxAttempts: Config.retries.bleReconnectMaxAttempts,
+          });
+          _emit("BLE:RECONNECTING", {
+            attempt: reconnectAttempts,
+            maxAttempts: Config.retries.bleReconnectMaxAttempts,
+            delay:
+              Config.timeouts.bleReconnectInitialDelay *
+              Math.pow(2, reconnectAttempts - 1),
+          });
+          _scheduleReconnect(device, reconnectAttempts);
+        } else {
+          cleanupResources();
+          transition(BLEState.DISCONNECTED, { reason: "reconnect_failed" });
+          _emit("BLE:DISCONNECTED", { reason: "reconnect_failed" });
+          _emit("BLE:RECONNECT_FAILED", {
+            attempts: Config.retries.bleReconnectMaxAttempts,
+          });
+        }
       },
     );
   }
@@ -361,9 +386,14 @@ const BLEStateMachine = (function () {
         }
       }
 
-      cleanupResources();
-      transition(BLEState.DISCONNECTED, { reason: "user" });
-      _emit("BLE:DISCONNECTED", { reason: "user" });
+      // Guard: handleDisconnect may have already run during awaitDisconnect
+      // (gattserverdisconnected arrived before timeout). In that case the
+      // state is already DISCONNECTED and cleanupResources was already called.
+      if (state !== BLEState.DISCONNECTED) {
+        cleanupResources();
+        transition(BLEState.DISCONNECTED, { reason: "user" });
+        _emit("BLE:DISCONNECTED", { reason: "user" });
+      }
     },
 
     /**
@@ -421,9 +451,8 @@ const BLEStateMachine = (function () {
       stopHeartbeat();
       _emit("BLE:TRANSFER_STARTED", {});
 
-      const signal = connectAbortController
-        ? connectAbortController.signal
-        : undefined;
+      transferAbortController = new AbortController();
+      const signal = transferAbortController.signal;
 
       const progressProxy = onProgress
         ? (sent, total) => {
@@ -460,6 +489,7 @@ const BLEStateMachine = (function () {
         _emit("BLE:TRANSFER_FAILED", { error });
         throw error;
       } finally {
+        transferAbortController = null;
         if (state === BLEState.CONNECTED) startHeartbeat();
       }
     },

@@ -465,6 +465,7 @@ const UIManager = (function () {
               script.src = src;
 
               const timeoutId = setTimeout(() => {
+                if (script.parentNode) script.parentNode.removeChild(script);
                 reject(
                   new Error(
                     `Script load timeout after ${Config.timeouts.scriptLoad}ms: ${src}`,
@@ -478,6 +479,7 @@ const UIManager = (function () {
               };
               script.onerror = () => {
                 clearTimeout(timeoutId);
+                if (script.parentNode) script.parentNode.removeChild(script);
                 reject(new Error("Failed to load " + src));
               };
               document.body.appendChild(script);

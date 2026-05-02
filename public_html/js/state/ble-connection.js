@@ -233,15 +233,17 @@ const BLEConnection = (function () {
   }
 
   /**
-   * Schedule an exponential-backoff reconnect attempt.
-   * Always clears any previously scheduled timer before setting a new one.
+   * Schedule a single reconnect attempt with exponential-backoff delay.
+   * Calls onConnected on success or onFailed on failure — never retries
+   * internally.  Retry orchestration (attempt counting, max-attempts check)
+   * is the caller's responsibility (BLEStateMachine._scheduleReconnect).
    *
    * @param {BluetoothDevice} device
-   * @param {number} attempt - 1-based attempt number
+   * @param {number} attempt - 1-based attempt number (used only for delay calc + logging)
    * @param {AbortSignal} [signal]
    * @param {Function} onConsoleMessage
    * @param {Function} onConnected  - Called with ConnectionResult on success
-   * @param {Function} onFailed     - Called with Error when max attempts exceeded
+   * @param {Function} onFailed     - Called with Error on failure
    * @returns {{ cancel: Function }} Object with cancel helper
    */
   function scheduleReconnect(
@@ -268,18 +270,7 @@ const BLEConnection = (function () {
         onConnected(result);
       } catch (err) {
         log.warn(`Reconnect attempt ${attempt} failed:`, err.message);
-        if (attempt < Config.retries.bleReconnectMaxAttempts) {
-          scheduleReconnect(
-            device,
-            attempt + 1,
-            signal,
-            onConsoleMessage,
-            onConnected,
-            onFailed,
-          );
-        } else {
-          onFailed(err);
-        }
+        onFailed(err);
       }
     }, delay);
 

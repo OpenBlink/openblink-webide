@@ -84,8 +84,14 @@ const BLEKnownDevices = (function () {
       throw new Error("device.forget() is not supported in this browser");
     }
 
+    const activeStates = [
+      "CONNECTED",
+      "TRANSFERRING",
+      "CONNECTING",
+      "RECONNECTING",
+    ];
     if (
-      BLEStateMachine.isConnected() &&
+      activeStates.includes(BLEStateMachine.getState()) &&
       device.id === _getConnectedDeviceId()
     ) {
       log.info("Disconnecting before forget:", device.name);
