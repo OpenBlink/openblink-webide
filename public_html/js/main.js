@@ -177,6 +177,16 @@ window.addEventListener("DOMContentLoaded", () => {
       "Promise Error: " + message;
     UIManager.appendToConsole(errorMsg);
   });
+
+  // Cleanup Bluetooth connections on page unload/reload/navigation
+  // Use both pagehide and beforeunload for better browser compatibility
+  const cleanupBluetooth = function () {
+    if (typeof BLEProtocol !== "undefined" && BLEProtocol.cleanup) {
+      BLEProtocol.cleanup();
+    }
+  };
+  window.addEventListener("pagehide", cleanupBluetooth);
+  window.addEventListener("beforeunload", cleanupBluetooth);
 });
 
 Module.onRuntimeInitialized = () => {

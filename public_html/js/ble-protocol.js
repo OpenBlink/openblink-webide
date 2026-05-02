@@ -155,6 +155,42 @@ const BLEProtocol = (function () {
     }
   }
 
+  // Cleanup device references and event listeners
+  function cleanupDevice() {
+    // Stop keep-alive heartbeat
+    stopKeepAlive();
+
+    // Reset transfer flag
+    isTransferring = false;
+
+    // Reset disconnect flag
+    userInitiatedDisconnect = false;
+
+    // Remove gattserverdisconnected event listener from device
+    if (deviceWithDisconnectListener) {
+      deviceWithDisconnectListener.removeEventListener(
+        "gattserverdisconnected",
+        handleDisconnect,
+      );
+      deviceWithDisconnectListener = null;
+    }
+
+    // Remove console characteristic event listener
+    if (consoleCharacteristic) {
+      consoleCharacteristic.removeEventListener(
+        "characteristicvaluechanged",
+        handleConsoleValueChanged,
+      );
+    }
+
+    // Clear all device references
+    programCharacteristic = null;
+    negotiatedMtuCharacteristic = null;
+    consoleCharacteristic = null;
+    connectedDevice = null;
+    negotiatedMTU = DEFAULT_MTU;
+  }
+
   async function connectToDevice(device) {
     const server = await device.gatt.connect();
     console.log("Connected to GATT server");
@@ -193,6 +229,18 @@ const BLEProtocol = (function () {
 
     await consoleCharacteristic.startNotifications();
 
+    // Add gattserverdisconnected event listener
+    if (deviceWithDisconnectListener !== device) {
+      if (deviceWithDisconnectListener) {
+        deviceWithDisconnectListener.removeEventListener(
+          "gattserverdisconnected",
+          handleDisconnect,
+        );
+      }
+      device.addEventListener("gattserverdisconnected", handleDisconnect);
+      deviceWithDisconnectListener = device;
+    }
+
     connectedDevice = device;
     UIManager.updateConnectionStatus("connected");
     UIManager.appendToConsole("Connected to device: " + device.name);
@@ -205,17 +253,11 @@ const BLEProtocol = (function () {
     const device = event.target;
     UIManager.appendToConsole("Device disconnected: " + device.name);
 
-    // Stop keep-alive heartbeat
-    stopKeepAlive();
-
-    programCharacteristic = null;
-    negotiatedMtuCharacteristic = null;
-    consoleCharacteristic = null;
-    negotiatedMTU = DEFAULT_MTU;
-
     if (userInitiatedDisconnect) {
       userInitiatedDisconnect = false;
       reconnectAttempts = 0;
+      // Cleanup all device references and event listeners
+      cleanupDevice();
       UIManager.updateConnectionStatus("disconnected");
       return;
     }
@@ -226,7 +268,8 @@ const BLEProtocol = (function () {
       UIManager.appendToConsole(
         "Max reconnection attempts reached. Please reconnect manually.",
       );
-      connectedDevice = null;
+      // Cleanup all device references and event listeners
+      cleanupDevice();
       reconnectAttempts = 0;
       UIManager.updateConnectionStatus("disconnected");
     }
@@ -244,6 +287,8 @@ const BLEProtocol = (function () {
     setTimeout(async () => {
       if (userInitiatedDisconnect) {
         reconnectAttempts = 0;
+        // Cleanup all device references and event listeners
+        cleanupDevice();
         UIManager.updateConnectionStatus("disconnected");
         return;
       }
@@ -268,6 +313,8 @@ const BLEProtocol = (function () {
             );
           }
           reconnectAttempts = 0;
+          // Cleanup all device references and event listeners
+          cleanupDevice();
           UIManager.updateConnectionStatus("disconnected");
           return;
         }
@@ -282,7 +329,8 @@ const BLEProtocol = (function () {
           UIManager.appendToConsole(
             "Max reconnection attempts reached. Please reconnect manually.",
           );
-          connectedDevice = null;
+          // Cleanup all device references and event listeners
+          cleanupDevice();
           reconnectAttempts = 0;
           UIManager.updateConnectionStatus("disconnected");
         }
@@ -303,6 +351,11 @@ const BLEProtocol = (function () {
       return programCharacteristic !== null;
     },
 
+    // Public cleanup function for page unload scenarios
+    cleanup: function () {
+      cleanupDevice();
+    },
+
     connect: async function () {
       UIManager.appendToConsole("Connecting to device...");
       UIManager.updateConnectionStatus("connecting");
@@ -318,17 +371,6 @@ const BLEProtocol = (function () {
         });
 
         UIManager.appendToConsole("Selected device: " + device.name);
-
-        if (deviceWithDisconnectListener !== device) {
-          if (deviceWithDisconnectListener) {
-            deviceWithDisconnectListener.removeEventListener(
-              "gattserverdisconnected",
-              handleDisconnect,
-            );
-          }
-          device.addEventListener("gattserverdisconnected", handleDisconnect);
-          deviceWithDisconnectListener = device;
-        }
 
         await connectToDevice(device);
       } catch (error) {
@@ -346,21 +388,19 @@ const BLEProtocol = (function () {
       userInitiatedDisconnect = true;
       reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
 
-      // Stop keep-alive heartbeat
-      stopKeepAlive();
-
       if (connectedDevice && connectedDevice.gatt.connected) {
         UIManager.appendToConsole("Disconnecting from device...");
-        connectedDevice.gatt.disconnect();
+        try {
+          connectedDevice.gatt.disconnect();
+        } catch (error) {
+          console.error("Disconnect error:", error);
+        }
+      } else {
+        // If not connected, still need to cleanup
+        cleanupDevice();
+        UIManager.updateConnectionStatus("disconnected");
+        UIManager.appendToConsole("Disconnected from device.");
       }
-
-      programCharacteristic = null;
-      negotiatedMtuCharacteristic = null;
-      consoleCharacteristic = null;
-      connectedDevice = null;
-      negotiatedMTU = DEFAULT_MTU;
-      UIManager.updateConnectionStatus("disconnected");
-      UIManager.appendToConsole("Disconnected from device.");
     },
 
     sendReset: async function () {
