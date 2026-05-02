@@ -19,6 +19,7 @@ const BLEProtocol = (function () {
   const MAX_RECONNECT_ATTEMPTS = 5;
   const INITIAL_RECONNECT_DELAY = 1000;
   const WRITE_TIMEOUT = 10000;
+  const HEARTBEAT_INTERVAL = 3000; // 3 seconds - shorter than BLE supervision timeout (6s) to maintain connection
 
   let programCharacteristic = null;
   let negotiatedMtuCharacteristic = null;
@@ -28,6 +29,8 @@ const BLEProtocol = (function () {
   let reconnectAttempts = 0;
   let deviceWithDisconnectListener = null;
   let negotiatedMTU = DEFAULT_MTU;
+  let heartbeatTimer = null; // Timer for keep-alive heartbeat
+  let isTransferring = false; // Flag to pause heartbeat during firmware transfer
 
   // Named function for console characteristic event listener to avoid duplicates
   function handleConsoleValueChanged(event) {
@@ -117,6 +120,41 @@ const BLEProtocol = (function () {
     return writeCharacteristicWithTimeout(characteristic, buffer);
   }
 
+  // Heartbeat/keep-alive functions to prevent idle disconnections
+  async function sendHeartbeat() {
+    if (!negotiatedMtuCharacteristic || isTransferring) {
+      return; // Skip heartbeat during transfer or if characteristic not available
+    }
+
+    try {
+      await negotiatedMtuCharacteristic.readValue();
+      // Silent success - no logging needed for normal heartbeat
+    } catch (error) {
+      console.warn("Heartbeat failed:", error.message);
+      // Don't force disconnect on heartbeat failure - just log and continue
+    }
+  }
+
+  function startKeepAlive() {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+    }
+    heartbeatTimer = setInterval(() => {
+      sendHeartbeat();
+    }, HEARTBEAT_INTERVAL);
+    console.log(
+      `Keep-alive heartbeat started (interval: ${HEARTBEAT_INTERVAL}ms)`,
+    );
+  }
+
+  function stopKeepAlive() {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+      console.log("Keep-alive heartbeat stopped");
+    }
+  }
+
   async function connectToDevice(device) {
     const server = await device.gatt.connect();
     console.log("Connected to GATT server");
@@ -158,11 +196,17 @@ const BLEProtocol = (function () {
     connectedDevice = device;
     UIManager.updateConnectionStatus("connected");
     UIManager.appendToConsole("Connected to device: " + device.name);
+
+    // Start keep-alive heartbeat to prevent idle disconnections
+    startKeepAlive();
   }
 
   function handleDisconnect(event) {
     const device = event.target;
     UIManager.appendToConsole("Device disconnected: " + device.name);
+
+    // Stop keep-alive heartbeat
+    stopKeepAlive();
 
     programCharacteristic = null;
     negotiatedMtuCharacteristic = null;
@@ -302,6 +346,9 @@ const BLEProtocol = (function () {
       userInitiatedDisconnect = true;
       reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
 
+      // Stop keep-alive heartbeat
+      stopKeepAlive();
+
       if (connectedDevice && connectedDevice.gatt.connected) {
         UIManager.appendToConsole("Disconnecting from device...");
         connectedDevice.gatt.disconnect();
@@ -359,6 +406,9 @@ const BLEProtocol = (function () {
         UIManager.appendToConsole("Error: Not connected to device");
         return;
       }
+
+      // Pause heartbeat during firmware transfer to avoid interference
+      isTransferring = true;
 
       if (!programCharacteristic) {
         UIManager.appendToConsole(
@@ -430,6 +480,9 @@ const BLEProtocol = (function () {
         await this.sendReload();
       } catch (error) {
         UIManager.appendToConsole("Send [P]rogram Error: " + error.message);
+      } finally {
+        // Resume heartbeat after firmware transfer completes
+        isTransferring = false;
       }
     },
   };
