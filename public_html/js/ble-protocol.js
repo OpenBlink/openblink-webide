@@ -11,19 +11,55 @@
  */
 
 const BLEProtocol = (function () {
-  // Protocol constants (not state)
-  const OPENBLINK_SERVICE_UUID = "227da52c-e13a-412b-befb-ba2256bb7fbe";
-  const OPENBLINK_PROGRAM_CHARACTERISTIC_UUID =
-    "ad9fdd56-1135-4a84-923c-ce5a244385e7";
-  const OPENBLINK_CONSOLE_CHARACTERISTIC_UUID =
-    "a015b3de-185a-4252-aa04-7a87d38ce148";
-  const OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID =
-    "ca141151-3113-448b-b21a-6a6203d253ff";
+  const log = Logger.scope("BLEProtocol");
 
-  const DATA_HEADER_SIZE = 6;
-  const PROGRAM_HEADER_SIZE = 8;
-  const DEFAULT_MTU = 20;
-  const REQUESTED_MTU = 512;
+  /** WeakMap to store console notification handlers without polluting characteristic objects. */
+  const consoleHandlers = new WeakMap();
+
+  /** Cached Bluetooth availability (updated by subscribeAvailability). */
+  let _bluetoothAvailable = null;
+
+  /**
+   * Check Bluetooth adapter availability.
+   * Result is cached; use subscribeAvailability() to keep it up to date.
+   * @returns {Promise<boolean>}
+   */
+  async function checkAvailability() {
+    if (!navigator.bluetooth) {
+      _bluetoothAvailable = false;
+      return false;
+    }
+    try {
+      _bluetoothAvailable = await navigator.bluetooth.getAvailability();
+    } catch (_e) {
+      _bluetoothAvailable = false;
+    }
+    log.debug("Bluetooth available:", _bluetoothAvailable);
+    return _bluetoothAvailable;
+  }
+
+  /**
+   * Return the last cached Bluetooth availability value.
+   * Returns null if checkAvailability() has never been called.
+   * @returns {boolean|null}
+   */
+  function isAvailable() {
+    return _bluetoothAvailable;
+  }
+
+  /**
+   * Subscribe to Bluetooth adapter availability changes.
+   * Updates the internal cache and calls handler(available: boolean) on each change.
+   * @param {Function} handler
+   */
+  function subscribeAvailability(handler) {
+    if (!navigator.bluetooth) return;
+    navigator.bluetooth.addEventListener("availabilitychanged", (event) => {
+      _bluetoothAvailable = event.value;
+      log.info("Bluetooth availability changed:", _bluetoothAvailable);
+      if (handler) handler(_bluetoothAvailable);
+    });
+  }
 
   /**
    * Request a BLE device with OpenBlink service filter
@@ -32,8 +68,8 @@ const BLEProtocol = (function () {
   async function requestDevice() {
     return navigator.bluetooth.requestDevice({
       filters: [
-        { namePrefix: "OpenBlink" },
-        { services: [OPENBLINK_SERVICE_UUID] },
+        { namePrefix: Config.ble.namePrefix },
+        { services: [Config.ble.serviceUUID] },
       ],
     });
   }
@@ -46,13 +82,13 @@ const BLEProtocol = (function () {
   async function connectToDevice(device) {
     const server = await device.gatt.connect();
 
-    const service = await server.getPrimaryService(OPENBLINK_SERVICE_UUID);
+    const service = await server.getPrimaryService(Config.ble.serviceUUID);
 
     const [consoleCharacteristic, programCharacteristic, mtuCharacteristic] =
       await Promise.all([
-        service.getCharacteristic(OPENBLINK_CONSOLE_CHARACTERISTIC_UUID),
-        service.getCharacteristic(OPENBLINK_PROGRAM_CHARACTERISTIC_UUID),
-        service.getCharacteristic(OPENBLINK_NEGOTIATED_MTU_CHARACTERISTIC_UUID),
+        service.getCharacteristic(Config.ble.consoleCharUUID),
+        service.getCharacteristic(Config.ble.programCharUUID),
+        service.getCharacteristic(Config.ble.mtuCharUUID),
       ]);
 
     return {
@@ -66,39 +102,31 @@ const BLEProtocol = (function () {
   }
 
   /**
-   * Negotiate MTU with the device
-   * @param {BluetoothRemoteGATTCharacteristic} programChar - Program characteristic (for device reference)
+   * Negotiate MTU with the device.
+   * Reads the MTU characteristic to obtain the device-reported ATT MTU.
+   * gattServer.requestMTU() is not part of the Web Bluetooth standard and has been removed.
+   * @param {BluetoothRemoteGATTCharacteristic} _programChar - Unused; kept for API compatibility
    * @param {BluetoothRemoteGATTCharacteristic} mtuChar - MTU characteristic
    * @returns {Promise<number>} Negotiated MTU value
    */
-  async function negotiateMTU(programChar, mtuChar) {
-    if (!programChar || !programChar.service || !programChar.service.device) {
-      return DEFAULT_MTU;
-    }
-
-    const gattServer = programChar.service.device.gatt;
-    if (gattServer.requestMTU) {
-      try {
-        const mtu = await gattServer.requestMTU(REQUESTED_MTU);
-        return mtu;
-      } catch (_error) {
-        return DEFAULT_MTU;
-      }
-    } else {
-      try {
-        const valueDataView = await mtuChar.readValue();
-        const deviceMTU = valueDataView.getUint16(0, true);
-        return deviceMTU - 3;
-      } catch (_error) {
-        return DEFAULT_MTU;
-      }
+  async function negotiateMTU(_programChar, mtuChar) {
+    try {
+      const valueDataView = await mtuChar.readValue();
+      const deviceMTU = valueDataView.getUint16(0, true);
+      const effective = deviceMTU - 3;
+      log.info(`Negotiated MTU: ${effective} (raw=${deviceMTU})`);
+      return effective;
+    } catch (_error) {
+      log.warn("MTU read failed, using default", Config.ble.defaultMTU);
+      return Config.ble.defaultMTU;
     }
   }
 
   /**
-   * Start console notifications
-   * @param {BluetoothRemoteGATTCharacteristic} consoleChar - Console characteristic
-   * @param {Function} onConsoleMessage - Callback for console messages
+   * Start console notifications.
+   * Stores the event handler in a WeakMap to avoid polluting the characteristic object.
+   * @param {BluetoothRemoteGATTCharacteristic} consoleChar
+   * @param {Function} onConsoleMessage
    * @returns {Promise<void>}
    */
   async function startConsoleNotifications(consoleChar, onConsoleMessage) {
@@ -106,57 +134,60 @@ const BLEProtocol = (function () {
       throw new Error("Console characteristic not available");
     }
 
-    const handler = function (event) {
+    const handler = (event) => {
       const value = new TextDecoder().decode(event.target.value);
-      if (onConsoleMessage) {
-        onConsoleMessage(value);
-      }
+      if (onConsoleMessage) onConsoleMessage(value);
     };
 
-    // Store handler reference for cleanup
-    consoleChar._consoleHandler = handler;
+    consoleHandlers.set(consoleChar, handler);
     consoleChar.addEventListener("characteristicvaluechanged", handler);
     await consoleChar.startNotifications();
   }
 
   /**
-   * Stop console notifications
-   * @param {BluetoothRemoteGATTCharacteristic} consoleChar - Console characteristic
+   * Stop console notifications.
+   * Removes the stored handler from the WeakMap.
+   * @param {BluetoothRemoteGATTCharacteristic} consoleChar
    */
   function stopConsoleNotifications(consoleChar) {
-    if (!consoleChar) {
-      return;
-    }
-
-    if (consoleChar._consoleHandler) {
-      consoleChar.removeEventListener(
-        "characteristicvaluechanged",
-        consoleChar._consoleHandler,
-      );
-      delete consoleChar._consoleHandler;
+    if (!consoleChar) return;
+    const handler = consoleHandlers.get(consoleChar);
+    if (handler) {
+      consoleChar.removeEventListener("characteristicvaluechanged", handler);
+      consoleHandlers.delete(consoleChar);
     }
   }
 
   /**
-   * Write to a characteristic with timeout
-   * @param {BluetoothRemoteGATTCharacteristic} characteristic - Target characteristic
-   * @param {ArrayBuffer} buffer - Data to write
-   * @param {number} timeout - Timeout in milliseconds
+   * Write to a characteristic with timeout.
+   * Low-level wrapper retained for backward compatibility.
+   * New code should prefer BLECommandQueue.enqueueWrite() for serialization.
+   * @param {BluetoothRemoteGATTCharacteristic} characteristic
+   * @param {ArrayBuffer} buffer
+   * @param {number} [timeout]
    * @returns {Promise<void>}
    */
   async function writeWithTimeout(characteristic, buffer, timeout) {
     if (!characteristic) {
       throw new Error("Characteristic not available");
     }
-
+    const ms = timeout !== undefined ? timeout : Config.timeouts.bleWrite;
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        reject(new Error(`BLE write timeout after ${timeout}ms`));
-      }, timeout);
+        reject(new Error(`BLE write timeout after ${ms}ms`));
+      }, ms);
 
-      const writePromise = characteristic.properties.writeWithoutResponse
-        ? characteristic.writeValueWithoutResponse(buffer)
-        : characteristic.writeValue(buffer);
+      let writePromise;
+      if (
+        characteristic.properties &&
+        characteristic.properties.writeWithoutResponse
+      ) {
+        writePromise = characteristic.writeValueWithoutResponse(buffer);
+      } else if (characteristic.properties && characteristic.properties.write) {
+        writePromise = characteristic.writeValueWithResponse(buffer);
+      } else {
+        writePromise = characteristic.writeValue(buffer);
+      }
 
       writePromise
         .then(() => {
@@ -192,7 +223,7 @@ const BLEProtocol = (function () {
   function buildDataChunk(offset, chunkSize, mrbContent) {
     const actualChunkSize = Math.min(chunkSize, mrbContent.length - offset);
 
-    const buffer = new ArrayBuffer(DATA_HEADER_SIZE + actualChunkSize);
+    const buffer = new ArrayBuffer(Config.ble.dataHeaderSize + actualChunkSize);
     const view = new DataView(buffer);
 
     view.setUint8(0, 0x01);
@@ -200,7 +231,11 @@ const BLEProtocol = (function () {
     view.setUint16(2, offset, true);
     view.setUint16(4, actualChunkSize, true);
 
-    const payload = new Uint8Array(buffer, DATA_HEADER_SIZE, actualChunkSize);
+    const payload = new Uint8Array(
+      buffer,
+      Config.ble.dataHeaderSize,
+      actualChunkSize,
+    );
     payload.set(mrbContent.subarray(offset, offset + actualChunkSize));
 
     return buffer;
@@ -214,7 +249,7 @@ const BLEProtocol = (function () {
    * @returns {ArrayBuffer} Buffer ready to send
    */
   function buildProgramCommand(contentLength, crc16, slot) {
-    const buffer = new ArrayBuffer(PROGRAM_HEADER_SIZE);
+    const buffer = new ArrayBuffer(Config.ble.programHeaderSize);
     const view = new DataView(buffer);
 
     view.setUint8(0, 0x01);
@@ -271,19 +306,24 @@ const BLEProtocol = (function () {
   }
 
   return {
-    // Constants
+    // Constants (delegate to Config for single source of truth)
     getServiceUUID: function () {
-      return OPENBLINK_SERVICE_UUID;
+      return Config.ble.serviceUUID;
     },
     getDefaultMTU: function () {
-      return DEFAULT_MTU;
+      return Config.ble.defaultMTU;
     },
     getDataHeaderSize: function () {
-      return DATA_HEADER_SIZE;
+      return Config.ble.dataHeaderSize;
     },
     getProgramHeaderSize: function () {
-      return PROGRAM_HEADER_SIZE;
+      return Config.ble.programHeaderSize;
     },
+
+    // Availability API
+    checkAvailability: checkAvailability,
+    isAvailable: isAvailable,
+    subscribeAvailability: subscribeAvailability,
 
     // Protocol operations
     requestDevice: requestDevice,

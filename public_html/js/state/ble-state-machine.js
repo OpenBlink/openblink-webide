@@ -4,121 +4,86 @@
  */
 
 /**
- * BLEStateMachine - Manages BLE connection state and lifecycle
- * All BLE state management is centralized here. BLEProtocol provides stateless protocol functions.
+ * BLEStateMachine - Facade managing BLE connection state and lifecycle.
+ *
+ * Delegates connection logic to BLEConnection, write serialization to
+ * BLECommandQueue, and transfer loops to BLETransfer.
+ * Retains: state + transitions, heartbeat, GATT-poll, reconnect scheduling.
+ *
+ * Public API (signatures unchanged):
+ *   init(bus) / getState() / isConnected() / canTransfer() / getNegotiatedMTU()
+ *   connect() / disconnect() / sendReset() / sendReload() / startTransfer() / cleanup()
  */
-
 const BLEStateMachine = (function () {
-  // State machine implementation constants
-  const MAX_RECONNECT_ATTEMPTS = 5;
-  const INITIAL_RECONNECT_DELAY = 1000;
-  const WRITE_TIMEOUT = 10000;
-  const HEARTBEAT_INTERVAL = 3000;
+  const log = Logger.scope("BLEStateMachine");
 
-  // Valid state transitions
-  const VALID_TRANSITIONS = {
-    DISCONNECTED: ["CONNECTING"],
-    CONNECTING: ["CONNECTED", "DISCONNECTED"],
-    CONNECTED: [
-      "TRANSFERRING",
-      "DISCONNECTING",
-      "RECONNECTING",
-      "DISCONNECTED",
-    ],
-    TRANSFERRING: ["CONNECTED", "DISCONNECTED", "RECONNECTING"],
-    RECONNECTING: ["CONNECTED", "DISCONNECTED"],
-    DISCONNECTING: ["DISCONNECTED"],
-  };
-
-  // Current state
-  let state = "DISCONNECTED";
+  // ── State ───────────────────────────────────────────────────────────────
+  let state = BLEState.DISCONNECTED;
   let previousState = null;
-
-  // Event bus reference
   let eventBus = null;
 
-  // BLE resources (managed by state transitions)
+  // ── BLE resources ───────────────────────────────────────────────────────
   let connectedDevice = null;
   let programCharacteristic = null;
   let negotiatedMtuCharacteristic = null;
   let consoleCharacteristic = null;
-  let negotiatedMTU = BLEProtocol.getDefaultMTU();
+  let negotiatedMTU = Config.ble.defaultMTU;
 
-  // Reconnection state
+  // ── Reconnect ───────────────────────────────────────────────────────────
   let reconnectAttempts = 0;
-  let reconnectTimeoutId = null;
+  let reconnectHandle = null;
   let userInitiatedDisconnect = false;
+  let connectAbortController = null;
 
-  // Heartbeat
+  // ── Heartbeat ───────────────────────────────────────────────────────────
   let heartbeatTimer = null;
 
-  // Transfer state
-  let isTransferring = false;
+  // ── GATT poller ─────────────────────────────────────────────────────────
+  let pollTimer = null;
 
-  /**
-   * Transition to a new state
-   * @param {string} newState - Target state
-   * @param {Object} payload - Optional payload for event
-   */
+  // ── Cleanup guard ───────────────────────────────────────────────────────
+  let cleanedUp = false;
+
+  // ── Helpers ─────────────────────────────────────────────────────────────
+
+  function _emit(event, payload) {
+    if (eventBus) eventBus.emit(event, payload);
+  }
+
   function transition(newState, payload) {
-    if (state === newState) {
-      return; // No-op transition
-    }
-
-    // Validate transition
-    const allowedTransitions = VALID_TRANSITIONS[state] || [];
-    if (!allowedTransitions.includes(newState)) {
-      console.error(`Invalid state transition: ${state} -> ${newState}`);
+    if (state === newState) return;
+    if (!isBLETransitionValid(state, newState)) {
+      log.error(`Invalid transition: ${state} -> ${newState}`);
       return;
     }
-
     previousState = state;
     state = newState;
-
-    if (eventBus) {
-      eventBus.emit("BLE:STATE_CHANGED", {
-        from: previousState,
-        to: newState,
-        payload: payload,
-      });
-    }
-
-    console.log(`BLE State: ${previousState} -> ${newState}`);
+    log.info(`State: ${previousState} -> ${newState}`);
+    _emit("BLE:STATE_CHANGED", { from: previousState, to: newState, payload });
   }
 
-  /**
-   * Send heartbeat to keep connection alive
-   */
+  // ── Heartbeat ────────────────────────────────────────────────────────────
+
   async function sendHeartbeat() {
-    if (
-      !negotiatedMtuCharacteristic ||
-      isTransferring ||
-      state !== "CONNECTED"
-    ) {
-      return;
-    }
-
+    if (!negotiatedMtuCharacteristic || state !== BLEState.CONNECTED) return;
     try {
-      await BLEProtocol.readHeartbeat(negotiatedMtuCharacteristic);
-    } catch (error) {
-      console.warn("Heartbeat failed:", error.message);
-      // Don't disconnect on heartbeat failure
+      await BLECommandQueue.enqueueRead(negotiatedMtuCharacteristic, {
+        label: "heartbeat",
+        timeout: Config.timeouts.bleRead,
+      });
+    } catch (err) {
+      log.warn("Heartbeat failed:", err.message);
     }
   }
 
-  /**
-   * Start keep-alive heartbeat
-   */
   function startHeartbeat() {
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer);
-    }
-    heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(
+      sendHeartbeat,
+      Config.timeouts.bleHeartbeatInterval,
+    );
   }
 
-  /**
-   * Stop keep-alive heartbeat
-   */
   function stopHeartbeat() {
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer);
@@ -126,24 +91,47 @@ const BLEStateMachine = (function () {
     }
   }
 
-  /**
-   * Cleanup all BLE resources and event listeners
-   */
-  function cleanupResources() {
-    // Stop heartbeat
-    stopHeartbeat();
+  // ── GATT state poller ────────────────────────────────────────────────────
 
-    // Stop console notifications
-    if (consoleCharacteristic) {
-      BLEProtocol.stopConsoleNotifications(consoleCharacteristic);
-      try {
-        consoleCharacteristic.stopNotifications();
-      } catch (e) {
-        // Ignore errors during cleanup
+  function startPoller() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => {
+      if (
+        (state === BLEState.CONNECTED || state === BLEState.TRANSFERRING) &&
+        connectedDevice &&
+        connectedDevice.gatt &&
+        !connectedDevice.gatt.connected
+      ) {
+        log.warn(
+          "Poller detected GATT disconnected; triggering handleDisconnect",
+        );
+        handleDisconnect({ target: connectedDevice });
       }
+    }, Config.timeouts.bleStatePollInterval);
+  }
+
+  function stopPoller() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  // ── Resource cleanup ─────────────────────────────────────────────────────
+
+  function cleanupResources() {
+    if (cleanedUp) return;
+    cleanedUp = true;
+
+    stopHeartbeat();
+    stopPoller();
+    BLECommandQueue.clear({ reason: "cleanup" });
+
+    if (reconnectHandle) {
+      reconnectHandle.cancel();
+      reconnectHandle = null;
     }
 
-    // Remove disconnect listener
     if (connectedDevice) {
       connectedDevice.removeEventListener(
         "gattserverdisconnected",
@@ -151,453 +139,325 @@ const BLEStateMachine = (function () {
       );
     }
 
-    // Clear reconnect timeout
-    if (reconnectTimeoutId) {
-      clearTimeout(reconnectTimeoutId);
-      reconnectTimeoutId = null;
+    if (connectAbortController) {
+      connectAbortController.abort();
+      connectAbortController = null;
     }
 
-    // Reset state
-    isTransferring = false;
     userInitiatedDisconnect = false;
     reconnectAttempts = 0;
-
-    // Clear references
     connectedDevice = null;
     programCharacteristic = null;
     negotiatedMtuCharacteristic = null;
     consoleCharacteristic = null;
-    negotiatedMTU = BLEProtocol.getDefaultMTU();
+    negotiatedMTU = Config.ble.defaultMTU;
   }
 
-  /**
-   * Handle unexpected disconnect (not user-initiated)
-   * @param {Event} event - gattserverdisconnected event
-   */
+  function _resetCleanupGuard() {
+    cleanedUp = false;
+  }
+
+  // ── Disconnect handler ───────────────────────────────────────────────────
+
   function handleDisconnect(event) {
     const device = event.target;
 
     if (userInitiatedDisconnect) {
       cleanupResources();
-      transition("DISCONNECTED", { reason: "user" });
-      if (eventBus) {
-        eventBus.emit("BLE:DISCONNECTED", { reason: "user" });
-      }
+      transition(BLEState.DISCONNECTED, { reason: "user" });
+      _emit("BLE:DISCONNECTED", { reason: "user" });
       return;
     }
 
-    if (state === "TRANSFERRING") {
-      // During transfer, try immediate reconnect
-      transition("RECONNECTING", { attempt: 1 });
-      attemptReconnect(device);
-    } else if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-      transition("RECONNECTING", { attempt: reconnectAttempts + 1 });
-      attemptReconnect(device);
+    // Count reconnect attempts regardless of current state (fixes TRANSFERRING bug)
+    if (reconnectAttempts < Config.retries.bleReconnectMaxAttempts) {
+      reconnectAttempts++;
+      transition(BLEState.RECONNECTING, {
+        attempt: reconnectAttempts,
+        maxAttempts: Config.retries.bleReconnectMaxAttempts,
+      });
+      _emit("BLE:RECONNECTING", {
+        attempt: reconnectAttempts,
+        maxAttempts: Config.retries.bleReconnectMaxAttempts,
+      });
+      _scheduleReconnect(device, reconnectAttempts);
     } else {
       cleanupResources();
-      transition("DISCONNECTED", { reason: "max_reconnects" });
-      if (eventBus) {
-        eventBus.emit("BLE:DISCONNECTED", { reason: "max_reconnects" });
-        eventBus.emit("BLE:RECONNECT_FAILED", {
-          attempts: MAX_RECONNECT_ATTEMPTS,
-        });
-      }
-    }
-  }
-
-  /**
-   * Attempt to reconnect to device
-   * @param {BluetoothDevice} device - Device to reconnect to
-   */
-  async function attemptReconnect(device) {
-    reconnectAttempts++;
-    const delay = INITIAL_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1);
-
-    if (eventBus) {
-      eventBus.emit("BLE:RECONNECTING", {
-        attempt: reconnectAttempts,
-        maxAttempts: MAX_RECONNECT_ATTEMPTS,
-        delay: delay,
+      transition(BLEState.DISCONNECTED, { reason: "max_reconnects" });
+      _emit("BLE:DISCONNECTED", { reason: "max_reconnects" });
+      _emit("BLE:RECONNECT_FAILED", {
+        attempts: Config.retries.bleReconnectMaxAttempts,
       });
     }
-
-    reconnectTimeoutId = setTimeout(async () => {
-      if (userInitiatedDisconnect) {
-        cleanupResources();
-        transition("DISCONNECTED", { reason: "user_cancelled" });
-        if (eventBus) {
-          eventBus.emit("BLE:DISCONNECTED", { reason: "user_cancelled" });
-        }
-        return;
-      }
-
-      try {
-        const result = await BLEProtocol.connectToDevice(device);
-
-        // Store resources (only those we need for operations)
-        connectedDevice = result.device;
-        programCharacteristic = result.programCharacteristic;
-        negotiatedMtuCharacteristic = result.negotiatedMtuCharacteristic;
-        consoleCharacteristic = result.consoleCharacteristic;
-
-        // Negotiate MTU
-        negotiatedMTU = await BLEProtocol.negotiateMTU(
-          programCharacteristic,
-          negotiatedMtuCharacteristic,
-        );
-
-        // Setup console notifications
-        await BLEProtocol.startConsoleNotifications(
-          consoleCharacteristic,
-          (message) => {
-            if (eventBus) {
-              eventBus.emit("BLE:CONSOLE_MESSAGE", { message: message });
-            }
-          },
-        );
-
-        // Add disconnect listener
-        connectedDevice.addEventListener(
-          "gattserverdisconnected",
-          handleDisconnect,
-        );
-
-        // Start heartbeat
-        startHeartbeat();
-
-        reconnectAttempts = 0;
-        reconnectTimeoutId = null;
-
-        transition("CONNECTED", { deviceName: device.name });
-        if (eventBus) {
-          eventBus.emit("BLE:CONNECTED", { deviceName: device.name });
-        }
-      } catch (_error) {
-        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          attemptReconnect(device);
-        } else {
-          cleanupResources();
-          transition("DISCONNECTED", { reason: "reconnect_failed" });
-          if (eventBus) {
-            eventBus.emit("BLE:DISCONNECTED", { reason: "reconnect_failed" });
-            eventBus.emit("BLE:RECONNECT_FAILED", {
-              attempts: MAX_RECONNECT_ATTEMPTS,
-            });
-          }
-        }
-      }
-    }, delay);
   }
+
+  function _onConsoleMessage(message) {
+    _emit("BLE:CONSOLE_MESSAGE", { message });
+  }
+
+  function _applyConnectionResult(result) {
+    connectedDevice = result.device;
+    programCharacteristic = result.programChar;
+    negotiatedMtuCharacteristic = result.mtuChar;
+    consoleCharacteristic = result.consoleChar;
+    negotiatedMTU = result.mtu;
+  }
+
+  function _afterConnected(deviceName) {
+    connectedDevice.addEventListener(
+      "gattserverdisconnected",
+      handleDisconnect,
+    );
+    startHeartbeat();
+    startPoller();
+    reconnectAttempts = 0;
+    _resetCleanupGuard();
+    transition(BLEState.CONNECTED, { deviceName });
+    _emit("BLE:CONNECTED", { deviceName });
+  }
+
+  function _scheduleReconnect(device, attempt) {
+    if (reconnectHandle) {
+      reconnectHandle.cancel();
+      reconnectHandle = null;
+    }
+    const signal = connectAbortController
+      ? connectAbortController.signal
+      : undefined;
+    reconnectHandle = BLEConnection.scheduleReconnect(
+      device,
+      attempt,
+      signal,
+      _onConsoleMessage,
+      (result) => {
+        reconnectHandle = null;
+        _applyConnectionResult(result);
+        _afterConnected(device.name);
+      },
+      (_err) => {
+        reconnectHandle = null;
+        cleanupResources();
+        transition(BLEState.DISCONNECTED, { reason: "reconnect_failed" });
+        _emit("BLE:DISCONNECTED", { reason: "reconnect_failed" });
+        _emit("BLE:RECONNECT_FAILED", {
+          attempts: Config.retries.bleReconnectMaxAttempts,
+        });
+      },
+    );
+  }
+
+  // ── Public API ───────────────────────────────────────────────────────────
 
   return {
     /**
-     * Initialize the state machine with EventBus
-     * @param {Object} bus - EventBus instance
+     * Initialize with an EventBus instance.
+     * @param {Object} bus
      */
-    init: function (bus) {
+    init(bus) {
       eventBus = bus;
     },
 
-    /**
-     * Get current state
-     * @returns {string} Current state
-     */
-    getState: function () {
+    /** @returns {string} */
+    getState() {
       return state;
     },
 
-    /**
-     * Check if connected
-     * @returns {boolean}
-     */
-    isConnected: function () {
-      return state === "CONNECTED";
+    /** @returns {boolean} */
+    isConnected() {
+      return state === BLEState.CONNECTED;
     },
 
-    /**
-     * Check if transferring
-     * @returns {boolean}
-     */
-    isTransferring: function () {
-      return state === "TRANSFERRING";
+    /** @returns {boolean} */
+    isTransferring() {
+      return state === BLEState.TRANSFERRING;
     },
 
-    /**
-     * Check if transfer is possible
-     * @returns {boolean}
-     */
-    canTransfer: function () {
-      return state === "CONNECTED";
+    /** @returns {boolean} */
+    canTransfer() {
+      return state === BLEState.CONNECTED;
     },
 
-    /**
-     * Get negotiated MTU
-     * @returns {number}
-     */
-    getNegotiatedMTU: function () {
+    /** @returns {number} */
+    getNegotiatedMTU() {
       return negotiatedMTU;
     },
 
     /**
-     * Connect to a BLE device
+     * Connect to a BLE device selected by the user.
      */
-    connect: async function () {
-      if (state !== "DISCONNECTED") {
-        return;
-      }
+    async connect() {
+      if (state !== BLEState.DISCONNECTED) return;
 
-      transition("CONNECTING");
+      transition(BLEState.CONNECTING);
       userInitiatedDisconnect = false;
       reconnectAttempts = 0;
+      _resetCleanupGuard();
+
+      connectAbortController = new AbortController();
+      const signal = connectAbortController.signal;
 
       try {
         const device = await BLEProtocol.requestDevice();
-
-        const result = await BLEProtocol.connectToDevice(device);
-
-        // Store resources (only those we need for operations)
-        connectedDevice = result.device;
-        programCharacteristic = result.programCharacteristic;
-        negotiatedMtuCharacteristic = result.negotiatedMtuCharacteristic;
-        consoleCharacteristic = result.consoleCharacteristic;
-
-        // Negotiate MTU
-        negotiatedMTU = await BLEProtocol.negotiateMTU(
-          programCharacteristic,
-          negotiatedMtuCharacteristic,
+        const result = await BLEConnection.establish(
+          device,
+          signal,
+          _onConsoleMessage,
         );
-
-        // Setup console notifications
-        await BLEProtocol.startConsoleNotifications(
-          consoleCharacteristic,
-          (message) => {
-            if (eventBus) {
-              eventBus.emit("BLE:CONSOLE_MESSAGE", { message: message });
-            }
-          },
-        );
-
-        // Add disconnect listener
-        connectedDevice.addEventListener(
-          "gattserverdisconnected",
-          handleDisconnect,
-        );
-
-        // Start heartbeat
-        startHeartbeat();
-
-        transition("CONNECTED", { deviceName: device.name });
-        if (eventBus) {
-          eventBus.emit("BLE:CONNECTED", { deviceName: device.name });
-        }
+        connectAbortController = null;
+        _applyConnectionResult(result);
+        _afterConnected(device.name);
       } catch (error) {
+        connectAbortController = null;
         cleanupResources();
-        transition("DISCONNECTED", { error: error });
-        if (eventBus) {
-          eventBus.emit("BLE:CONNECT_FAILED", { error: error });
-        }
+        transition(BLEState.DISCONNECTED, { error });
+        _emit("BLE:CONNECT_FAILED", { error });
       }
     },
 
     /**
-     * Disconnect from device
+     * Disconnect from the device.
+     * Waits for gattserverdisconnected event (max bleDisconnect ms).
      */
-    disconnect: function () {
-      if (state === "DISCONNECTED" || state === "DISCONNECTING") {
+    async disconnect() {
+      if (state === BLEState.DISCONNECTED || state === BLEState.DISCONNECTING)
         return;
-      }
 
       userInitiatedDisconnect = true;
-      reconnectAttempts = MAX_RECONNECT_ATTEMPTS;
+      reconnectAttempts = Config.retries.bleReconnectMaxAttempts;
 
-      if (connectedDevice && BLEProtocol.isConnected(connectedDevice)) {
-        transition("DISCONNECTING");
-        BLEProtocol.disconnect(connectedDevice);
-        // Note: actual cleanup happens in handleDisconnect or we do it here if already disconnected
-        setTimeout(() => {
-          if (state === "DISCONNECTING") {
-            cleanupResources();
-            transition("DISCONNECTED", { reason: "user" });
-            if (eventBus) {
-              eventBus.emit("BLE:DISCONNECTED", { reason: "user" });
-            }
-          }
-        }, 100);
-      } else {
-        cleanupResources();
-        transition("DISCONNECTED", { reason: "user" });
-        if (eventBus) {
-          eventBus.emit("BLE:DISCONNECTED", { reason: "user" });
+      if (connectAbortController) {
+        connectAbortController.abort();
+        connectAbortController = null;
+      }
+
+      if (
+        connectedDevice &&
+        connectedDevice.gatt &&
+        connectedDevice.gatt.connected
+      ) {
+        transition(BLEState.DISCONNECTING);
+        await BLEConnection.tearDown(connectedDevice, consoleCharacteristic);
+        const outcome = await BLEConnection.awaitDisconnect(
+          connectedDevice,
+          Config.timeouts.bleDisconnect,
+        );
+        if (outcome === "timeout") {
+          log.warn(
+            "disconnect: event not received within timeout, forcing cleanup",
+          );
         }
       }
+
+      cleanupResources();
+      transition(BLEState.DISCONNECTED, { reason: "user" });
+      _emit("BLE:DISCONNECTED", { reason: "user" });
     },
 
     /**
-     * Send reset command
+     * Send R (reset) command.
      */
-    sendReset: async function () {
-      if (state !== "CONNECTED" || !programCharacteristic) {
+    async sendReset() {
+      if (state !== BLEState.CONNECTED || !programCharacteristic) {
         throw new Error("Not connected");
       }
-
       const buffer = BLEProtocol.buildResetCommand();
-
       try {
-        await BLEProtocol.writeWithTimeout(
-          programCharacteristic,
-          buffer,
-          WRITE_TIMEOUT,
-        );
-        if (eventBus) {
-          eventBus.emit("BLE:RESET_SENT", {});
-        }
+        await BLECommandQueue.enqueueWrite(programCharacteristic, buffer, {
+          label: "resetCmd",
+          mode: "response",
+        });
+        _emit("BLE:RESET_SENT", {});
       } catch (error) {
-        if (eventBus) {
-          eventBus.emit("BLE:RESET_FAILED", { error: error });
-        }
+        _emit("BLE:RESET_FAILED", { error });
         throw error;
       }
     },
 
     /**
-     * Send reload command
+     * Send L (reload) command.
      */
-    sendReload: async function () {
-      if (state !== "CONNECTED" || !programCharacteristic) {
+    async sendReload() {
+      if (state !== BLEState.CONNECTED || !programCharacteristic) {
         throw new Error("Not connected");
       }
-
       const buffer = BLEProtocol.buildReloadCommand();
-
       try {
-        await BLEProtocol.writeWithTimeout(
-          programCharacteristic,
-          buffer,
-          WRITE_TIMEOUT,
-        );
-        if (eventBus) {
-          eventBus.emit("BLE:RELOAD_SENT", {});
-        }
+        await BLECommandQueue.enqueueWrite(programCharacteristic, buffer, {
+          label: "reloadCmd",
+          mode: "response",
+        });
+        _emit("BLE:RELOAD_SENT", {});
       } catch (error) {
-        if (eventBus) {
-          eventBus.emit("BLE:RELOAD_FAILED", { error: error });
-        }
+        _emit("BLE:RELOAD_FAILED", { error });
         throw error;
       }
     },
 
     /**
-     * Start firmware transfer
-     * @param {Uint8Array} bytecode - Firmware bytecode
-     * @param {number} slot - Target slot (1 or 2)
-     * @param {Function} onProgress - Optional progress callback
+     * Transfer firmware bytecode to the device.
+     * @param {Uint8Array} bytecode
+     * @param {number} slot - 1 or 2
+     * @param {Function} [onProgress] - (sent, total) => void
      */
-    startTransfer: async function (bytecode, slot, onProgress) {
-      if (state !== "CONNECTED") {
+    async startTransfer(bytecode, slot, onProgress) {
+      if (state !== BLEState.CONNECTED || !programCharacteristic) {
         throw new Error("Not connected");
       }
 
-      if (!programCharacteristic) {
-        throw new Error("Program characteristic not available");
-      }
-
-      transition("TRANSFERRING");
-      isTransferring = true;
+      transition(BLEState.TRANSFERRING);
       stopHeartbeat();
+      _emit("BLE:TRANSFER_STARTED", {});
 
-      if (eventBus) {
-        eventBus.emit("BLE:TRANSFER_STARTED", {});
-      }
+      const signal = connectAbortController
+        ? connectAbortController.signal
+        : undefined;
+
+      const progressProxy = onProgress
+        ? (sent, total) => {
+            onProgress(sent, total);
+            _emit("BLE:TRANSFER_PROGRESS", { sent, total });
+          }
+        : (sent, total) => {
+            _emit("BLE:TRANSFER_PROGRESS", { sent, total });
+          };
 
       try {
-        const contentLength = bytecode.length;
-        const crc16 = crc16_reflect(0xd175, 0xffff, bytecode);
-        const dataPayloadSize = negotiatedMTU - BLEProtocol.getDataHeaderSize();
-
-        // Send data chunks
-        for (
-          let offset = 0;
-          offset < contentLength;
-          offset += dataPayloadSize
-        ) {
-          const chunkSize = Math.min(dataPayloadSize, contentLength - offset);
-          const buffer = BLEProtocol.buildDataChunk(
-            offset,
-            chunkSize,
-            bytecode,
-          );
-
-          await BLEProtocol.writeWithTimeout(
-            programCharacteristic,
-            buffer,
-            WRITE_TIMEOUT,
-          );
-
-          if (onProgress) {
-            onProgress(offset + chunkSize, contentLength);
-          }
-
-          if (eventBus) {
-            eventBus.emit("BLE:TRANSFER_PROGRESS", {
-              sent: offset + chunkSize,
-              total: contentLength,
-            });
-          }
-        }
-
-        // Send program command
-        const programBuffer = BLEProtocol.buildProgramCommand(
-          contentLength,
-          crc16,
-          slot,
-        );
-
-        await BLEProtocol.writeWithTimeout(
+        await BLETransfer.run(
           programCharacteristic,
-          programBuffer,
-          WRITE_TIMEOUT,
+          bytecode,
+          slot,
+          negotiatedMTU,
+          signal,
+          progressProxy,
         );
 
-        // Send reload
-        await this.sendReload();
-
-        isTransferring = false;
-        transition("CONNECTED");
-
-        if (eventBus) {
-          eventBus.emit("BLE:TRANSFER_COMPLETE", {});
-        }
+        transition(BLEState.CONNECTED);
+        _emit("BLE:TRANSFER_COMPLETE", {});
       } catch (error) {
-        isTransferring = false;
-
-        // Check if we got disconnected during transfer
-        if (!connectedDevice || !BLEProtocol.isConnected(connectedDevice)) {
-          transition("DISCONNECTED", { reason: "transfer_error" });
-          if (eventBus) {
-            eventBus.emit("BLE:DISCONNECTED", { reason: "transfer_error" });
-          }
+        if (
+          !connectedDevice ||
+          !connectedDevice.gatt ||
+          !connectedDevice.gatt.connected
+        ) {
+          transition(BLEState.DISCONNECTED, { reason: "transfer_error" });
+          _emit("BLE:DISCONNECTED", { reason: "transfer_error" });
         } else {
-          transition("CONNECTED");
+          transition(BLEState.CONNECTED);
         }
-
-        if (eventBus) {
-          eventBus.emit("BLE:TRANSFER_FAILED", { error: error });
-        }
+        _emit("BLE:TRANSFER_FAILED", { error });
         throw error;
       } finally {
-        if (state === "CONNECTED") {
-          startHeartbeat();
-        }
+        if (state === BLEState.CONNECTED) startHeartbeat();
       }
     },
 
     /**
-     * Cleanup all resources (for page unload)
+     * Full cleanup for page unload.
      */
-    cleanup: function () {
+    cleanup() {
       cleanupResources();
-      if (state !== "DISCONNECTED") {
-        transition("DISCONNECTED", { reason: "cleanup" });
+      if (state !== BLEState.DISCONNECTED) {
+        transition(BLEState.DISCONNECTED, { reason: "cleanup" });
       }
     },
   };

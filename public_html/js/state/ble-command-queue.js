@@ -1,0 +1,170 @@
+/*
+ * SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/**
+ * BLECommandQueue - Serializes BLE GATT operations to prevent "GATT operation already in progress" errors.
+ *
+ * All write/read/notify operations are chained via a promise tail so that at most
+ * one GATT operation is in-flight at a time.  Each operation carries an individual
+ * AbortSignal-based timeout; when a timeout fires the tail is reset so stale
+ * operations from the previous cycle cannot block future ones.
+ *
+ * Public API:
+ *   BLECommandQueue.enqueueWrite(char, buffer, opts)  → Promise<void>
+ *   BLECommandQueue.enqueueRead(char, opts)            → Promise<DataView>
+ *   BLECommandQueue.enqueueNotify(char, opts)          → Promise<void>
+ *   BLECommandQueue.clear({ reason })
+ *   BLECommandQueue.size()                             → number
+ */
+const BLECommandQueue = (function () {
+  const log = Logger.scope("BLECommandQueue");
+
+  let tail = Promise.resolve();
+  let pendingCount = 0;
+  let clearRejectFn = null;
+
+  /**
+   * Wrap an async operation with a per-operation timeout.
+   * On timeout the tail is reset so subsequent operations are not blocked.
+   * @param {Function} fn - Async factory () => Promise
+   * @param {number} timeoutMs
+   * @param {string} label
+   * @returns {Promise<any>}
+   */
+  function _withTimeout(fn, timeoutMs, label) {
+    return new Promise((resolve, reject) => {
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        log.warn(`Timeout after ${timeoutMs}ms: ${label}`);
+        tail = Promise.resolve();
+        reject(new Error(`BLE operation timed out after ${timeoutMs}ms: ${label}`));
+      }, timeoutMs);
+
+      fn()
+        .then((v) => {
+          if (!timedOut) {
+            clearTimeout(timer);
+            resolve(v);
+          }
+        })
+        .catch((err) => {
+          if (!timedOut) {
+            clearTimeout(timer);
+            reject(err);
+          }
+        });
+    });
+  }
+
+  /**
+   * Enqueue an operation onto the serial tail.
+   * @param {Function} fn - Async operation factory
+   * @param {number} timeoutMs
+   * @param {string} label
+   * @returns {Promise<any>}
+   */
+  function _enqueue(fn, timeoutMs, label) {
+    pendingCount++;
+    const p = tail.then(() => _withTimeout(fn, timeoutMs, label));
+    tail = p.catch(() => {});
+    p.finally(() => {
+      pendingCount = Math.max(0, pendingCount - 1);
+    });
+    return p;
+  }
+
+  /**
+   * Choose the best write method based on characteristic properties.
+   * @param {BluetoothRemoteGATTCharacteristic} char
+   * @param {ArrayBuffer} buffer
+   * @param {'auto'|'response'|'no-response'} mode
+   * @returns {Promise<void>}
+   */
+  function _doWrite(char, buffer, mode) {
+    if (mode === "response") {
+      return char.writeValueWithResponse(buffer);
+    }
+    if (mode === "no-response") {
+      return char.writeValueWithoutResponse(buffer);
+    }
+    // auto: prefer writeWithoutResponse when the property is available
+    if (char.properties && char.properties.writeWithoutResponse) {
+      return char.writeValueWithoutResponse(buffer);
+    }
+    if (char.properties && char.properties.write) {
+      return char.writeValueWithResponse(buffer);
+    }
+    // Fallback for older browsers that only have writeValue
+    return char.writeValue(buffer);
+  }
+
+  /**
+   * Enqueue a write operation.
+   * @param {BluetoothRemoteGATTCharacteristic} char
+   * @param {ArrayBuffer} buffer
+   * @param {{ timeout?: number, label?: string, mode?: 'auto'|'response'|'no-response' }} opts
+   * @returns {Promise<void>}
+   */
+  function enqueueWrite(char, buffer, opts) {
+    const { timeout = Config.timeouts.bleWrite, label = "write", mode = "auto" } = opts || {};
+    return _enqueue(() => _doWrite(char, buffer, mode), timeout, label);
+  }
+
+  /**
+   * Enqueue a read operation.
+   * @param {BluetoothRemoteGATTCharacteristic} char
+   * @param {{ timeout?: number, label?: string }} opts
+   * @returns {Promise<DataView>}
+   */
+  function enqueueRead(char, opts) {
+    const { timeout = Config.timeouts.bleRead, label = "read" } = opts || {};
+    return _enqueue(() => char.readValue(), timeout, label);
+  }
+
+  /**
+   * Enqueue a startNotifications / stopNotifications operation.
+   * @param {BluetoothRemoteGATTCharacteristic} char
+   * @param {{ timeout?: number, label?: string, start?: boolean }} opts
+   * @returns {Promise<void>}
+   */
+  function enqueueNotify(char, opts) {
+    const {
+      timeout = Config.timeouts.bleNotificationStart,
+      label = "notify",
+      start = true,
+    } = opts || {};
+    return _enqueue(
+      () => (start ? char.startNotifications() : char.stopNotifications()),
+      timeout,
+      label,
+    );
+  }
+
+  /**
+   * Cancel all pending operations and reset the queue.
+   * @param {{ reason?: string }} opts
+   */
+  function clear(opts) {
+    const { reason = "clear" } = opts || {};
+    log.info(`Queue cleared: ${reason} (pending=${pendingCount})`);
+    if (clearRejectFn) {
+      clearRejectFn(new Error(`Queue cleared: ${reason}`));
+      clearRejectFn = null;
+    }
+    tail = Promise.resolve();
+    pendingCount = 0;
+  }
+
+  /**
+   * Number of operations waiting or in-flight.
+   * @returns {number}
+   */
+  function size() {
+    return pendingCount;
+  }
+
+  return Object.freeze({ enqueueWrite, enqueueRead, enqueueNotify, clear, size });
+})();
