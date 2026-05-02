@@ -23,63 +23,22 @@ const I18n = (function () {
   let currentLanguage = DEFAULT_LANGUAGE;
   let initialized = false;
 
-  async function fetchWithTimeout(url, timeout) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === "AbortError") {
-        throw new Error(`Request timeout after ${timeout}ms`);
-      }
-      throw error;
-    }
-  }
-
   async function fetchTranslationsWithRetry() {
     if (translationsCache) {
       return translationsCache;
     }
 
-    let lastError = null;
+    const result = await NetUtils.fetchWithRetry("i18n/translations.json", {
+      parseAs: "json",
+    });
 
-    for (
-      let attempt = 0;
-      attempt < Config.retries.fetchMaxAttempts;
-      attempt++
-    ) {
-      try {
-        const response = await fetchWithTimeout(
-          "i18n/translations.json",
-          Config.timeouts.fetchRequest,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to load translations: " + response.status);
-        }
-        const result = await response.json();
-        translationsCache = result;
-        return result;
-      } catch (error) {
-        lastError = error;
-        log.warn(
-          `Translation fetch attempt ${attempt + 1}/${Config.retries.fetchMaxAttempts} failed:`,
-          error.message,
-        );
-
-        if (attempt < Config.retries.fetchMaxAttempts - 1) {
-          const delay =
-            Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
+    if (!result) {
+      log.error("Failed to load translations after all retries.");
+      return {};
     }
 
-    log.error("Failed to load translations after all retries:", lastError);
-    return {};
+    translationsCache = result;
+    return result;
   }
 
   function detectBrowserLanguage() {

@@ -9,82 +9,12 @@ const BoardManager = (function () {
   let boards = [];
   let currentBoard = null;
 
-  const resourceCache = new Map();
-
-  async function fetchWithTimeout(url, timeout) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    try {
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === "AbortError") {
-        throw new Error(`Request timeout after ${timeout}ms`);
-      }
-      throw error;
-    }
-  }
-
-  async function fetchWithRetry(url, options = {}) {
-    const {
-      timeout = Config.timeouts.fetchRequest,
-      maxRetries = Config.retries.fetchMaxAttempts,
-      parseAs = "json",
-      useCache = true,
-    } = options;
-
-    const cacheKey = `${url}:${parseAs}`;
-    if (useCache && resourceCache.has(cacheKey)) {
-      return resourceCache.get(cacheKey);
-    }
-
-    let lastError = null;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        const response = await fetchWithTimeout(url, timeout);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const result =
-          parseAs === "json" ? await response.json() : await response.text();
-
-        if (useCache) {
-          resourceCache.set(cacheKey, result);
-        }
-
-        return result;
-      } catch (error) {
-        lastError = error;
-        log.warn(
-          `Fetch attempt ${attempt + 1}/${maxRetries} failed for ${url}:`,
-          error.message,
-        );
-
-        if (attempt < maxRetries - 1) {
-          const delay =
-            Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
-    }
-
-    log.error(
-      `Failed to fetch ${url} after ${maxRetries} attempts:`,
-      lastError,
-    );
-    return null;
-  }
-
   async function fetchJSON(url) {
-    return fetchWithRetry(url, { parseAs: "json" });
+    return NetUtils.fetchWithRetry(url, { parseAs: "json", useCache: true });
   }
 
   async function fetchText(url) {
-    return fetchWithRetry(url, { parseAs: "text" });
+    return NetUtils.fetchWithRetry(url, { parseAs: "text", useCache: true });
   }
 
   async function fetchLocalizedReference(boardName) {

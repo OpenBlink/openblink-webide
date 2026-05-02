@@ -127,6 +127,9 @@ async function initializeApp() {
     // Initialize UI Manager with EventBus
     UIManager.initialize(EventBus);
 
+    // Phase 4.4: flush any errors that occurred before UIManager was ready
+    ErrorHandler.flush();
+
     // Setup event wiring
     setupEventWiring();
     setupPageLifecycle();
@@ -385,21 +388,19 @@ function setupLanguageSelector() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
-  window.onerror = function (message, source, lineno, colno, error) {
-    const errorMsg =
-      t("message.lineError", { message: message, line: lineno }) ||
-      "Error: " + message + " (at line " + lineno + ")";
-    UIManager.appendToConsole(errorMsg);
+  window.onerror = function (message, source, lineno, _colno, error) {
+    const syntheticErr = error || new Error(message + " (line " + lineno + ")");
+    ErrorHandler.report(syntheticErr, "Global");
     return false;
   };
 
   window.addEventListener("unhandledrejection", function (event) {
     const reason = event.reason;
-    const message = reason?.message ?? String(reason);
-    const errorMsg =
-      t("message.promiseError", { message: message }) ||
-      "Promise Error: " + message;
-    UIManager.appendToConsole(errorMsg);
+    const err =
+      reason instanceof Error
+        ? reason
+        : new Error(String(reason?.message ?? reason));
+    ErrorHandler.report(err, "Promise");
   });
 
   // Cleanup Bluetooth connections on page unload/reload/navigation

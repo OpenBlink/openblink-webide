@@ -36,6 +36,7 @@ const browserGlobals = {
   BLEConnection: "readonly",
   BLETransfer: "readonly",
   BLEKnownDevices: "readonly",
+  NetUtils: "readonly",
 };
 
 export default [
@@ -66,7 +67,7 @@ export default [
         {
           argsIgnorePattern: "^_|^(argc|colno|error)$",
           varsIgnorePattern:
-            "^_|^(BLECommandQueue|BLEConnection|BLEKnownDevices|BLEProtocol|BLEState|BLEStateMachine|BLETransfer|BoardManager|Compiler|Config|EventBus|FileManager|HistoryManager|I18n|Logger|Simulator|UIManager|Utils|crc16_reflect|isBLETransitionValid|t)$",
+            "^_|^(BLECommandQueue|BLEConnection|BLEKnownDevices|BLEProtocol|BLEState|BLEStateMachine|BLETransfer|BoardManager|Compiler|Config|EventBus|FileManager|HistoryManager|I18n|Logger|NetUtils|Simulator|UIManager|Utils|crc16_reflect|isBLETransitionValid|t)$",
           caughtErrorsIgnorePattern: "^_|^e$",
         },
       ],
