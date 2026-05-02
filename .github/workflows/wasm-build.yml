@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "Makefile"
-      - "emscripten.rb"
+      - "mruby_build_config.rb"
       - "src/**"
       - "mruby"
       - "mrubyc"
@@ -32,7 +32,7 @@ jobs:
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: 4.0.23
+          version: 5.0.7
 
       - name: Verify Emscripten
         run: emcc --version

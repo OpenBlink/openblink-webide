@@ -92,7 +92,7 @@ all: mrbc mrubyc
 mrbc:
 	@echo "Building mrbc (mruby bytecode compiler)..."
 	cd mruby && make
-	cd mruby && rake MRUBY_CONFIG=../emscripten.rb
+	cd mruby && rake MRUBY_CONFIG=../mruby_build_config.rb
 	@echo "mrbc build complete. Output: public_html/mrbc/"
 
 # Build mrubyc (mruby/c VM)
