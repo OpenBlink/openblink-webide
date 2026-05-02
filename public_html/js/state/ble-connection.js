@@ -119,7 +119,7 @@ const BLEConnection = (function () {
     try {
       diagLog.debug("=== GATT structure dump ===");
       const services = await server.getPrimaryServices();
-      if (signal) signal.throwIfAborted();
+      _checkSignalAborted(signal);
 
       for (const svc of services) {
         diagLog.debug(`Service: ${svc.uuid} (primary=${svc.isPrimary})`);
@@ -136,11 +136,20 @@ const BLEConnection = (function () {
             `  (could not enumerate characteristics: ${err.message})`,
           );
         }
-        if (signal) signal.throwIfAborted();
+        _checkSignalAborted(signal);
       }
       diagLog.debug("=== end GATT dump ===");
     } catch (err) {
+      if (err.name === "AbortError") throw err;
       diagLog.debug("GATT dump failed:", err.message);
+    }
+  }
+
+  function _checkSignalAborted(signal) {
+    if (signal?.aborted) {
+      const err = new Error("Operation aborted");
+      err.name = "AbortError";
+      throw err;
     }
   }
 
@@ -155,21 +164,21 @@ const BLEConnection = (function () {
    * @returns {Promise<{device, programChar, mtuChar, consoleChar, mtu}>}
    */
   async function establish(device, signal, onConsoleMessage) {
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     log.info("Connecting to", device.name);
     const server = await device.gatt.connect();
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     const service = await server.getPrimaryService(Config.ble.serviceUUID);
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     const [consoleChar, programChar, mtuChar] = await Promise.all([
       service.getCharacteristic(Config.ble.consoleCharUUID),
       service.getCharacteristic(Config.ble.programCharUUID),
       service.getCharacteristic(Config.ble.mtuCharUUID),
     ]);
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     _validateProperties(programChar, "programChar", [
       "write",
@@ -182,10 +191,10 @@ const BLEConnection = (function () {
     await _dumpGATTStructure(server, signal);
 
     const mtu = await _negotiateMTU(mtuChar);
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     await _startNotifications(consoleChar, onConsoleMessage);
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     log.info(`Connected: ${device.name}, MTU=${mtu}`);
     return { device, programChar, mtuChar, consoleChar, mtu };

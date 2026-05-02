@@ -105,7 +105,7 @@
     "device.connectKnown": "Connect",
     "device.forget": "Forget device",
     "device.forgetConfirm": "Forget this device? You'll need to re-pair.",
-    "device.forgetSuccess": "Device forgotten:"
+    "device.forgetSuccess": "Device forgotten: {deviceName}"
   },
 
   "zh-CN": {
@@ -214,7 +214,7 @@
     "device.connectKnown": "连接",
     "device.forget": "忘记设备",
     "device.forgetConfirm": "忘记此设备？下次需要重新配对。",
-    "device.forgetSuccess": "已忘记设备："
+    "device.forgetSuccess": "已忘记设备：{deviceName}"
   },
 
   "zh-TW": {
@@ -323,7 +323,7 @@
     "device.connectKnown": "連接",
     "device.forget": "忘記裝置",
     "device.forgetConfirm": "忘記此裝置？下次需要重新配對。",
-    "device.forgetSuccess": "已忘記裝置："
+    "device.forgetSuccess": "已忘記裝置：{deviceName}"
   },
 
   "ja": {
@@ -432,7 +432,7 @@
     "device.connectKnown": "接続",
     "device.forget": "このデバイスを忘れる",
     "device.forgetConfirm": "このデバイスを忘れますか？再接続するには再ペアリングが必要です。",
-    "device.forgetSuccess": "デバイスを忘れました："
+    "device.forgetSuccess": "デバイスを忘れました：{deviceName}"
   },
 
   "ja-easy": {
@@ -541,6 +541,6 @@
     "device.connectKnown": "つなぐ",
     "device.forget": "わすれる",
     "device.forgetConfirm": "このデバイスを わすれますか？もういちど つなぐには ペアリングが ひつようです。",
-    "device.forgetSuccess": "デバイスを わすれました："
+    "device.forgetSuccess": "デバイスを わすれました：{deviceName}"
   }
 }

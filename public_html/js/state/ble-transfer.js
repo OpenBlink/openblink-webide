@@ -16,6 +16,14 @@
 const BLETransfer = (function () {
   const log = Logger.scope("BLETransfer");
 
+  function _checkSignalAborted(signal) {
+    if (signal?.aborted) {
+      const err = new Error("Transfer aborted");
+      err.name = "AbortError";
+      throw err;
+    }
+  }
+
   /**
    * Build a D-command (data chunk) buffer.
    * @param {number} offset
@@ -81,7 +89,7 @@ const BLETransfer = (function () {
     );
 
     for (let offset = 0; offset < total; offset += payloadSize) {
-      if (signal) signal.throwIfAborted();
+      _checkSignalAborted(signal);
 
       const chunkSize = Math.min(payloadSize, total - offset);
       const buf = _buildDataChunk(offset, chunkSize, bytecode);
@@ -96,7 +104,7 @@ const BLETransfer = (function () {
       if (onProgress) onProgress(sent, total);
     }
 
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     const programBuf = _buildProgramCommand(total, crc16, slot);
     await BLECommandQueue.enqueueWrite(programChar, programBuf, {
@@ -105,7 +113,7 @@ const BLETransfer = (function () {
       timeout: Config.timeouts.bleWrite,
     });
 
-    if (signal) signal.throwIfAborted();
+    _checkSignalAborted(signal);
 
     const reloadBuf = BLEProtocol.buildReloadCommand();
     await BLECommandQueue.enqueueWrite(programChar, reloadBuf, {

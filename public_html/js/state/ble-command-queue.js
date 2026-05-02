@@ -8,8 +8,8 @@
  *
  * All write/read/notify operations are chained via a promise tail so that at most
  * one GATT operation is in-flight at a time.  Each operation carries an individual
- * AbortSignal-based timeout; when a timeout fires the tail is reset so stale
- * operations from the previous cycle cannot block future ones.
+ * AbortSignal-based timeout; when a timeout fires the rejection is swallowed
+ * by the tail's catch handler so subsequent operations are not blocked.
  *
  * Public API:
  *   BLECommandQueue.enqueueWrite(char, buffer, opts)  → Promise<void>
@@ -27,7 +27,7 @@ const BLECommandQueue = (function () {
 
   /**
    * Wrap an async operation with a per-operation timeout.
-   * On timeout the tail is reset so subsequent operations are not blocked.
+   * On timeout the promise rejects; the caller's tail.catch() ensures subsequent operations are not blocked.
    * @param {Function} fn - Async factory () => Promise
    * @param {number} timeoutMs
    * @param {string} label
@@ -39,7 +39,6 @@ const BLECommandQueue = (function () {
       const timer = setTimeout(() => {
         timedOut = true;
         log.warn(`Timeout after ${timeoutMs}ms: ${label}`);
-        tail = Promise.resolve();
         reject(
           new Error(`BLE operation timed out after ${timeoutMs}ms: ${label}`),
         );

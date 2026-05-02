@@ -42,23 +42,35 @@ const Logger = (function () {
   }
 
   function _readStoredLevel() {
+    const defaultLevel =
+      typeof Config !== "undefined" && Config.logging?.defaultLevel
+        ? Config.logging.defaultLevel
+        : "warn";
+    const storageKey =
+      typeof Config !== "undefined" && Config.logging?.storageKey
+        ? Config.logging.storageKey
+        : "openblink_log_level";
     try {
-      const stored = localStorage.getItem(Config.logging.storageKey);
+      const stored = localStorage.getItem(storageKey);
       if (stored && LEVELS[stored] !== undefined) {
         return LEVELS[stored];
       }
     } catch (_storageErr) {
-      return _resolveLevel(Config.logging.defaultLevel);
+      return _resolveLevel(defaultLevel);
     }
-    return _resolveLevel(Config.logging.defaultLevel);
+    return _resolveLevel(defaultLevel);
   }
 
   function setLevel(level) {
     currentLevel = _resolveLevel(level);
+    const storageKey =
+      typeof Config !== "undefined" && Config.logging?.storageKey
+        ? Config.logging.storageKey
+        : "openblink_log_level";
     try {
       const name = Object.keys(LEVELS).find((k) => LEVELS[k] === currentLevel);
       if (name) {
-        localStorage.setItem(Config.logging.storageKey, name);
+        localStorage.setItem(storageKey, name);
       }
     } catch (_storageErr) {
       return;

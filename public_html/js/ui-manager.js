@@ -191,9 +191,9 @@ const UIManager = (function () {
               await BLEKnownDevices.forget(device);
               if (eventBus) eventBus.emit("BLE:DEVICE_FORGOTTEN", { device });
               UIManager.appendToConsole(
-                (t("device.forgetSuccess") || "Device forgotten:") +
-                  " " +
-                  (device.name || device.id),
+                t("device.forgetSuccess", {
+                  deviceName: device.name || device.id,
+                }) || "Device forgotten: " + (device.name || device.id),
               );
             } catch (err) {
               UIManager.appendToConsole("Error: " + err.message);

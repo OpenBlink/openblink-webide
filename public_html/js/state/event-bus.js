@@ -103,7 +103,10 @@ const EventBus = (function () {
    * @returns {Function} Unsubscribe function
    */
   function once(event, handler) {
+    let called = false;
     const wrappedHandler = function (data) {
+      if (called) return;
+      called = true;
       off(event, wrappedHandler);
       handler(data);
     };
