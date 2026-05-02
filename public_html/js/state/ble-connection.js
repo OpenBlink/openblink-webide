@@ -105,6 +105,46 @@ const BLEConnection = (function () {
   }
 
   /**
+   * Phase 3G: Dump the full GATT service/characteristic structure to the Logger.
+   * Only runs when Logger level is 'debug' (e.g. ?debug=ble).
+   * Uses getCharacteristics() on every primary service so the output covers
+   * services beyond the OpenBlink service as well.
+   * @param {BluetoothRemoteGATTServer} server
+   * @param {AbortSignal} [signal]
+   */
+  async function _dumpGATTStructure(server, signal) {
+    const diagLog = Logger.scope("Diagnostic");
+    if (Logger.getLevel() !== "debug") return;
+
+    try {
+      diagLog.debug("=== GATT structure dump ===");
+      const services = await server.getPrimaryServices();
+      if (signal) signal.throwIfAborted();
+
+      for (const svc of services) {
+        diagLog.debug(`Service: ${svc.uuid} (primary=${svc.isPrimary})`);
+        try {
+          const chars = await svc.getCharacteristics();
+          for (const c of chars) {
+            const props = Object.keys(c.properties)
+              .filter((k) => c.properties[k] === true)
+              .join(", ");
+            diagLog.debug(`  Char: ${c.uuid} [${props}]`);
+          }
+        } catch (err) {
+          diagLog.debug(
+            `  (could not enumerate characteristics: ${err.message})`,
+          );
+        }
+        if (signal) signal.throwIfAborted();
+      }
+      diagLog.debug("=== end GATT dump ===");
+    } catch (err) {
+      diagLog.debug("GATT dump failed:", err.message);
+    }
+  }
+
+  /**
    * Connect to a BluetoothDevice and set up all characteristics.
    *
    * Throws if the AbortSignal fires before completion.
@@ -131,9 +171,15 @@ const BLEConnection = (function () {
     ]);
     if (signal) signal.throwIfAborted();
 
-    _validateProperties(programChar, "programChar", ["write", "writeWithoutResponse"]);
+    _validateProperties(programChar, "programChar", [
+      "write",
+      "writeWithoutResponse",
+    ]);
     _validateProperties(consoleChar, "consoleChar", ["notify"]);
     _validateProperties(mtuChar, "mtuChar", ["read"]);
+
+    // Phase 3G: full GATT dump when debug logging is enabled (?debug=ble)
+    await _dumpGATTStructure(server, signal);
 
     const mtu = await _negotiateMTU(mtuChar);
     if (signal) signal.throwIfAborted();
@@ -198,8 +244,16 @@ const BLEConnection = (function () {
    * @param {Function} onFailed     - Called with Error when max attempts exceeded
    * @returns {{ cancel: Function }} Object with cancel helper
    */
-  function scheduleReconnect(device, attempt, signal, onConsoleMessage, onConnected, onFailed) {
-    const delay = Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt - 1);
+  function scheduleReconnect(
+    device,
+    attempt,
+    signal,
+    onConsoleMessage,
+    onConnected,
+    onFailed,
+  ) {
+    const delay =
+      Config.timeouts.bleReconnectInitialDelay * Math.pow(2, attempt - 1);
     log.info(`Reconnect scheduled: attempt=${attempt}, delay=${delay}ms`);
 
     let timerId = null;
@@ -215,7 +269,14 @@ const BLEConnection = (function () {
       } catch (err) {
         log.warn(`Reconnect attempt ${attempt} failed:`, err.message);
         if (attempt < Config.retries.bleReconnectMaxAttempts) {
-          scheduleReconnect(device, attempt + 1, signal, onConsoleMessage, onConnected, onFailed);
+          scheduleReconnect(
+            device,
+            attempt + 1,
+            signal,
+            onConsoleMessage,
+            onConnected,
+            onFailed,
+          );
         } else {
           onFailed(err);
         }
@@ -230,5 +291,10 @@ const BLEConnection = (function () {
     };
   }
 
-  return Object.freeze({ establish, tearDown, awaitDisconnect, scheduleReconnect });
+  return Object.freeze({
+    establish,
+    tearDown,
+    awaitDisconnect,
+    scheduleReconnect,
+  });
 })();

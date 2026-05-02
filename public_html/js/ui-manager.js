@@ -113,7 +113,96 @@ const UIManager = (function () {
           if (runMainButton) runMainButton.disabled = true;
           if (softResetButton) softResetButton.disabled = true;
           break;
+        case "unavailable":
+          statusElement.textContent =
+            t("status.unavailable") || "Bluetooth unavailable";
+          statusElement.classList.add("disconnected");
+          if (connectButton) connectButton.disabled = true;
+          if (disconnectButton) disconnectButton.disabled = true;
+          if (runMainButton) runMainButton.disabled = true;
+          if (softResetButton) softResetButton.disabled = true;
+          break;
       }
+    },
+
+    /**
+     * Phase 3C/3D: Refresh the Known Devices list panel.
+     * Calls BLEKnownDevices.list() and renders connect/forget buttons.
+     * No-ops silently if the panel element is absent or getDevices() is unsupported.
+     */
+    refreshKnownDevices: async function () {
+      const panel = document.getElementById("known-devices-list");
+      if (!panel) return;
+
+      if (!BLEKnownDevices.isSupported()) {
+        panel.style.display = "none";
+        return;
+      }
+
+      panel.style.display = "";
+      const devices = await BLEKnownDevices.list();
+
+      if (devices.length === 0) {
+        panel.innerHTML =
+          "<span class='known-devices-empty'>" +
+          (t("device.noKnownDevices") || "No known devices") +
+          "</span>";
+        return;
+      }
+
+      const isConnected = BLEStateMachine.getState() !== "DISCONNECTED";
+      panel.innerHTML = "";
+
+      devices.forEach((device) => {
+        const row = document.createElement("div");
+        row.className = "known-device-row";
+
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "known-device-name";
+        nameSpan.textContent = device.name || device.id;
+        row.appendChild(nameSpan);
+
+        const connectBtn = document.createElement("button");
+        connectBtn.className = "secondary known-device-connect";
+        connectBtn.textContent = t("device.connectKnown") || "Connect";
+        connectBtn.disabled = isConnected;
+        connectBtn.addEventListener("click", () => {
+          connectBtn.disabled = true;
+          BLEKnownDevices.connectKnown(device).catch((err) => {
+            UIManager.appendToConsole("Error: " + err.message);
+          });
+        });
+        row.appendChild(connectBtn);
+
+        if (typeof device.forget === "function") {
+          const forgetBtn = document.createElement("button");
+          forgetBtn.className = "danger known-device-forget";
+          forgetBtn.textContent = "\u00D7";
+          forgetBtn.title = t("device.forget") || "Forget device";
+          forgetBtn.addEventListener("click", async () => {
+            const confirmMsg =
+              t("device.forgetConfirm") ||
+              "Forget this device? You'll need to re-pair.";
+            if (!window.confirm(confirmMsg)) return;
+            forgetBtn.disabled = true;
+            try {
+              await BLEKnownDevices.forget(device);
+              if (eventBus) eventBus.emit("BLE:DEVICE_FORGOTTEN", { device });
+              UIManager.appendToConsole(
+                (t("device.forgetSuccess") || "Device forgotten:") +
+                  " " +
+                  (device.name || device.id),
+              );
+            } catch (err) {
+              UIManager.appendToConsole("Error: " + err.message);
+              forgetBtn.disabled = false;
+            }
+          });
+          row.appendChild(forgetBtn);
+        }
+
+        panel.appendChild(row);
+      });
     },
 
     updateMetrics: function (metrics) {

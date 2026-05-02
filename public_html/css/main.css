@@ -360,3 +360,49 @@ select:focus {
     transform: rotate(360deg);
   }
 }
+
+.known-devices-section {
+  margin-top: 8px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+.known-devices-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.known-device-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.known-device-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.known-device-connect {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.known-device-forget {
+  font-size: 11px;
+  padding: 2px 6px;
+  min-width: 22px;
+}
+
+.known-devices-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+}

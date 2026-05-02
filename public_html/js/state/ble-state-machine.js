@@ -283,9 +283,21 @@ const BLEStateMachine = (function () {
     },
 
     /**
-     * Connect to a BLE device selected by the user.
+     * Return the id of the currently-connected BluetoothDevice, or null.
+     * Used by BLEKnownDevices.forget() to detect if the device to forget is active.
+     * @returns {string|null}
      */
-    async connect() {
+    getConnectedDeviceId() {
+      return connectedDevice ? connectedDevice.id : null;
+    },
+
+    /**
+     * Connect to a BLE device.
+     * @param {{ device?: BluetoothDevice }} [opts]
+     *   opts.device - If provided, skip requestDevice() and connect directly
+     *                 (used by BLEKnownDevices.connectKnown()).
+     */
+    async connect(opts) {
       if (state !== BLEState.DISCONNECTED) return;
 
       transition(BLEState.CONNECTING);
@@ -297,7 +309,8 @@ const BLEStateMachine = (function () {
       const signal = connectAbortController.signal;
 
       try {
-        const device = await BLEProtocol.requestDevice();
+        const device =
+          opts && opts.device ? opts.device : await BLEProtocol.requestDevice();
         const result = await BLEConnection.establish(
           device,
           signal,
@@ -448,6 +461,28 @@ const BLEStateMachine = (function () {
         throw error;
       } finally {
         if (state === BLEState.CONNECTED) startHeartbeat();
+      }
+    },
+
+    /**
+     * Phase 3F: Pause heartbeat and poller when page goes to background.
+     * Called on visibilitychange (hidden) to reduce background GATT activity.
+     */
+    pauseBackgroundTimers() {
+      stopHeartbeat();
+      stopPoller();
+      log.info("Background timers paused");
+    },
+
+    /**
+     * Phase 3F: Resume heartbeat and poller when page returns to foreground.
+     * Only resumes if the state machine is currently CONNECTED.
+     */
+    resumeBackgroundTimers() {
+      if (state === BLEState.CONNECTED) {
+        startHeartbeat();
+        startPoller();
+        log.info("Background timers resumed");
       }
     },
 

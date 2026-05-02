@@ -115,6 +115,12 @@ async function initializeApp() {
       return;
     }
 
+    // Phase 3G: enable debug logging when ?debug=ble is present
+    if (new URLSearchParams(window.location.search).get("debug") === "ble") {
+      Logger.setLevel("debug");
+      Logger.scope("main").info("BLE debug mode enabled");
+    }
+
     // Initialize EventBus and BLE State Machine
     BLEStateMachine.init(EventBus);
 
@@ -123,6 +129,25 @@ async function initializeApp() {
 
     // Setup event wiring
     setupEventWiring();
+    setupPageLifecycle();
+
+    // Phase 3A: check Bluetooth availability and subscribe to changes
+    const available = await BLEProtocol.checkAvailability();
+    BLEProtocol.subscribeAvailability((isNowAvailable) => {
+      EventBus.emit("BLE:AVAILABILITY_CHANGED", { available: isNowAvailable });
+      if (
+        !isNowAvailable &&
+        BLEStateMachine.getState() !== BLEState.DISCONNECTED
+      ) {
+        BLEStateMachine.cleanup();
+      }
+    });
+    if (!available) {
+      UIManager.updateConnectionStatus("unavailable");
+    }
+
+    // Phase 3C: populate Known Devices list on startup
+    UIManager.refreshKnownDevices();
 
     const startedMsg =
       t("message.started", { version: OPENBLINK_WEBIDE_VERSION }) ||
@@ -144,6 +169,25 @@ async function initializeApp() {
   } finally {
     hideLoadingOverlay();
   }
+}
+
+/**
+ * Phase 3F: Page Lifecycle integration.
+ * Stops heartbeat/poller when the page is hidden or frozen;
+ * resumes them when the page becomes visible again.
+ */
+function setupPageLifecycle() {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      BLEStateMachine.pauseBackgroundTimers();
+    } else {
+      BLEStateMachine.resumeBackgroundTimers();
+    }
+  });
+
+  document.addEventListener("freeze", () => {
+    BLEStateMachine.cleanup();
+  });
 }
 
 /**
@@ -240,10 +284,12 @@ function setupEventWiring() {
 
   EventBus.on("BLE:CONNECTED", ({ deviceName }) => {
     UIManager.appendToConsole("Connected to device: " + deviceName);
+    UIManager.refreshKnownDevices();
   });
 
   EventBus.on("BLE:DISCONNECTED", ({ _reason }) => {
     UIManager.appendToConsole("Disconnected from device.");
+    UIManager.refreshKnownDevices();
   });
 
   EventBus.on("BLE:CONNECT_FAILED", ({ error }) => {
@@ -252,6 +298,16 @@ function setupEventWiring() {
     } else {
       UIManager.appendToConsole(ErrorHandler.getErrorMessage(error));
     }
+  });
+
+  EventBus.on("BLE:AVAILABILITY_CHANGED", ({ available }) => {
+    UIManager.updateConnectionStatus(
+      available ? "disconnected" : "unavailable",
+    );
+  });
+
+  EventBus.on("BLE:DEVICE_FORGOTTEN", () => {
+    UIManager.refreshKnownDevices();
   });
 
   EventBus.on("BLE:RECONNECTING", ({ attempt, maxAttempts, delay }) => {
