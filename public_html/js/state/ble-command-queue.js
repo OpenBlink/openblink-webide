@@ -118,7 +118,7 @@ const BLECommandQueue = (function () {
    * Enqueue a write operation.
    * @param {BluetoothRemoteGATTCharacteristic} char
    * @param {ArrayBuffer} buffer
-   * @param {{ timeout?: number, label?: string, mode?: 'auto'|'response'|'no-response' }} opts
+   * @param {{ timeout?: number, label?: string, mode?: 'auto'|'response'|'no-response', bypass?: boolean }} opts
    * @returns {Promise<void>}
    */
   function enqueueWrite(char, buffer, opts) {
@@ -126,7 +126,15 @@ const BLECommandQueue = (function () {
       timeout = Config.timeouts.bleWrite,
       label = "write",
       mode = "auto",
+      bypass = false,
     } = opts || {};
+
+    if (bypass) {
+      // Bypass mode: skip queueing and execute directly
+      log.debug(`Bypassing queue for ${label}`);
+      return _withTimeout(() => _doWrite(char, buffer, mode), timeout, label);
+    }
+
     return _enqueue(() => _doWrite(char, buffer, mode), timeout, label);
   }
 
