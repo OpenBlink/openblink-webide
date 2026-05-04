@@ -74,6 +74,9 @@ jobs:
       - name: Build WebAssembly artifacts
         run: make all
 
+      - name: Clean mrbc build artifacts
+        run: make clean-mrbc
+
       - name: Verify build artifacts
         run: |
           for f in public_html/mrbc/mrbc.js public_html/mrbc/mrbc.wasm public_html/mrubyc/mrubyc.js public_html/mrubyc/mrubyc.wasm; do

@@ -117,7 +117,6 @@ clean-mrbc:
 	@echo "Cleaning mrbc build artifacts..."
 	cd mruby && make clean || true
 	rm -rf public_html/mrbc_build
-	rm -f public_html/mrbc/mrbc.js public_html/mrbc/mrbc.wasm
 
 clean-mrubyc:
 	@echo "Cleaning mrubyc build artifacts..."
