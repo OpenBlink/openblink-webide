@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build CodeMirror
+        run: npm run build:codemirror
+
       - name: Check release version
         run: npm run check-version
 

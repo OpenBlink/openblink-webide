@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build CodeMirror
+        run: npm run build:codemirror
+
       - name: ESLint
         id: eslint
         run: npm run lint

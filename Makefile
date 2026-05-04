@@ -89,7 +89,7 @@ OUTPUT_WASM = $(MRUBYC_BUILD_DIR)/mrubyc.wasm
 # ============================================================================
 
 # Default target: build both mrbc and mrubyc
-all: mrbc mrubyc
+all: mrbc mrubyc codemirror
 
 # Build mrbc (mruby bytecode compiler)
 mrbc:
@@ -101,6 +101,12 @@ mrbc:
 # Build mrubyc (mruby/c VM)
 mrubyc: mrubyc-autogen $(MRUBYC_BUILD_DIR) $(OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
+
+# Build CodeMirror
+codemirror:
+	@echo "Building CodeMirror..."
+	npm run build:codemirror
+	@echo "CodeMirror build complete. Output: public_html/codemirror/"
 
 # Generate mrubyc auto-generated files
 mrubyc-autogen:
@@ -117,7 +123,7 @@ $(OUTPUT_JS): $(SRCS)
 	$(CC) $(CFLAGS) $(EMFLAGS) $(SRCS) -o $(OUTPUT_JS)
 
 # Clean build artifacts
-clean: clean-mrbc clean-mrubyc
+clean: clean-mrbc clean-mrubyc clean-codemirror
 
 clean-all: clean
 	@echo "Cleaning all mrubyc artifacts including auto-generated files..."
@@ -133,6 +139,10 @@ clean-mrubyc:
 	rm -f $(OUTPUT_JS) $(OUTPUT_WASM)
 	cd vendor/mrubyc/src && rm -f _autogen_*.h
 
+clean-codemirror:
+	@echo "Cleaning CodeMirror build artifacts..."
+	rm -rf public_html/codemirror
+
 # Rebuild
 rebuild: clean-all all
 
@@ -144,10 +154,12 @@ help:
 	@echo "  all         - Build both mrbc and mrubyc (default)"
 	@echo "  mrbc        - Build mrbc (mruby bytecode compiler)"
 	@echo "  mrubyc      - Build mrubyc (mruby/c VM for simulator)"
+	@echo "  codemirror  - Build CodeMirror from npm"
 	@echo "  mrubyc-autogen - Generate mrubyc auto-generated files"
 	@echo "  clean       - Remove all build artifacts"
 	@echo "  clean-mrbc  - Remove mrbc build artifacts"
 	@echo "  clean-mrubyc - Remove mrubyc build artifacts"
+	@echo "  clean-codemirror - Remove CodeMirror build artifacts"
 	@echo "  clean-all   - Remove all build artifacts including auto-generated files"
 	@echo "  rebuild     - Clean and rebuild all"
 	@echo "  help        - Show this help message"
@@ -155,4 +167,4 @@ help:
 	@echo "Before building, make sure to activate Emscripten:"
 	@echo "  source vendor/emsdk/emsdk_env.sh"
 
-.PHONY: all mrbc mrubyc mrubyc-autogen clean clean-mrbc clean-mrubyc clean-all rebuild help
+.PHONY: all mrbc mrubyc codemirror mrubyc-autogen clean clean-mrbc clean-mrubyc clean-codemirror clean-all rebuild help
