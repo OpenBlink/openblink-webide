@@ -9,12 +9,19 @@
     "lint:html": "htmlhint \"public_html/**/*.html\"",
     "lint:json": "node scripts/validate-json.js",
     "lint:static": "node scripts/validate-static-assets.js",
-    "check-version": "node scripts/check-version.js"
+    "check-version": "node scripts/check-version.js",
+    "build:codemirror": "node esbuild.config.mjs",
+    "dev:codemirror": "node esbuild.config.mjs --watch"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "eslint": "^9.0.0",
     "globals": "^15.0.0",
     "htmlhint": "^1.1.0"
+  },
+  "dependencies": {
+    "codemirror": "5.65.21",
+    "esbuild": "^0.24.0",
+    "esbuild-css-modules-plugin": "^2.1.0"
   }
 }

@@ -158,13 +158,19 @@ emsdk $ source ./emsdk_env.sh
 emsdk $ cd ..
 ```
 
-3. Build mrbc and mrubyc
+3. Install Node.js Dependencies
+
+```console
+$ npm install
+```
+
+4. Build mrbc, mrubyc, and CodeMirror
 
 ```console
 $ make all
 ```
 
-This builds both mrbc (mruby bytecode compiler) and mrubyc (mruby/c VM for WebSimulator). The build outputs are placed in `public_html/mrbc/` and `public_html/mrubyc/`.
+This builds mrbc (mruby bytecode compiler), mrubyc (mruby/c VM for WebSimulator), and CodeMirror from npm packages. The build outputs are placed in `public_html/mrbc/`, `public_html/mrubyc/`, and `public_html/codemirror/`.
 
 ## Documentation
 
@@ -328,13 +334,19 @@ emsdk $ source ./emsdk_env.sh
 emsdk $ cd ..
 ```
 
-3. 构建 mrbc 和 mrubyc
+3. 安装 Node.js 依赖
+
+```console
+$ npm install
+```
+
+4. 构建 mrbc、mrubyc 和 CodeMirror
 
 ```console
 $ make all
 ```
 
-此命令同时构建 mrbc（mruby 字节码编译器）和 mrubyc（用于 WebSimulator 的 mruby/c VM）。构建输出分别放置在 `public_html/mrbc/` 和 `public_html/mrubyc/` 目录中。
+此命令同时构建 mrbc（mruby 字节码编译器）、mrubyc（用于 WebSimulator 的 mruby/c VM）和 CodeMirror（从 npm 包构建）。构建输出分别放置在 `public_html/mrbc/`、`public_html/mrubyc/` 和 `public_html/codemirror/` 目录中。
 
 ## 文档
 
@@ -498,13 +510,19 @@ emsdk $ source ./emsdk_env.sh
 emsdk $ cd ..
 ```
 
-3. mrbc と mrubyc をビルド
+3. Node.js 依存関係のインストール
+
+```console
+$ npm install
+```
+
+4. mrbc、mrubyc、CodeMirror をビルド
 
 ```console
 $ make all
 ```
 
-このコマンドで mrbc（mruby バイトコードコンパイラ）と mrubyc（WebSimulator 用 mruby/c VM）の両方がビルドされます。ビルド出力は `public_html/mrbc/` と `public_html/mrubyc/` に配置されます。
+このコマンドで mrbc（mruby バイトコードコンパイラ）、mrubyc（WebSimulator 用 mruby/c VM）、CodeMirror（npm パッケージからビルド）のすべてがビルドされます。ビルド出力は `public_html/mrbc/`、`public_html/mrubyc/`、`public_html/codemirror/` に配置されます。
 
 ## ドキュメント
 

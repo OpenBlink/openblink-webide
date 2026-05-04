@@ -1,9 +1,9 @@
 [submodule "mruby"]
-	path = mruby
+	path = vendor/mruby
 	url = https://github.com/mruby/mruby
 [submodule "emsdk"]
-	path = emsdk
+	path = vendor/emsdk
 	url = https://github.com/emscripten-core/emsdk
 [submodule "mrubyc"]
-	path = mrubyc
+	path = vendor/mrubyc
 	url = https://github.com/mrubyc/mrubyc

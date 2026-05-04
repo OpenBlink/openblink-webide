@@ -7,9 +7,9 @@ on:
       - "Makefile"
       - "mruby_build_config.rb"
       - "src/**"
-      - "mruby"
-      - "mrubyc"
-      - "emsdk"
+      - "vendor/mruby"
+      - "vendor/mrubyc"
+      - "vendor/emsdk"
       - ".gitmodules"
   workflow_dispatch:
 

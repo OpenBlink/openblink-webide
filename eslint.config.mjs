@@ -44,9 +44,9 @@ export default [
   {
     ignores: [
       "node_modules/**",
-      "emsdk/**",
-      "mruby/**",
-      "mrubyc/**",
+      "vendor/emsdk/**",
+      "vendor/mruby/**",
+      "vendor/mrubyc/**",
       "public_html/codemirror/**",
       "public_html/mrbc/**",
       "public_html/mrubyc/**",

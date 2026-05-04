@@ -9,7 +9,7 @@
 # ============================================================================
 
 # Directories
-MRUBYC_DIR = mrubyc
+MRUBYC_DIR = vendor/mrubyc
 MRUBYC_SRC_DIR = $(MRUBYC_DIR)/src
 SRC_DIR = src
 HAL_DIR = $(SRC_DIR)/lib/mrubyc
@@ -89,18 +89,30 @@ OUTPUT_WASM = $(MRUBYC_BUILD_DIR)/mrubyc.wasm
 # ============================================================================
 
 # Default target: build both mrbc and mrubyc
-all: mrbc mrubyc
+all: mrbc mrubyc codemirror
 
 # Build mrbc (mruby bytecode compiler)
 mrbc:
 	@echo "Building mrbc (mruby bytecode compiler)..."
-	cd mruby && make
-	cd mruby && rake MRUBY_CONFIG=../mruby_build_config.rb
+	cd vendor/mruby && make
+	cd vendor/mruby && rake MRUBY_CONFIG=../../mruby_build_config.rb
 	@echo "mrbc build complete. Output: public_html/mrbc/"
 
 # Build mrubyc (mruby/c VM)
-mrubyc: $(MRUBYC_BUILD_DIR) $(OUTPUT_JS)
+mrubyc: mrubyc-autogen $(MRUBYC_BUILD_DIR) $(OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
+
+# Build CodeMirror
+codemirror:
+	@echo "Building CodeMirror..."
+	npm run build:codemirror
+	@echo "CodeMirror build complete. Output: public_html/codemirror/"
+
+# Generate mrubyc auto-generated files
+mrubyc-autogen:
+	@echo "Generating mrubyc auto-generated files..."
+	cd vendor/mrubyc && make autogen
+	@echo "mrubyc auto-generated files complete."
 
 # Create build directory
 $(MRUBYC_BUILD_DIR):
@@ -111,19 +123,28 @@ $(OUTPUT_JS): $(SRCS)
 	$(CC) $(CFLAGS) $(EMFLAGS) $(SRCS) -o $(OUTPUT_JS)
 
 # Clean build artifacts
-clean: clean-mrbc clean-mrubyc
+clean: clean-mrbc clean-mrubyc clean-codemirror
+
+clean-all: clean
+	@echo "Cleaning all mrubyc artifacts including auto-generated files..."
+	cd vendor/mrubyc && make clean_all
 
 clean-mrbc:
 	@echo "Cleaning mrbc build artifacts..."
-	cd mruby && make clean || true
-	rm -rf public_html/mrbc_build
+	cd vendor/mruby && make clean || true
+	rm -rf build/mrbc
 
 clean-mrubyc:
 	@echo "Cleaning mrubyc build artifacts..."
 	rm -f $(OUTPUT_JS) $(OUTPUT_WASM)
+	cd vendor/mrubyc/src && rm -f _autogen_*.h
+
+clean-codemirror:
+	@echo "Cleaning CodeMirror build artifacts..."
+	rm -rf public_html/codemirror
 
 # Rebuild
-rebuild: clean all
+rebuild: clean-all all
 
 # Help
 help:
@@ -133,13 +154,17 @@ help:
 	@echo "  all         - Build both mrbc and mrubyc (default)"
 	@echo "  mrbc        - Build mrbc (mruby bytecode compiler)"
 	@echo "  mrubyc      - Build mrubyc (mruby/c VM for simulator)"
+	@echo "  codemirror  - Build CodeMirror from npm"
+	@echo "  mrubyc-autogen - Generate mrubyc auto-generated files"
 	@echo "  clean       - Remove all build artifacts"
 	@echo "  clean-mrbc  - Remove mrbc build artifacts"
 	@echo "  clean-mrubyc - Remove mrubyc build artifacts"
+	@echo "  clean-codemirror - Remove CodeMirror build artifacts"
+	@echo "  clean-all   - Remove all build artifacts including auto-generated files"
 	@echo "  rebuild     - Clean and rebuild all"
 	@echo "  help        - Show this help message"
 	@echo ""
 	@echo "Before building, make sure to activate Emscripten:"
-	@echo "  source emsdk/emsdk_env.sh"
+	@echo "  source vendor/emsdk/emsdk_env.sh"
 
-.PHONY: all mrbc mrubyc clean clean-mrbc clean-mrubyc rebuild help
+.PHONY: all mrbc mrubyc codemirror mrubyc-autogen clean clean-mrbc clean-mrubyc clean-codemirror clean-all rebuild help

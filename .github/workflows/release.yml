@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build CodeMirror
+        run: npm run build:codemirror
+
       - name: Check release version
         run: npm run check-version
 
@@ -67,9 +70,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
-
-      - name: Generate mrubyc auto-generated files
-        run: cd mrubyc && make autogen
 
       - name: Build WebAssembly artifacts
         run: make all

@@ -7,5 +7,5 @@ yarn-error.log*
 coverage/
 *.zip
 checksums-sha256.txt
-public_html/mrbc_build/
+build/mrbc/
 mruby_build_config.rb.lock
