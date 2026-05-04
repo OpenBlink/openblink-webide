@@ -99,8 +99,14 @@ mrbc:
 	@echo "mrbc build complete. Output: public_html/mrbc/"
 
 # Build mrubyc (mruby/c VM)
-mrubyc: $(MRUBYC_BUILD_DIR) $(OUTPUT_JS)
+mrubyc: mrubyc-autogen $(MRUBYC_BUILD_DIR) $(OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
+
+# Generate mrubyc auto-generated files
+mrubyc-autogen:
+	@echo "Generating mrubyc auto-generated files..."
+	cd vendor/mrubyc && make autogen
+	@echo "mrubyc auto-generated files complete."
 
 # Create build directory
 $(MRUBYC_BUILD_DIR):
@@ -113,6 +119,10 @@ $(OUTPUT_JS): $(SRCS)
 # Clean build artifacts
 clean: clean-mrbc clean-mrubyc
 
+clean-all: clean
+	@echo "Cleaning all mrubyc artifacts including auto-generated files..."
+	cd vendor/mrubyc && make clean_all
+
 clean-mrbc:
 	@echo "Cleaning mrbc build artifacts..."
 	cd vendor/mruby && make clean || true
@@ -121,9 +131,10 @@ clean-mrbc:
 clean-mrubyc:
 	@echo "Cleaning mrubyc build artifacts..."
 	rm -f $(OUTPUT_JS) $(OUTPUT_WASM)
+	cd vendor/mrubyc/src && rm -f _autogen_*.h
 
 # Rebuild
-rebuild: clean all
+rebuild: clean-all all
 
 # Help
 help:
@@ -133,13 +144,15 @@ help:
 	@echo "  all         - Build both mrbc and mrubyc (default)"
 	@echo "  mrbc        - Build mrbc (mruby bytecode compiler)"
 	@echo "  mrubyc      - Build mrubyc (mruby/c VM for simulator)"
+	@echo "  mrubyc-autogen - Generate mrubyc auto-generated files"
 	@echo "  clean       - Remove all build artifacts"
 	@echo "  clean-mrbc  - Remove mrbc build artifacts"
 	@echo "  clean-mrubyc - Remove mrubyc build artifacts"
+	@echo "  clean-all   - Remove all build artifacts including auto-generated files"
 	@echo "  rebuild     - Clean and rebuild all"
 	@echo "  help        - Show this help message"
 	@echo ""
 	@echo "Before building, make sure to activate Emscripten:"
 	@echo "  source vendor/emsdk/emsdk_env.sh"
 
-.PHONY: all mrbc mrubyc clean clean-mrbc clean-mrubyc rebuild help
+.PHONY: all mrbc mrubyc mrubyc-autogen clean clean-mrbc clean-mrubyc clean-all rebuild help

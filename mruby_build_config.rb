@@ -68,12 +68,14 @@ MRuby.each_target do |target|
     # This dependency is handled by mruby build system
   end
 
-  task :all => "#{MRUBY_ROOT}/../public_html/mrbc/mrbc.js"
+  # Use absolute path to ensure correct destination
+  public_html_mrbc = File.expand_path('../public_html/mrbc', __FILE__)
+  task :all => "#{public_html_mrbc}/mrbc.js"
 
-  file "#{MRUBY_ROOT}/../public_html/mrbc/mrbc.js" => "#{target.build_dir}/bin/mrbc.js" do |t|
+  file "#{public_html_mrbc}/mrbc.js" => "#{target.build_dir}/bin/mrbc.js" do |t|
     FileUtils.mkdir_p(File.dirname(t.name))
     FileUtils.cp("#{target.build_dir}/bin/mrbc.js", t.name)
-    FileUtils.cp("#{target.build_dir}/bin/mrbc.wasm", "#{MRUBY_ROOT}/../public_html/mrbc/mrbc.wasm")
+    FileUtils.cp("#{target.build_dir}/bin/mrbc.wasm", "#{public_html_mrbc}/mrbc.wasm")
     puts "Copied mrbc.js and mrbc.wasm to public_html/mrbc/"
   end
 end
