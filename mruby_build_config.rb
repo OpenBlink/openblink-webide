@@ -5,7 +5,7 @@ MRuby::Build.new('emscripten') do |conf|
   toolchain :clang
 
   # Output directory for mrbc.js and mrbc.wasm
-  conf.build_dir = File.expand_path('../public_html/mrbc_build', __FILE__)
+  conf.build_dir = File.expand_path('../build/mrbc', __FILE__)
 
   # Compiler settings (Emscripten 5.0.7)
   conf.cc.command = 'emcc'
