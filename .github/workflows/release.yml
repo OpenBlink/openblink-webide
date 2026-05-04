@@ -68,6 +68,9 @@ jobs:
         with:
           ruby-version: "3.3"
 
+      - name: Generate mrubyc auto-generated files
+        run: cd mrubyc && make autogen
+
       - name: Build WebAssembly artifacts
         run: make all
 
