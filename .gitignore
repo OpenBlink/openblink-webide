@@ -9,3 +9,4 @@ coverage/
 checksums-sha256.txt
 public_html/mrbc_build/
 mruby_build_config.rb.lock
+vendor/
