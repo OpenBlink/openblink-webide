@@ -98,6 +98,7 @@ const BLETransfer = (function () {
         label: `data@${offset}`,
         mode: "no-response",
         timeout: Config.timeouts.bleWrite,
+        bypass: true,
       });
 
       const sent = offset + chunkSize;
@@ -109,8 +110,9 @@ const BLETransfer = (function () {
     const programBuf = _buildProgramCommand(total, crc16, slot);
     await BLECommandQueue.enqueueWrite(programChar, programBuf, {
       label: "programCmd",
-      mode: "response",
+      mode: "no-response",
       timeout: Config.timeouts.bleWrite,
+      bypass: true,
     });
 
     _checkSignalAborted(signal);
@@ -118,8 +120,9 @@ const BLETransfer = (function () {
     const reloadBuf = BLEProtocol.buildReloadCommand();
     await BLECommandQueue.enqueueWrite(programChar, reloadBuf, {
       label: "reloadCmd",
-      mode: "response",
+      mode: "no-response",
       timeout: Config.timeouts.bleWrite,
+      bypass: true,
     });
 
     log.info("Transfer complete");
