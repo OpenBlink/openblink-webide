@@ -20,7 +20,7 @@
     "htmlhint": "^1.1.0"
   },
   "dependencies": {
-    "codemirror": "5.65.18",
+    "codemirror": "5.65.21",
     "esbuild": "^0.24.0",
     "esbuild-css-modules-plugin": "^2.1.0"
   }
