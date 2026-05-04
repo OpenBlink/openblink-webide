@@ -9,7 +9,7 @@
 # ============================================================================
 
 # Directories
-MRUBYC_DIR = mrubyc
+MRUBYC_DIR = vendor/mrubyc
 MRUBYC_SRC_DIR = $(MRUBYC_DIR)/src
 SRC_DIR = src
 HAL_DIR = $(SRC_DIR)/lib/mrubyc
@@ -94,8 +94,8 @@ all: mrbc mrubyc
 # Build mrbc (mruby bytecode compiler)
 mrbc:
 	@echo "Building mrbc (mruby bytecode compiler)..."
-	cd mruby && make
-	cd mruby && rake MRUBY_CONFIG=../mruby_build_config.rb
+	cd vendor/mruby && make
+	cd vendor/mruby && rake MRUBY_CONFIG=../../mruby_build_config.rb
 	@echo "mrbc build complete. Output: public_html/mrbc/"
 
 # Build mrubyc (mruby/c VM)
@@ -115,7 +115,7 @@ clean: clean-mrbc clean-mrubyc
 
 clean-mrbc:
 	@echo "Cleaning mrbc build artifacts..."
-	cd mruby && make clean || true
+	cd vendor/mruby && make clean || true
 	rm -rf public_html/mrbc_build
 
 clean-mrubyc:
@@ -140,6 +140,6 @@ help:
 	@echo "  help        - Show this help message"
 	@echo ""
 	@echo "Before building, make sure to activate Emscripten:"
-	@echo "  source emsdk/emsdk_env.sh"
+	@echo "  source vendor/emsdk/emsdk_env.sh"
 
 .PHONY: all mrbc mrubyc clean clean-mrbc clean-mrubyc rebuild help
