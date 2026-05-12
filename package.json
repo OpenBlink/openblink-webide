@@ -14,9 +14,9 @@
     "dev:codemirror": "node esbuild.config.mjs --watch"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "eslint": "^9.0.0",
-    "globals": "^15.0.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
     "htmlhint": "^1.1.0"
   },
   "dependencies": {
