@@ -15,13 +15,15 @@
 #include "hal.h"
 
 EM_JS(void, js_on_task_created, (), {
-  if (typeof window !== 'undefined' && window.mrubycOnTaskCreated) {
-    window.mrubycOnTaskCreated();
+  const moduleCallback =
+    typeof Module !== 'undefined' && Module.mrubycOnTaskCreated;
+  if (typeof moduleCallback === 'function') {
+    moduleCallback();
   }
 });
 
 #if !defined(MRBC_MEMORY_SIZE)
-#define MRBC_MEMORY_SIZE (1024 * 40)
+#define MRBC_MEMORY_SIZE 131072
 #endif
 
 #define MIN_BYTECODE_SIZE 8
@@ -29,15 +31,37 @@ EM_JS(void, js_on_task_created, (), {
 
 static uint8_t memory_pool[MRBC_MEMORY_SIZE];
 static int initialized = 0;
+static mrbc_tcb *active_tcb = NULL;
 
-static void output_error(const char *message)
+EMSCRIPTEN_KEEPALIVE
+void mrbc_wasm_init(void);
+
+static void write_text(int fd, const char *message)
 {
-  hal_write(2, message, (int)strlen(message));
+  hal_write(fd, message, (int)strlen(message));
+  hal_flush(fd);
 }
 
-static void output_info(const char *message)
+static void reset_vm(void)
 {
-  hal_write(1, message, (int)strlen(message));
+  if (initialized) {
+    mrbc_cleanup();
+    initialized = 0;
+  }
+  mrbc_wasm_init();
+}
+
+static void terminate_active_task(void)
+{
+  mrbc_tcb *tcb = active_tcb;
+
+  if (tcb == NULL) {
+    return;
+  }
+
+  active_tcb = NULL;
+  mrbc_terminate_task(tcb);
+  mrbc_delete_task(tcb);
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -50,12 +74,18 @@ void mrbc_wasm_init(void)
 }
 
 EMSCRIPTEN_KEEPALIVE
+void mrbc_wasm_stop(void)
+{
+  terminate_active_task();
+}
+
+EMSCRIPTEN_KEEPALIVE
 int mrbc_wasm_run(const uint8_t *bytecode, int size)
 {
   char buffer[256];
 
   if (bytecode == NULL) {
-    output_error("[ERROR] Bytecode pointer is NULL.\n");
+    write_text(2, "[ERROR] Bytecode pointer is NULL.\n");
     return -1;
   }
 
@@ -63,7 +93,7 @@ int mrbc_wasm_run(const uint8_t *bytecode, int size)
     snprintf(buffer, sizeof(buffer),
       "[ERROR] Bytecode size too small: %d bytes (minimum: %d bytes).\n",
       size, MIN_BYTECODE_SIZE);
-    output_error(buffer);
+    write_text(2, buffer);
     return -2;
   }
 
@@ -71,13 +101,13 @@ int mrbc_wasm_run(const uint8_t *bytecode, int size)
     snprintf(buffer, sizeof(buffer),
       "[ERROR] Bytecode size too large: %d bytes (maximum: %d bytes).\n",
       size, MAX_BYTECODE_SIZE);
-    output_error(buffer);
+    write_text(2, buffer);
     return -3;
   }
 
   if (bytecode[0] != 'R' || bytecode[1] != 'I' ||
       bytecode[2] != 'T' || bytecode[3] != 'E') {
-    output_error("[ERROR] Invalid bytecode format: missing RITE header.\n");
+    write_text(2, "[ERROR] Invalid bytecode format: missing RITE header.\n");
     return -4;
   }
 
@@ -88,27 +118,26 @@ int mrbc_wasm_run(const uint8_t *bytecode, int size)
   mrbc_tcb *tcb = mrbc_create_task(bytecode, NULL);
   
   if (tcb == NULL) {
-    output_error("[ERROR] Failed to create task.\n");
-    output_error("  Possible causes:\n");
-    output_error("  - Insufficient memory in VM pool\n");
-    output_error("  - Invalid or corrupted bytecode\n");
-    output_error("  - VM state is abnormal\n");
+    write_text(2, "[ERROR] Failed to create task.\n");
+    write_text(2, "  Possible causes:\n");
+    write_text(2, "  - Insufficient memory in VM pool\n");
+    write_text(2, "  - Invalid or corrupted bytecode\n");
+    write_text(2, "  - VM state is abnormal\n");
     snprintf(buffer, sizeof(buffer),
       "  Memory pool size: %d bytes\n", MRBC_MEMORY_SIZE);
-    output_error(buffer);
-    mrbc_cleanup();
-    initialized = 0;
-    mrbc_wasm_init();
+    write_text(2, buffer);
+    reset_vm();
     return -5;
   }
 
   js_on_task_created();
 
+  active_tcb = tcb;
   int ret = mrbc_run();
-  mrbc_cleanup();
-
-  initialized = 0;
-  mrbc_wasm_init();
+  hal_flush(1);
+  hal_flush(2);
+  active_tcb = NULL;
+  reset_vm();
 
   return ret == 1 ? 0 : ret;
 }
@@ -117,12 +146,6 @@ EMSCRIPTEN_KEEPALIVE
 void mrbc_wasm_print_statistics(void)
 {
   mrbc_alloc_print_statistics();
-}
-
-int main(void)
-{
-  mrbc_wasm_init();
-  return 0;
 }
 
 /*

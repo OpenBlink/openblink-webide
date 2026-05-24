@@ -17,36 +17,48 @@ BUILD_DIR = public_html
 
 # Emscripten compiler
 CC = emcc
+RUBY ?= ruby
+RUBY_BINDIR ?= $(dir $(shell command -v $(RUBY) 2>/dev/null))
 
 # Compiler flags
-CFLAGS = -O3 \
-         -flto \
-         -I$(MRUBYC_SRC_DIR) \
-         -I$(HAL_DIR) \
-         -DMRBC_SCHEDULER_EXIT=1 -DMRBC_USE_FLOAT=1 -DMRBC_USE_MATH=1 -DMAX_VM_COUNT=5 \
-         -DMRBC_DEBUG \
-         -DNDEBUG
+MRUBYC_CFLAGS = -O3 \
+                -flto \
+                -Wall \
+                -I$(MRUBYC_SRC_DIR) \
+                -I$(HAL_DIR) \
+                -DMRBC_SCHEDULER_EXIT=1 \
+                -DMRBC_USE_FLOAT=2 \
+                -DMRBC_USE_MATH=1 \
+                -DMAX_VM_COUNT=5 \
+                -DMRBC_MEMORY_SIZE=131072
 
 # Emscripten specific flags
-EMFLAGS = -s WASM=1 \
-          -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","UTF8ToString","wasmMemory","addFunction","removeFunction"]' \
-          -s EXPORTED_FUNCTIONS='["_main","_mrbc_wasm_init","_mrbc_wasm_run","_mrbc_wasm_print_statistics","_malloc","_free","_mrbc_wasm_get_class_object","_mrbc_wasm_define_class","_mrbc_wasm_define_method","_mrbc_wasm_get_int_arg","_mrbc_wasm_get_float_arg","_mrbc_wasm_is_numeric_arg","_mrbc_wasm_set_return_bool","_mrbc_wasm_set_return_nil","_mrbc_wasm_set_return_int","_mrbc_wasm_set_return_float","_mrbc_wasm_instance_new","_mrbc_wasm_set_global_const","_mrbc_wasm_free_instance"]' \
-          -s ALLOW_TABLE_GROWTH=1 \
-          -s ALLOW_MEMORY_GROWTH=1 \
-          -s INITIAL_MEMORY=16777216 \
-          -s MAXIMUM_MEMORY=33554432 \
-          -s ASYNCIFY \
-          -s ASYNCIFY_STACK_SIZE=16384 \
-          -s 'ASYNCIFY_ADD=["mrbc_*","hal_*","main"]' \
-          -s ASYNCIFY_IMPORTS='["emscripten_sleep"]' \
-          -s MODULARIZE=1 \
-          -s EXPORT_NAME='createMrubycModule' \
-          -s ASSERTIONS=0 \
-          -s DISABLE_EXCEPTION_CATCHING=1 \
-          -s STACK_OVERFLOW_CHECK=0 \
-          -s FILESYSTEM=0 \
-          -s ENVIRONMENT='web' \
-          --no-entry
+MRUBYC_EMFLAGS = -s WASM=1 \
+                 -s STRICT=1 \
+                 -s EXPORTED_RUNTIME_METHODS='["ccall","HEAPU8","addFunction","removeFunction"]' \
+                 -s EXPORTED_FUNCTIONS='["_mrbc_wasm_init","_mrbc_wasm_stop","_mrbc_wasm_run","_mrbc_wasm_print_statistics","_malloc","_free","_mrbc_wasm_get_class_object","_mrbc_wasm_define_class","_mrbc_wasm_define_method","_mrbc_wasm_get_int_arg","_mrbc_wasm_get_float_arg","_mrbc_wasm_is_numeric_arg","_mrbc_wasm_set_return_bool","_mrbc_wasm_set_return_nil","_mrbc_wasm_set_return_int","_mrbc_wasm_set_return_float","_mrbc_wasm_instance_new","_mrbc_wasm_set_global_const","_mrbc_wasm_free_instance"]' \
+                 -s ALLOW_TABLE_GROWTH=1 \
+                 -s ALLOW_MEMORY_GROWTH=1 \
+                 -s INITIAL_HEAP=16777216 \
+                 -s MAXIMUM_MEMORY=33554432 \
+                 -s STACK_SIZE=1048576 \
+                 -s MALLOC=dlmalloc \
+                 -s ABORTING_MALLOC=1 \
+                 -s ASYNCIFY=1 \
+                 -s ASYNCIFY_STACK_SIZE=65536 \
+                 -s MODULARIZE=1 \
+                 -s EXPORT_ES6=1 \
+                 -s EXPORT_NAME='createMrubycModule' \
+                 -s ASSERTIONS=1 \
+                 -s STACK_OVERFLOW_CHECK=1 \
+                 -s CHECK_NULL_WRITES=1 \
+                 -s FILESYSTEM=0 \
+                 -s ENVIRONMENT='web' \
+                 -s EXIT_RUNTIME=0 \
+                 -s DYNAMIC_EXECUTION=0 \
+                 -s TEXTDECODER=2 \
+                 -s INCOMING_MODULE_JS_API='["locateFile","print","printErr"]' \
+                 --no-entry
 
 # mruby/c source files
 MRUBYC_SRCS = $(MRUBYC_SRC_DIR)/alloc.c \
@@ -80,9 +92,9 @@ MAIN_SRCS = $(SRC_DIR)/main.c
 SRCS = $(MRUBYC_SRCS) $(HAL_SRCS) $(MAIN_SRCS)
 
 # Output files for mruby/c
-MRUBYC_BUILD_DIR = $(BUILD_DIR)/mrubyc
-OUTPUT_JS = $(MRUBYC_BUILD_DIR)/mrubyc.js
-OUTPUT_WASM = $(MRUBYC_BUILD_DIR)/mrubyc.wasm
+MRUBYC_OUTPUT_DIR = $(BUILD_DIR)/mrubyc
+MRUBYC_OUTPUT_JS = $(MRUBYC_OUTPUT_DIR)/mrubyc.js
+MRUBYC_OUTPUT_WASM = $(MRUBYC_OUTPUT_DIR)/mrubyc.wasm
 
 # ============================================================================
 # Build Targets
@@ -91,15 +103,20 @@ OUTPUT_WASM = $(MRUBYC_BUILD_DIR)/mrubyc.wasm
 # Default target: build both mrbc and mrubyc
 all: mrbc mrubyc codemirror
 
+check-emcc:
+	@command -v $(CC) >/dev/null 2>&1 || { echo "emcc was not found. Run: source vendor/emsdk/emsdk_env.sh" >&2; exit 1; }
+
+check-ruby-autogen:
+	@PATH="$(RUBY_BINDIR):$(PATH)" ruby -rripper -e 'exit RUBY_VERSION.split(".").first.to_i >= 3 ? 0 : 1' || { echo "Ruby 3.x or newer with Ripper is required for mruby/c autogen. Set RUBY=/path/to/ruby." >&2; exit 1; }
+
 # Build mrbc (mruby bytecode compiler)
-mrbc:
+mrbc: check-emcc
 	@echo "Building mrbc (mruby bytecode compiler)..."
-	cd vendor/mruby && make
-	cd vendor/mruby && rake MRUBY_CONFIG=../../mruby_build_config.rb
+	cd vendor/mruby && PATH="$(RUBY_BINDIR):$(PATH)" rake MRUBY_CONFIG=../../mruby_build_config.rb
 	@echo "mrbc build complete. Output: public_html/mrbc/"
 
 # Build mrubyc (mruby/c VM)
-mrubyc: mrubyc-autogen $(MRUBYC_BUILD_DIR) $(OUTPUT_JS)
+mrubyc: check-emcc mrubyc-autogen $(MRUBYC_OUTPUT_DIR) $(MRUBYC_OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
 
 # Build CodeMirror
@@ -109,25 +126,25 @@ codemirror:
 	@echo "CodeMirror build complete. Output: public_html/codemirror/"
 
 # Generate mrubyc auto-generated files
-mrubyc-autogen:
+mrubyc-autogen: check-ruby-autogen
 	@echo "Generating mrubyc auto-generated files..."
-	cd vendor/mrubyc && make autogen
+	PATH="$(RUBY_BINDIR):$(PATH)" $(MAKE) -C vendor/mrubyc autogen
 	@echo "mrubyc auto-generated files complete."
 
 # Create build directory
-$(MRUBYC_BUILD_DIR):
-	mkdir -p $(MRUBYC_BUILD_DIR)
+$(MRUBYC_OUTPUT_DIR):
+	mkdir -p $(MRUBYC_OUTPUT_DIR)
 
 # Build WebAssembly module
-$(OUTPUT_JS): $(SRCS)
-	$(CC) $(CFLAGS) $(EMFLAGS) $(SRCS) -o $(OUTPUT_JS)
+$(MRUBYC_OUTPUT_JS): $(SRCS) Makefile | $(MRUBYC_OUTPUT_DIR)
+	$(CC) $(MRUBYC_CFLAGS) $(MRUBYC_EMFLAGS) $(SRCS) -o $(MRUBYC_OUTPUT_JS)
 
 # Clean build artifacts
 clean: clean-mrbc clean-mrubyc clean-codemirror
 
 clean-all: clean
 	@echo "Cleaning all mrubyc artifacts including auto-generated files..."
-	cd vendor/mrubyc && make clean_all
+	cd vendor/mrubyc && make clean
 
 clean-mrbc:
 	@echo "Cleaning mrbc build artifacts..."
@@ -136,7 +153,7 @@ clean-mrbc:
 
 clean-mrubyc:
 	@echo "Cleaning mrubyc build artifacts..."
-	rm -f $(OUTPUT_JS) $(OUTPUT_WASM)
+	rm -f $(MRUBYC_OUTPUT_JS) $(MRUBYC_OUTPUT_WASM)
 	cd vendor/mrubyc/src && rm -f _autogen_*.h
 
 clean-codemirror:
@@ -152,6 +169,8 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo "  all         - Build both mrbc and mrubyc (default)"
+	@echo "  check-emcc  - Verify emcc is available"
+	@echo "  check-ruby-autogen - Verify Ruby can run mruby/c generators"
 	@echo "  mrbc        - Build mrbc (mruby bytecode compiler)"
 	@echo "  mrubyc      - Build mrubyc (mruby/c VM for simulator)"
 	@echo "  codemirror  - Build CodeMirror from npm"
@@ -167,4 +186,4 @@ help:
 	@echo "Before building, make sure to activate Emscripten:"
 	@echo "  source vendor/emsdk/emsdk_env.sh"
 
-.PHONY: all mrbc mrubyc codemirror mrubyc-autogen clean clean-mrbc clean-mrubyc clean-codemirror clean-all rebuild help
+.PHONY: all check-emcc check-ruby-autogen mrbc mrubyc codemirror mrubyc-autogen clean clean-mrbc clean-mrubyc clean-codemirror clean-all rebuild help

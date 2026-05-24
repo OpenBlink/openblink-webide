@@ -274,36 +274,6 @@
           document.getElementById("consoleOutput").innerHTML = "";
         });
     </script>
-    <script>
-      var Module = Module || {};
-      Module.print = function (text) {
-        var consoleOutput = document.getElementById("consoleOutput");
-        if (consoleOutput && text && text.trim() !== "") {
-          var line = document.createElement("div");
-          line.textContent = text;
-          consoleOutput.appendChild(line);
-          consoleOutput.scrollTop = consoleOutput.scrollHeight;
-        }
-      };
-      Module.printErr = function (text) {
-        var consoleOutput = document.getElementById("consoleOutput");
-        if (consoleOutput && text && text.trim() !== "") {
-          var line = document.createElement("div");
-          var prefix =
-            typeof I18n !== "undefined"
-              ? I18n.t("compiler.errorPrefix") || "Compiler Error: "
-              : "Compiler Error: ";
-          var errorText = prefix + text;
-          if (typeof I18n !== "undefined" && I18n.isEasyJapanese()) {
-            errorText = I18n.wrapCompilerError(text);
-          }
-          line.textContent = errorText;
-          consoleOutput.appendChild(line);
-          consoleOutput.scrollTop = consoleOutput.scrollHeight;
-        }
-      };
-    </script>
-    <script src="mrbc/mrbc.js"></script>
     <script src="lib/crc.js"></script>
     <script src="js/config.js"></script>
     <script src="js/logger.js"></script>

@@ -14,17 +14,8 @@
  */
 let registeredCallbacks = [];
 
-/**
- * Pointer to the current PIXELS instance for memory management
- * @type {number|null}
- */
-let currentPixelsInstance = null;
-
-/**
- * Reference to the current API wrapper for cleanup
- * @type {MrubycWasmAPI|null}
- */
-let currentApi = null;
+let currentModule = null;
+let callbackRegistrations = [];
 
 /**
  * mruby/c WASM API wrapper class
@@ -200,26 +191,37 @@ class MrubycWasmAPI {
  * BEFORE old callbacks are removed.
  * @param {Object} mrubycModule - The mruby/c WASM module instance
  */
-function definePixelsAPI(mrubycModule) {
+function definePixelsAPI(mrubycModule, runtimeId) {
   const api = new MrubycWasmAPI(mrubycModule);
+  const currentRegistration = callbackRegistrations.find(
+    (registration) => registration.module === mrubycModule,
+  );
+  const oldCallbacks = currentRegistration
+    ? [...currentRegistration.callbacks]
+    : [];
 
-  if (currentPixelsInstance && currentApi) {
-    currentApi.freeInstance(currentPixelsInstance);
-    currentPixelsInstance = null;
-  }
-  currentApi = api;
+  currentModule = mrubycModule;
 
-  const oldCallbacks = [...registeredCallbacks];
   registeredCallbacks = [];
 
   const classObject = api.getClassObject();
 
-  const pixelsClass = api.defineClass("Pixels", classObject);
+  const pixelsClass = api.defineClass("PIXELS", classObject);
 
   // Clamp RGB values to 0-255 range for CSS after 10x amplification
   const clampRGB = (value) => Math.max(0, Math.min(255, value));
+  const isRuntimeActive = () =>
+    runtimeId === undefined ||
+    (typeof Simulator !== "undefined" &&
+      typeof Simulator.isRuntimeActive === "function" &&
+      Simulator.isRuntimeActive(runtimeId));
 
   const setPixelCallback = api.addFunction((vmPtr, vPtr, argc) => {
+    if (!isRuntimeActive()) {
+      api.setReturnBool(vPtr, false);
+      return;
+    }
+
     if (
       argc >= 4 &&
       api.isNumericArg(vPtr, 1) &&
@@ -245,24 +247,34 @@ function definePixelsAPI(mrubycModule) {
   api.defineMethod(pixelsClass, "set", setPixelCallback);
 
   const updateCallback = api.addFunction((vmPtr, vPtr, argc) => {
-    api.setReturnBool(vPtr, true);
+    api.setReturnBool(vPtr, isRuntimeActive());
   }, "viii");
 
   registeredCallbacks.push(updateCallback);
   api.defineMethod(pixelsClass, "update", updateCallback);
 
-  const pixelsInstance = api.instanceNew(pixelsClass);
-
-  if (pixelsInstance) {
-    currentPixelsInstance = pixelsInstance;
-    api.setGlobalConst("PIXELS", pixelsInstance);
+  if (currentRegistration) {
+    currentRegistration.callbacks = registeredCallbacks;
   } else {
-    console.error("definePixelsAPI: Failed to create Pixels instance");
+    callbackRegistrations.push({
+      module: mrubycModule,
+      callbacks: registeredCallbacks,
+    });
   }
 
   for (const callback of oldCallbacks) {
     try {
       api.removeFunction(callback);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+}
+
+function removeCallbacks(mrubycModule, callbacks) {
+  for (const callback of callbacks) {
+    try {
+      mrubycModule.removeFunction(callback);
     } catch (e) {
       // Ignore cleanup errors
     }
@@ -275,22 +287,19 @@ function definePixelsAPI(mrubycModule) {
  * @param {Object} mrubycModule - The mruby/c WASM module instance
  */
 function cleanupPixelsAPI(mrubycModule) {
-  if (currentPixelsInstance && currentApi) {
-    currentApi.freeInstance(currentPixelsInstance);
-    currentPixelsInstance = null;
-  }
-  currentApi = null;
-
-  for (const callback of registeredCallbacks) {
-    try {
-      mrubycModule.removeFunction(callback);
-    } catch (e) {
-      // Ignore cleanup errors
+  callbackRegistrations = callbackRegistrations.filter((registration) => {
+    if (registration.module !== mrubycModule) {
+      return true;
     }
-  }
-  registeredCallbacks = [];
-}
 
+    removeCallbacks(mrubycModule, registration.callbacks);
+    if (currentModule === mrubycModule) {
+      registeredCallbacks = [];
+      currentModule = null;
+    }
+    return false;
+  });
+}
 if (typeof window !== "undefined") {
   window.definePixelsAPI = definePixelsAPI;
   window.cleanupPixelsAPI = cleanupPixelsAPI;

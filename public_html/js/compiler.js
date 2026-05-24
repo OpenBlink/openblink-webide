@@ -6,27 +6,117 @@
 
 const Compiler = (function () {
   // Note: Global t() helper is defined in i18n.js
-  function isRuntimeReady() {
+  const MRBC_MODULE_SRC = "mrbc/mrbc.js";
+  let mrbcModule = null;
+  let initializationPromise = null;
+
+  function isRuntimeReady(moduleInstance) {
     return (
-      typeof Module !== "undefined" &&
-      Module.FS &&
-      typeof Module.FS.writeFile === "function" &&
-      typeof Module.FS.readFile === "function" &&
-      typeof Module._malloc === "function" &&
-      typeof Module._free === "function" &&
-      typeof Module.stringToUTF8 === "function" &&
-      typeof Module.setValue === "function" &&
-      typeof Module._main === "function"
+      moduleInstance &&
+      moduleInstance.FS &&
+      typeof moduleInstance.FS.writeFile === "function" &&
+      typeof moduleInstance.FS.readFile === "function" &&
+      typeof moduleInstance._malloc === "function" &&
+      typeof moduleInstance._free === "function" &&
+      typeof moduleInstance.stringToUTF8 === "function" &&
+      typeof moduleInstance.setValue === "function" &&
+      typeof moduleInstance._main === "function"
     );
   }
 
+  function appendCompilerOutput(text) {
+    const consoleOutput = document.getElementById("consoleOutput");
+    if (consoleOutput && text && text.trim() !== "") {
+      const line = document.createElement("div");
+      line.textContent = text;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+  }
+
+  function appendCompilerError(text) {
+    const consoleOutput = document.getElementById("consoleOutput");
+    if (consoleOutput && text && text.trim() !== "") {
+      const line = document.createElement("div");
+      const prefix =
+        typeof I18n !== "undefined"
+          ? I18n.t("compiler.errorPrefix") || "Compiler Error: "
+          : "Compiler Error: ";
+      let errorText = prefix + text;
+      if (typeof I18n !== "undefined" && I18n.isEasyJapanese()) {
+        errorText = I18n.wrapCompilerError(text);
+      }
+      line.textContent = errorText;
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+  }
+
+  function getModuleOptions() {
+    return {
+      locateFile: (path) => "mrbc/" + path,
+      print: appendCompilerOutput,
+      printErr: appendCompilerError,
+    };
+  }
+
+  async function loadEsModuleFactory(src) {
+    const moduleUrl = new URL(src, window.location.href).href;
+    const moduleNamespace = await import(moduleUrl);
+    const moduleFactory =
+      moduleNamespace.default || moduleNamespace.createMrbcModule;
+
+    if (typeof moduleFactory !== "function") {
+      throw new Error("mrbc module factory was not found: " + src);
+    }
+
+    return moduleFactory;
+  }
+
+  async function initializeRuntime() {
+    if (isRuntimeReady(mrbcModule)) {
+      return mrbcModule;
+    }
+
+    if (initializationPromise) {
+      return initializationPromise;
+    }
+
+    initializationPromise = (async () => {
+      const moduleOptions = getModuleOptions();
+      const moduleFactory = await loadEsModuleFactory(MRBC_MODULE_SRC);
+      const moduleInstance = await moduleFactory(moduleOptions);
+
+      if (!isRuntimeReady(moduleInstance)) {
+        throw new Error("mrbc runtime did not expose the required API.");
+      }
+
+      mrbcModule = moduleInstance;
+      return mrbcModule;
+    })();
+
+    try {
+      return await initializationPromise;
+    } catch (error) {
+      initializationPromise = null;
+      throw error;
+    }
+  }
+
+  function tryUnlink(fs, path) {
+    try {
+      fs.unlink(path);
+    } catch (_error) {
+      return;
+    }
+  }
+
   return {
-    isReady: isRuntimeReady,
+    initialize: initializeRuntime,
 
     compile: function (rubyCode) {
-      if (!isRuntimeReady()) {
+      if (!isRuntimeReady(mrbcModule)) {
         const errorMsg =
-          (typeof t === "function" && t("compiler.runtimeNotReady")) ||
           "mrbc runtime is not ready. Please reload the page and try again.";
         return {
           success: false,
@@ -38,7 +128,8 @@ const Compiler = (function () {
       const sourceFileName = "temp.rb";
       const outputFileName = "temp.mrb";
 
-      Module.FS.writeFile(sourceFileName, rubyCode);
+      tryUnlink(mrbcModule.FS, outputFileName);
+      mrbcModule.FS.writeFile(sourceFileName, rubyCode);
 
       const args = ["mrbc", "-o", outputFileName, sourceFileName];
       const argc = args.length;
@@ -47,25 +138,33 @@ const Compiler = (function () {
       let argPointers = [];
 
       try {
-        argv = Module._malloc(args.length * 4);
-        argPointers = args.map((arg) => {
-          const ptr = Module._malloc(arg.length + 1);
-          Module.stringToUTF8(arg, ptr, arg.length + 1);
-          return ptr;
-        });
+        argv = mrbcModule._malloc(args.length * 4);
+        if (!argv) {
+          throw new Error("Failed to allocate compiler argv.");
+        }
+
+        for (const arg of args) {
+          const ptr = mrbcModule._malloc(arg.length + 1);
+          if (!ptr) {
+            throw new Error("Failed to allocate compiler argument.");
+          }
+          mrbcModule.stringToUTF8(arg, ptr, arg.length + 1);
+          argPointers.push(ptr);
+        }
 
         for (let i = 0; i < argPointers.length; i++) {
-          Module.setValue(argv + i * 4, argPointers[i], "i32");
+          mrbcModule.setValue(argv + i * 4, argPointers[i], "i32");
         }
 
         const startTime = performance.now();
-        const result = Module._main(argc, argv);
+        const result = mrbcModule._main(argc, argv);
         const endTime = performance.now();
         const compileTime = endTime - startTime;
 
         if (result !== 0) {
           const errorMsg =
-            t("compiler.failed", { code: result }) ||
+            (typeof t === "function" &&
+              t("compiler.failed", { code: result })) ||
             "mrbc failed with exit code: " + result;
           return {
             success: false,
@@ -74,7 +173,7 @@ const Compiler = (function () {
           };
         }
 
-        const mrbContent = Module.FS.readFile(outputFileName);
+        const mrbContent = mrbcModule.FS.readFile(outputFileName);
 
         return {
           success: true,
@@ -84,10 +183,10 @@ const Compiler = (function () {
         };
       } finally {
         if (argPointers.length > 0) {
-          argPointers.forEach((ptr) => Module._free(ptr));
+          argPointers.forEach((ptr) => mrbcModule._free(ptr));
         }
         if (argv !== null) {
-          Module._free(argv);
+          mrbcModule._free(argv);
         }
       }
     },

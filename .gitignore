@@ -8,4 +8,5 @@ coverage/
 *.zip
 checksums-sha256.txt
 build/mrbc/
+build/host/
 mruby_build_config.rb.lock
