@@ -17,7 +17,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.4.0",
     "globals": "^17.6.0",
-    "htmlhint": "^1.1.0"
+    "htmlhint": "^1.9.2"
   },
   "dependencies": {
     "codemirror": "5.65.21",
