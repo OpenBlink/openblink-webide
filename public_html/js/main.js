@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const OPENBLINK_WEBIDE_VERSION = "0.3.5";
+const OPENBLINK_WEBIDE_VERSION = "0.3.6";
 
 // Track if initializeApp has been called to prevent duplicate initialization
 let isInitialized = false;
