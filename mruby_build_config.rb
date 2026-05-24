@@ -1,6 +1,17 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 
+# Minimal host build: provides yacc (Lrama) and gperf commands required by
+# mruby-compiler to generate y.tab.c and lex.def from parse.y/keywords.
+# Without this, MRuby.targets["host"] is nil and CI builds fail because
+# y.tab.c is .gitignored and must be regenerated.
+MRuby::Build.new do |conf|
+  toolchain :gcc
+  conf.build_dir = File.expand_path('build/host', __dir__)
+  conf.disable_libmruby
+  conf.disable_presym
+end
+
 MRuby::Build.new('emscripten') do |conf|
   toolchain :emscripten
 
