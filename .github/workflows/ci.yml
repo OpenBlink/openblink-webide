@@ -20,10 +20,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Use Node.js 22
+      - name: Use Node.js 24
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          check-latest: true
           cache: npm
 
       - name: Install dependencies
@@ -73,10 +74,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Use Node.js 22
+      - name: Use Node.js 24
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          check-latest: true
           cache: npm
 
       - name: Install dependencies
@@ -93,7 +95,7 @@ jobs:
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3"
+          ruby-version: "3.4"
 
       - name: Build WebAssembly artifacts
         run: make all
