@@ -8,7 +8,6 @@ const browserGlobals = {
   ...globals.browser,
   Module: "readonly",
   createMrubycModule: "readonly",
-  CodeMirror: "readonly",
   I18n: "readonly",
   t: "readonly",
   Utils: "readonly",
@@ -79,6 +78,14 @@ export default [
       ecmaVersion: 2022,
       sourceType: "commonjs",
       globals: globals.node,
+    },
+  },
+  {
+    files: ["src/codemirror/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: globals.browser,
     },
   },
 ];

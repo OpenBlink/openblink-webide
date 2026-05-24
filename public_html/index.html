@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="css/console.css" />
     <link rel="stylesheet" href="css/history.css" />
     <link rel="stylesheet" href="css/simulator.css" />
-    <link rel="stylesheet" href="codemirror/codemirror.css" />
-    <link rel="stylesheet" href="codemirror/theme/dracula.css" />
   </head>
   <body>
     <div class="header-container">
@@ -119,7 +117,7 @@
                   </div>
                 </div>
               </div>
-              <textarea id="ruby-code"></textarea>
+              <div id="ruby-editor"></div>
             </div>
           </div>
         </div>
@@ -269,21 +267,7 @@
     </div>
 
     <script src="codemirror/codemirror.js"></script>
-    <script src="codemirror/mode/ruby/ruby.js"></script>
-    <script src="codemirror/addon/edit/matchbrackets.js"></script>
     <script>
-      var editor = CodeMirror.fromTextArea(
-        document.getElementById("ruby-code"),
-        {
-          mode: "ruby",
-          theme: "dracula",
-          lineNumbers: true,
-          matchBrackets: true,
-          autoCloseBrackets: true,
-        },
-      );
-      window.editor = editor;
-
       document
         .getElementById("clear-console")
         .addEventListener("click", function () {

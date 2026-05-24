@@ -109,7 +109,15 @@ const Simulator = (function () {
     try {
       setStatus("loading", "Loading mruby/c module...");
 
-      mrubycModule = await createMrubycModule();
+      if (typeof window.createMrubycModule !== "function") {
+        throw new Error(
+          "createMrubycModule is not defined. Please hard reload the page and try again.",
+        );
+      }
+
+      mrubycModule = await window.createMrubycModule({
+        locateFile: (path) => "mrubyc/" + path,
+      });
       mrubycModule._mrbc_wasm_init();
 
       boardLoader = new BoardLoader();
@@ -343,7 +351,7 @@ const Simulator = (function () {
       }
 
       // Compile the code using the existing compiler
-      const rubyCode = window.editor.getValue();
+      const rubyCode = window.editorView.state.doc.toString();
       const compileResult = Compiler.compile(rubyCode);
 
       if (!compileResult.success) {

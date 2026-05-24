@@ -285,11 +285,17 @@ const HistoryManager = (function () {
         );
       }
 
-      if (window.editor) {
+      if (window.editorView) {
         if (!FileManager.checkUnsavedChanges()) {
           return null;
         }
-        window.editor.setValue(code);
+        window.editorView.dispatch({
+          changes: {
+            from: 0,
+            to: window.editorView.state.doc.length,
+            insert: code,
+          },
+        });
       }
 
       return code;

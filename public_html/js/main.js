@@ -182,7 +182,7 @@ async function initializeApp() {
       UIManager.appendToConsole(loadedMsg);
     }
 
-    FileManager.initialize(window.editor);
+    FileManager.initialize(window.editorView);
     HistoryManager.initialize();
   } finally {
     hideLoadingOverlay();
@@ -232,7 +232,7 @@ function setupEventWiring() {
     UIManager.setRunButtonEnabled(false);
 
     try {
-      const rubyCode = window.editor.getValue();
+      const rubyCode = window.editorView.state.doc.toString();
       const slot = UIManager.getSelectedSlot();
 
       const compileResult = Compiler.compile(rubyCode);
@@ -440,17 +440,17 @@ Module.onRuntimeInitialized = () => {
   initializeApp();
 };
 
-// Fallback: if Module.onRuntimeInitialized is not called within 3 seconds, initialize anyway
+// Fallback: initialize only when the Emscripten runtime has already completed.
 setTimeout(() => {
-  if (typeof Module !== "undefined" && Module.calledRun !== true) {
-    Logger.scope("main").error(
-      "Emscripten runtime initialization timeout, forcing initialization",
-    );
-    initializeApp();
-  } else if (typeof Module !== "undefined" && Module.calledRun === true) {
+  if (typeof Module === "undefined" || Module.calledRun !== true) {
     Logger.scope("main").info(
-      "Emscripten runtime already initialized, calling initializeApp",
+      "Emscripten runtime is still initializing; waiting for onRuntimeInitialized.",
     );
-    initializeApp();
+    return;
   }
+
+  Logger.scope("main").info(
+    "Emscripten runtime already initialized, calling initializeApp",
+  );
+  initializeApp();
 }, 3000);

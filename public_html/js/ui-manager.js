@@ -468,7 +468,7 @@ const UIManager = (function () {
 
       simulatorLoading = true;
 
-      const loadScriptWithRetry = async (src) => {
+      const loadScriptWithRetry = async (src, validate) => {
         let lastError = null;
 
         for (
@@ -492,6 +492,11 @@ const UIManager = (function () {
 
               script.onload = () => {
                 clearTimeout(timeoutId);
+                if (validate && !validate()) {
+                  if (script.parentNode) script.parentNode.removeChild(script);
+                  reject(new Error("Loaded script did not initialize: " + src));
+                  return;
+                }
                 resolve();
               };
               script.onerror = () => {
@@ -520,9 +525,83 @@ const UIManager = (function () {
         throw lastError;
       };
 
+      const loadMrubycModuleFactoryWithRetry = async () => {
+        const src = "mrubyc/mrubyc.js";
+        let lastError = null;
+
+        for (
+          let attempt = 0;
+          attempt < Config.retries.scriptLoadMaxAttempts;
+          attempt++
+        ) {
+          try {
+            const response = await fetch(src, {
+              credentials: "same-origin",
+              cache: "no-store",
+            });
+            if (!response.ok) {
+              throw new Error(response.status + " : " + response.url);
+            }
+
+            const source = await response.text();
+            const hasImportMeta = source.includes("import" + ".meta");
+            const hasDefaultExport = /\bexport\s+default\b/.test(source);
+            let moduleFactory = null;
+
+            if (hasImportMeta || hasDefaultExport) {
+              const absoluteScriptUrl = new URL(src, window.location.href).href;
+              const normalizedSource = source.replace(
+                /\bimport\.meta\.url\b/g,
+                JSON.stringify(absoluteScriptUrl),
+              );
+              const moduleSource = hasDefaultExport
+                ? normalizedSource
+                : normalizedSource +
+                  "\nexport default typeof createMrubycModule === 'function' ? createMrubycModule : undefined;";
+              const moduleUrl = URL.createObjectURL(
+                new Blob([moduleSource], { type: "text/javascript" }),
+              );
+              try {
+                const moduleNamespace = await import(moduleUrl);
+                moduleFactory =
+                  moduleNamespace.default || moduleNamespace.createMrubycModule;
+              } finally {
+                URL.revokeObjectURL(moduleUrl);
+              }
+            } else {
+              moduleFactory = new Function(
+                source +
+                  "\nreturn typeof createMrubycModule === 'function' ? createMrubycModule : undefined;",
+              )();
+            }
+
+            if (typeof moduleFactory !== "function") {
+              throw new Error("mrubyc module factory was not found: " + src);
+            }
+
+            window.createMrubycModule = moduleFactory;
+            return;
+          } catch (error) {
+            lastError = error;
+            log.warn(
+              `Script load attempt ${attempt + 1}/${Config.retries.scriptLoadMaxAttempts} failed for ${src}:`,
+              error.message,
+            );
+
+            if (attempt < Config.retries.scriptLoadMaxAttempts - 1) {
+              const delay =
+                Config.timeouts.fetchRetryInitialDelay * Math.pow(2, attempt);
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+          }
+        }
+
+        throw lastError;
+      };
+
       simulatorLoadPromise = (async () => {
         try {
-          await loadScriptWithRetry("mrubyc/mrubyc.js");
+          await loadMrubycModuleFactoryWithRetry();
           await loadScriptWithRetry("lib/board-loader.js");
           await loadScriptWithRetry("js/simulator.js");
           simulatorLoaded = true;

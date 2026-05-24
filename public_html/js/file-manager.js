@@ -4,13 +4,13 @@
  */
 
 const FileManager = (function () {
-  let editor = null;
+  let editorView = null;
   let currentFile = null;
   let isDirty = false;
 
   function setupChangeTracking() {
-    if (editor) {
-      editor.on("change", () => {
+    if (editorView) {
+      window.addEventListener("openblink:editor-doc-changed", () => {
         isDirty = true;
       });
     }
@@ -27,7 +27,7 @@ const FileManager = (function () {
 
   return {
     initialize: function (editorInstance) {
-      editor = editorInstance;
+      editorView = editorInstance;
       setupChangeTracking();
       setupBeforeUnload();
     },
@@ -53,8 +53,14 @@ const FileManager = (function () {
         const reader = new FileReader();
         reader.onload = (event) => {
           const content = event.target.result;
-          if (editor) {
-            editor.setValue(content);
+          if (editorView) {
+            editorView.dispatch({
+              changes: {
+                from: 0,
+                to: editorView.state.doc.length,
+                insert: content,
+              },
+            });
             currentFile = file.name;
             isDirty = false;
             this.updateFilenameInput();
@@ -71,7 +77,7 @@ const FileManager = (function () {
     },
 
     saveFile: function () {
-      if (!editor) return;
+      if (!editorView) return;
 
       const filenameInput = document.getElementById("filename-input");
       let filename = filenameInput ? filenameInput.value.trim() : "";
@@ -83,7 +89,7 @@ const FileManager = (function () {
         filename += ".rb";
       }
 
-      const content = editor.getValue();
+      const content = editorView.state.doc.toString();
       const blob = new Blob([content], { type: "text/plain" });
       const url = URL.createObjectURL(blob);
 

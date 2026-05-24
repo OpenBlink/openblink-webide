@@ -75,8 +75,14 @@ const BoardManager = (function () {
         currentBoard = boards[0];
         UIManager.populateBoardSelector(boards);
 
-        if (currentBoard.sampleCode && window.editor) {
-          window.editor.setValue(currentBoard.sampleCode);
+        if (currentBoard.sampleCode && window.editorView) {
+          window.editorView.dispatch({
+            changes: {
+              from: 0,
+              to: window.editorView.state.doc.length,
+              insert: currentBoard.sampleCode,
+            },
+          });
           if (
             typeof FileManager !== "undefined" &&
             typeof FileManager.markClean === "function"
@@ -120,8 +126,14 @@ const BoardManager = (function () {
 
       currentBoard = board;
 
-      if (board.sampleCode && window.editor) {
-        window.editor.setValue(board.sampleCode);
+      if (board.sampleCode && window.editorView) {
+        window.editorView.dispatch({
+          changes: {
+            from: 0,
+            to: window.editorView.state.doc.length,
+            insert: board.sampleCode,
+          },
+        });
         FileManager.markClean();
       }
 

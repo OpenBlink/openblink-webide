@@ -6,9 +6,35 @@
 
 const Compiler = (function () {
   // Note: Global t() helper is defined in i18n.js
+  function isRuntimeReady() {
+    return (
+      typeof Module !== "undefined" &&
+      Module.FS &&
+      typeof Module.FS.writeFile === "function" &&
+      typeof Module.FS.readFile === "function" &&
+      typeof Module._malloc === "function" &&
+      typeof Module._free === "function" &&
+      typeof Module.stringToUTF8 === "function" &&
+      typeof Module.setValue === "function" &&
+      typeof Module._main === "function"
+    );
+  }
 
   return {
+    isReady: isRuntimeReady,
+
     compile: function (rubyCode) {
+      if (!isRuntimeReady()) {
+        const errorMsg =
+          (typeof t === "function" && t("compiler.runtimeNotReady")) ||
+          "mrbc runtime is not ready. Please reload the page and try again.";
+        return {
+          success: false,
+          error: errorMsg,
+          compileTime: 0,
+        };
+      }
+
       const sourceFileName = "temp.rb";
       const outputFileName = "temp.mrb";
 

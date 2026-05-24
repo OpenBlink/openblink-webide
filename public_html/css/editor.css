@@ -21,7 +21,7 @@
   gap: 8px;
 }
 
-.CodeMirror {
+#ruby-editor .cm-editor {
   height: auto;
   min-height: 200px;
   max-height: 400px;
@@ -31,13 +31,20 @@
   font-family: "Fira Code", "Monaco", "Menlo", monospace;
 }
 
-.CodeMirror-scroll {
+#ruby-editor .cm-scroller {
   min-height: 200px;
+  max-height: 400px;
+  overflow: auto;
 }
 
-.CodeMirror-focused {
+#ruby-editor .cm-editor.cm-focused {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+#ruby-editor .cm-content {
+  font-family: "Fira Code", "Monaco", "Menlo", monospace;
+  font-size: 13px;
 }
 
 .file-info {
