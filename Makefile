@@ -144,7 +144,7 @@ clean: clean-mrbc clean-mrubyc clean-codemirror
 
 clean-all: clean
 	@echo "Cleaning all mrubyc artifacts including auto-generated files..."
-	cd vendor/mrubyc && make clean_all
+	cd vendor/mrubyc && make clean
 
 clean-mrbc:
 	@echo "Cleaning mrbc build artifacts..."
