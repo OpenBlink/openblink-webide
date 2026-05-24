@@ -449,7 +449,11 @@ const UIManager = (function () {
       if (!runSimulatorButton) return;
 
       const hasSimulator = BoardManager.hasSimulatorSupport(board);
-      runSimulatorButton.disabled = !hasSimulator;
+      const simulatorRunning =
+        typeof Simulator !== "undefined" &&
+        typeof Simulator.isRunning === "function" &&
+        Simulator.isRunning();
+      runSimulatorButton.disabled = !hasSimulator || simulatorRunning;
       const availableTitle =
         t("simulator.available") || "Run code in browser simulator";
       const unavailableTitle =
@@ -468,7 +472,7 @@ const UIManager = (function () {
 
       simulatorLoading = true;
 
-      const loadScriptWithRetry = async (src, validate) => {
+      const loadScriptWithRetry = async (src) => {
         let lastError = null;
 
         for (
@@ -492,11 +496,6 @@ const UIManager = (function () {
 
               script.onload = () => {
                 clearTimeout(timeoutId);
-                if (validate && !validate()) {
-                  if (script.parentNode) script.parentNode.removeChild(script);
-                  reject(new Error("Loaded script did not initialize: " + src));
-                  return;
-                }
                 resolve();
               };
               script.onerror = () => {
@@ -535,48 +534,14 @@ const UIManager = (function () {
           attempt++
         ) {
           try {
-            const response = await fetch(src, {
-              credentials: "same-origin",
-              cache: "no-store",
-            });
-            if (!response.ok) {
-              throw new Error(response.status + " : " + response.url);
-            }
-
-            const source = await response.text();
-            const hasImportMeta = source.includes("import" + ".meta");
-            const hasDefaultExport = /\bexport\s+default\b/.test(source);
-            let moduleFactory = null;
-
-            if (hasImportMeta || hasDefaultExport) {
-              const absoluteScriptUrl = new URL(src, window.location.href).href;
-              const normalizedSource = source.replace(
-                /\bimport\.meta\.url\b/g,
-                JSON.stringify(absoluteScriptUrl),
-              );
-              const moduleSource = hasDefaultExport
-                ? normalizedSource
-                : normalizedSource +
-                  "\nexport default typeof createMrubycModule === 'function' ? createMrubycModule : undefined;";
-              const moduleUrl = URL.createObjectURL(
-                new Blob([moduleSource], { type: "text/javascript" }),
-              );
-              try {
-                const moduleNamespace = await import(moduleUrl);
-                moduleFactory =
-                  moduleNamespace.default || moduleNamespace.createMrubycModule;
-              } finally {
-                URL.revokeObjectURL(moduleUrl);
-              }
-            } else {
-              moduleFactory = new Function(
-                source +
-                  "\nreturn typeof createMrubycModule === 'function' ? createMrubycModule : undefined;",
-              )();
-            }
+            const moduleNamespace = await import(
+              new URL(src, window.location.href).href
+            );
+            const moduleFactory =
+              moduleNamespace.default || moduleNamespace.createMrubycModule;
 
             if (typeof moduleFactory !== "function") {
-              throw new Error("mrubyc module factory was not found: " + src);
+              throw new Error("module factory was not found: " + src);
             }
 
             window.createMrubycModule = moduleFactory;

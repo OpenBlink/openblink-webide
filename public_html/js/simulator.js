@@ -15,6 +15,9 @@ const Simulator = (function () {
   let boardLoader = null;
   let initialized = false;
   let simulatorPanel = null;
+  let activeRuntimeId = 0;
+  let activeRunId = 0;
+  let currentBoardName = null;
 
   /**
    * Append output to the simulator console
@@ -56,6 +59,59 @@ const Simulator = (function () {
     }
     if (statusText) {
       statusText.textContent = text;
+    }
+  }
+
+  function isRuntimeActive(runtimeId) {
+    return runtimeId === activeRuntimeId;
+  }
+
+  function appendRuntimeOutput(runtimeId, text, className) {
+    if (isRuntimeActive(runtimeId)) {
+      appendOutput(text, className);
+    }
+  }
+
+  function cleanupRuntimeModule(module) {
+    if (module && typeof window.cleanupPixelsAPI === "function") {
+      window.cleanupPixelsAPI(module);
+    }
+  }
+
+  function stopRuntimeModule(module) {
+    if (module && typeof module._mrbc_wasm_stop === "function") {
+      module._mrbc_wasm_stop();
+    }
+  }
+
+  function disposeRuntime() {
+    const moduleToDispose = mrubycModule;
+    const wasRunning = isRunning;
+
+    activeRuntimeId += 1;
+    activeRunId += 1;
+
+    if (!wasRunning) {
+      cleanupRuntimeModule(moduleToDispose);
+    } else {
+      stopRuntimeModule(moduleToDispose);
+    }
+
+    const boardUIContainer = document.getElementById("simulator-board-ui");
+    if (boardLoader && typeof boardLoader.cleanupBoard === "function") {
+      boardLoader.cleanupBoard(boardUIContainer);
+    }
+
+    mrubycModule = null;
+    boardLoader = null;
+    initialized = false;
+    isRunning = false;
+    currentBoardName = null;
+  }
+
+  function defineBoardAPI() {
+    if (mrubycModule && typeof window.definePixelsAPI === "function") {
+      window.definePixelsAPI(mrubycModule, activeRuntimeId);
     }
   }
 
@@ -115,8 +171,18 @@ const Simulator = (function () {
         );
       }
 
+      const runtimeId = activeRuntimeId + 1;
+      activeRuntimeId = runtimeId;
+
       mrubycModule = await window.createMrubycModule({
         locateFile: (path) => "mrubyc/" + path,
+        mrubycOutput: (text) => appendRuntimeOutput(runtimeId, text),
+        mrubycError: (text) => appendRuntimeOutput(runtimeId, text, "error"),
+        mrubycOnTaskCreated: () => {
+          if (isRuntimeActive(runtimeId)) {
+            defineBoardAPI();
+          }
+        },
       });
       mrubycModule._mrbc_wasm_init();
 
@@ -147,6 +213,10 @@ const Simulator = (function () {
   async function runBytecode(bytecode) {
     if (!mrubycModule || isRunning) return;
 
+    const module = mrubycModule;
+    const runtimeId = activeRuntimeId;
+    const runId = activeRunId + 1;
+    activeRunId = runId;
     isRunning = true;
     setStatus("running", "Running bytecode...");
 
@@ -157,20 +227,23 @@ const Simulator = (function () {
 
     let bytecodePtr = 0;
     try {
-      bytecodePtr = mrubycModule._malloc(bytecode.length);
+      bytecodePtr = module._malloc(bytecode.length);
       if (!bytecodePtr) {
         throw new Error("Memory allocation failed in WebAssembly module.");
       }
-      const heapU8 = new Uint8Array(mrubycModule.wasmMemory.buffer);
-      heapU8.set(bytecode, bytecodePtr);
+      module.HEAPU8.set(bytecode, bytecodePtr);
 
-      const result = await mrubycModule.ccall(
+      const result = await module.ccall(
         "mrbc_wasm_run",
         "number",
         ["number", "number"],
         [bytecodePtr, bytecode.length],
         { async: true },
       );
+
+      if (!isRuntimeActive(runtimeId) || activeRunId !== runId) {
+        return;
+      }
 
       appendOutput(
         "\n--- Execution End (return: " + result + ") ---\n",
@@ -186,26 +259,38 @@ const Simulator = (function () {
         );
       }
     } catch (error) {
+      if (!isRuntimeActive(runtimeId) || activeRunId !== runId) {
+        return;
+      }
       appendOutput(
         "\n[ERROR] Execution failed: " + error.message + "\n",
         "error",
       );
     } finally {
       if (bytecodePtr) {
-        mrubycModule._free(bytecodePtr);
+        try {
+          module._free(bytecodePtr);
+        } catch (_error) {
+          void _error;
+        }
       }
-      isRunning = false;
-      setStatus("ready", "Simulator ready");
 
-      // Recompute the Run Simulator button state based on the current board
-      if (
-        typeof UIManager !== "undefined" &&
-        typeof BoardManager !== "undefined"
-      ) {
-        UIManager.updateSimulatorButton(BoardManager.getCurrentBoard());
+      if (isRuntimeActive(runtimeId) && activeRunId === runId) {
+        isRunning = false;
+        setStatus("ready", "Simulator ready");
+
+        // Recompute the Run Simulator button state based on the current board
+        if (
+          typeof UIManager !== "undefined" &&
+          typeof BoardManager !== "undefined"
+        ) {
+          UIManager.updateSimulatorButton(BoardManager.getCurrentBoard());
+        } else {
+          const runBtn = document.getElementById("run-simulator");
+          if (runBtn) runBtn.disabled = false;
+        }
       } else {
-        const runBtn = document.getElementById("run-simulator");
-        if (runBtn) runBtn.disabled = false;
+        cleanupRuntimeModule(module);
       }
     }
   }
@@ -226,6 +311,8 @@ const Simulator = (function () {
     isRunning: function () {
       return isRunning;
     },
+
+    isRuntimeActive: isRuntimeActive,
 
     /**
      * Initialize and show the simulator panel
@@ -260,33 +347,17 @@ const Simulator = (function () {
 
       simulatorPanel.style.display = "block";
 
-      // Set up global callbacks for mruby/c output
-      window.mrubycOutput = function (text) {
-        appendOutput(text);
-      };
-
-      window.mrubycError = function (text) {
-        appendOutput(text, "error");
-      };
-
-      window.mrubycOnTaskCreated = function () {
-        if (
-          boardLoader &&
-          mrubycModule &&
-          typeof window.definePixelsAPI === "function"
-        ) {
-          window.definePixelsAPI(mrubycModule);
-        }
-      };
-
       // Initialize module
       const success = await initModule();
       if (!success) {
         return false;
       }
 
-      // Load board configuration
       const boardUIContainer = document.getElementById("simulator-board-ui");
+
+      if (currentBoardName === boardName && boardLoader.isBoardLoaded()) {
+        return true;
+      }
 
       // Register the board if it has simulator support
       const boardConfig = BoardManager.getCurrentBoard();
@@ -302,6 +373,7 @@ const Simulator = (function () {
           boardUIContainer,
         );
         if (boardSuccess) {
+          currentBoardName = boardName;
           appendOutput("[INFO] Board loaded: " + boardName + "\n", "info");
         } else {
           appendOutput(
@@ -322,11 +394,7 @@ const Simulator = (function () {
         simulatorPanel.style.display = "none";
       }
 
-      isRunning = false;
-
-      window.mrubycOutput = null;
-      window.mrubycError = null;
-      window.mrubycOnTaskCreated = null;
+      disposeRuntime();
 
       if (
         typeof UIManager !== "undefined" &&
@@ -374,14 +442,6 @@ const Simulator = (function () {
 
       // Run the bytecode
       await runBytecode(compileResult.bytecode);
-    },
-
-    /**
-     * Get the mruby/c module instance
-     * @returns {Object|null} The module instance
-     */
-    getModule: function () {
-      return mrubycModule;
     },
 
     /**

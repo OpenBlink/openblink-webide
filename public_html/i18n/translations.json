@@ -98,6 +98,7 @@
     "simulator.output": "Simulator Output",
 
     "loading.setup": "Setting up...",
+    "loading.compiler": "Loading compiler...",
     "loading.boards": "Loading boards...",
 
     "device.knownDevices": "Known devices",
@@ -207,6 +208,7 @@
     "simulator.output": "模拟器输出",
 
     "loading.setup": "正在设置...",
+    "loading.compiler": "正在加载编译器...",
     "loading.boards": "正在加载开发板...",
 
     "device.knownDevices": "已知设备",
@@ -316,6 +318,7 @@
     "simulator.output": "模擬器輸出",
 
     "loading.setup": "正在設定...",
+    "loading.compiler": "正在載入編譯器...",
     "loading.boards": "正在載入開發板...",
 
     "device.knownDevices": "已知裝置",
@@ -425,6 +428,7 @@
     "simulator.output": "シミュレータ出力",
 
     "loading.setup": "設定中...",
+    "loading.compiler": "コンパイラを読み込み中...",
     "loading.boards": "ボードを読み込み中...",
 
     "device.knownDevices": "接続したことがあるデバイス",
@@ -534,6 +538,7 @@
     "simulator.output": "📝 シミュレータの メッセージ",
 
     "loading.setup": "⏳ じゅんびしています...",
+    "loading.compiler": "🔧 コンパイラを よみこんでいます...",
     "loading.boards": "📦 ボードを よみこんでいます...",
 
     "device.knownDevices": "📱 つないだことがある デバイス",

@@ -51,7 +51,7 @@ const BoardManager = (function () {
 
   return {
     loadBoards: async function () {
-      const boardList = ["m5stamps3", "xiao-nrf54l15"]; // Add new board names here
+      const boardList = ["xiao-nrf54l15", "m5stamps3"]; // Add new board names here
 
       for (const boardName of boardList) {
         const config = await fetchJSON(`boards/${boardName}/config.json`);

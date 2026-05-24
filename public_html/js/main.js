@@ -125,6 +125,9 @@ async function initializeApp() {
       return;
     }
 
+    updateLoadingMessage(t("loading.compiler") || "Loading compiler...");
+    await Compiler.initialize();
+
     // Phase 3G: enable debug logging when ?debug=ble is present
     if (new URLSearchParams(window.location.search).get("debug") === "ble") {
       Logger.setLevel("debug");
@@ -433,24 +436,8 @@ window.addEventListener("DOMContentLoaded", () => {
   };
   window.addEventListener("pagehide", cleanupBluetooth);
   window.addEventListener("beforeunload", cleanupBluetooth);
+
+  initializeApp().catch((error) => {
+    ErrorHandler.report(error, "Startup");
+  });
 });
-
-Module.onRuntimeInitialized = () => {
-  Logger.scope("main").info("Emscripten runtime initialized.");
-  initializeApp();
-};
-
-// Fallback: initialize only when the Emscripten runtime has already completed.
-setTimeout(() => {
-  if (typeof Module === "undefined" || Module.calledRun !== true) {
-    Logger.scope("main").info(
-      "Emscripten runtime is still initializing; waiting for onRuntimeInitialized.",
-    );
-    return;
-  }
-
-  Logger.scope("main").info(
-    "Emscripten runtime already initialized, calling initializeApp",
-  );
-  initializeApp();
-}, 3000);
