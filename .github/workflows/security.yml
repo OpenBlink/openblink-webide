@@ -25,7 +25,7 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
@@ -36,7 +36,7 @@ jobs:
     name: npm audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Use Node.js 24
         uses: actions/setup-node@v6
