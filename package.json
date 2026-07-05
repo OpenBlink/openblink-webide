@@ -20,7 +20,7 @@
     "htmlhint": "^1.9.2"
   },
   "dependencies": {
-    "@codemirror/language": "^6.12.3",
+    "@codemirror/language": "^6.12.4",
     "@codemirror/legacy-modes": "^6.5.3",
     "@codemirror/theme-one-dark": "^6.1.3",
     "codemirror": "^6.0.2",
