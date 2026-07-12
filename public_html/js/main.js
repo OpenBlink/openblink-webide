@@ -125,6 +125,12 @@ async function initializeApp() {
       return;
     }
 
+    // Registered before Compiler.initialize() so diagnostics emitted during
+    // compiler startup are not lost.
+    EventBus.on("COMPILER:OUTPUT", ({ message }) => {
+      UIManager.appendToConsole(message);
+    });
+
     updateLoadingMessage(t("loading.compiler") || "Loading compiler...");
     await Compiler.initialize();
 
@@ -356,10 +362,6 @@ function setupEventWiring() {
   });
 
   EventBus.on("BLE:CONSOLE_MESSAGE", ({ message }) => {
-    UIManager.appendToConsole(message);
-  });
-
-  EventBus.on("COMPILER:OUTPUT", ({ message }) => {
     UIManager.appendToConsole(message);
   });
 
