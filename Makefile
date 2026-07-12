@@ -15,6 +15,11 @@ SRC_DIR = src
 HAL_DIR = $(SRC_DIR)/lib/mrubyc
 BUILD_DIR = public_html
 
+# Build type: "release" (default) omits Emscripten runtime checks for speed
+# and size; "debug" (WASM_BUILD=debug) enables assertions and stack checks.
+WASM_BUILD ?= release
+export WASM_BUILD
+
 # Emscripten compiler
 CC = emcc
 RUBY ?= ruby
@@ -49,9 +54,6 @@ MRUBYC_EMFLAGS = -s WASM=1 \
                  -s MODULARIZE=1 \
                  -s EXPORT_ES6=1 \
                  -s EXPORT_NAME='createMrubycModule' \
-                 -s ASSERTIONS=1 \
-                 -s STACK_OVERFLOW_CHECK=1 \
-                 -s CHECK_NULL_WRITES=1 \
                  -s FILESYSTEM=0 \
                  -s ENVIRONMENT='web' \
                  -s EXIT_RUNTIME=0 \
@@ -59,6 +61,12 @@ MRUBYC_EMFLAGS = -s WASM=1 \
                  -s TEXTDECODER=2 \
                  -s INCOMING_MODULE_JS_API='["locateFile","print","printErr"]' \
                  --no-entry
+
+ifeq ($(WASM_BUILD),debug)
+MRUBYC_EMFLAGS += -s ASSERTIONS=1 \
+                  -s STACK_OVERFLOW_CHECK=1 \
+                  -s CHECK_NULL_WRITES=1
+endif
 
 # mruby/c source files
 MRUBYC_SRCS = $(MRUBYC_SRC_DIR)/alloc.c \
@@ -159,7 +167,7 @@ clean-mrubyc:
 clean-codemirror:
 	@echo "Cleaning bundle build artifacts..."
 	rm -rf public_html/codemirror
-	rm -f public_html/js/app.js
+	rm -f public_html/js/app.js public_html/js/compiler-worker.js
 
 # Rebuild
 rebuild: clean-all all

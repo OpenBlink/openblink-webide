@@ -15,6 +15,7 @@ const isWatch = process.argv.includes("--watch");
 const outputDir = "public_html/codemirror";
 const outputFile = `${outputDir}/codemirror.js`;
 const appOutputFile = "public_html/js/app.js";
+const workerOutputFile = "public_html/js/compiler-worker.js";
 const bundledPackages = [
   "codemirror",
   "@codemirror/autocomplete",
@@ -107,10 +108,24 @@ async function build() {
     outfile: appOutputFile,
   };
 
+  // The compiler worker is a module worker so it can dynamically import the
+  // Emscripten mrbc ES module at runtime.
+  const workerOptions = {
+    ...commonOptions,
+    format: "esm",
+    entryPoints: ["src/app/compiler-worker.js"],
+    outfile: workerOutputFile,
+  };
+
   if (isWatch) {
     const codemirrorContext = await esbuild.context(codemirrorOptions);
     const appContext = await esbuild.context(appOptions);
-    await Promise.all([codemirrorContext.watch(), appContext.watch()]);
+    const workerContext = await esbuild.context(workerOptions);
+    await Promise.all([
+      codemirrorContext.watch(),
+      appContext.watch(),
+      workerContext.watch(),
+    ]);
     console.log("Watching CodeMirror and app bundles...");
     return;
   }
@@ -118,6 +133,7 @@ async function build() {
   await Promise.all([
     esbuild.build(codemirrorOptions),
     esbuild.build(appOptions),
+    esbuild.build(workerOptions),
   ]);
 }
 

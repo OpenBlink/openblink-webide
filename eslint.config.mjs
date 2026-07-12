@@ -31,6 +31,7 @@ export default [
       "vendor/mrubyc/**",
       "public_html/codemirror/**",
       "public_html/js/app.js",
+      "public_html/js/compiler-worker.js",
       "public_html/mrbc/**",
       "public_html/mrubyc/**",
     ],

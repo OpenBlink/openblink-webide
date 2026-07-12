@@ -13,6 +13,7 @@ const requiredFiles = [
   { path: "public_html/codemirror/codemirror.js", minBytes: 1000 },
   { path: "public_html/codemirror/LICENSE", minBytes: 100 },
   { path: "public_html/js/app.js", minBytes: 1000 },
+  { path: "public_html/js/compiler-worker.js", minBytes: 1000 },
   { path: "public_html/mrbc/LICENSE.txt", minBytes: 100 },
   { path: "public_html/mrbc/mrbc.js", minBytes: 1000 },
   { path: "public_html/mrbc/mrbc.wasm", minBytes: 1000 },

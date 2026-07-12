@@ -12,6 +12,10 @@ MRuby::Build.new do |conf|
   conf.disable_presym
 end
 
+# WASM_BUILD=debug enables Emscripten runtime checks; the default release
+# build omits them for speed and size.
+wasm_debug = ENV['WASM_BUILD'] == 'debug'
+
 MRuby::Build.new('emscripten') do |conf|
   toolchain :emscripten
 
@@ -27,7 +31,8 @@ MRuby::Build.new('emscripten') do |conf|
     '-O3',
     '-flto',
     '-sWASM=1',
-    '-sENVIRONMENT=web',
+    # "worker" is required because the WebIDE runs mrbc inside a Web Worker.
+    '-sENVIRONMENT=web,worker',
     '-sSTRICT=1',
     '-sMODULARIZE=1',
     '-sEXPORT_ES6=1',
@@ -38,16 +43,21 @@ MRuby::Build.new('emscripten') do |conf|
     '-sABORTING_MALLOC=1',
     '-sFORCE_FILESYSTEM=1',
     '-sINVOKE_RUN=0',
-    '-sASSERTIONS=1',
     '-sDYNAMIC_EXECUTION=0',
     '-sEVAL_CTORS=1',
     '-sTEXTDECODER=2',
-    '-sSTACK_OVERFLOW_CHECK=1',
-    '-sCHECK_NULL_WRITES=1',
     '-sEXPORTED_FUNCTIONS=["_main","_malloc","_free"]',
     '-sEXPORTED_RUNTIME_METHODS=["stringToUTF8","setValue","FS"]',
     '-sINCOMING_MODULE_JS_API=["locateFile","print","printErr"]'
   ]
+
+  if wasm_debug
+    link_flags.concat(%w[
+      -sASSERTIONS=1
+      -sSTACK_OVERFLOW_CHECK=1
+      -sCHECK_NULL_WRITES=1
+    ])
+  end
 
   conf.cc.flags.concat(compile_flags)
   conf.cxx.flags.concat(compile_flags)
