@@ -48,8 +48,8 @@ export function createConfigStub() {
       defaultMTU: 20,
       dataHeaderSize: 6,
       programHeaderSize: 8,
-      crcPolynomial: 0xd175,
-      crcInitial: 0xffff,
+      crcPoly: 0xd175,
+      crcInit: 0xffff,
     },
     timeouts: {
       bleWrite: 100,
