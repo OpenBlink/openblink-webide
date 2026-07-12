@@ -129,6 +129,10 @@ export const Compiler = (function () {
               "Compiler worker failed: " +
                 (errorEvent.message || "unknown error"),
             );
+            workerReady = false;
+            worker = null;
+            initializationPromise = null;
+            candidate.terminate();
           });
           worker = candidate;
           workerReady = true;
