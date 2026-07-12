@@ -3,7 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const ErrorHandler = (function () {
+import { Logger } from "./logger.js";
+import { t } from "./i18n.js";
+import { UIManager } from "./ui-manager.js";
+
+export const ErrorHandler = (function () {
   const log = Logger.scope("ErrorHandler");
 
   /** Buffer for errors that arrive before UIManager is initialized. */

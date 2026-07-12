@@ -3,18 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
-import { loadScript } from "./helpers/load-module.js";
+import { describe, it, expect } from "vitest";
+import { BLEProtocol } from "../src/app/ble-protocol.js";
 
 describe("BLEProtocol packet builders", () => {
-  let BLEProtocol;
-
-  beforeAll(() => {
-    BLEProtocol = loadScript("public_html/js/ble-protocol.js", ["BLEProtocol"], {
-      navigator: {},
-    }).BLEProtocol;
-  });
-
   it("builds a data chunk with header and payload", () => {
     const content = new Uint8Array([0x10, 0x20, 0x30, 0x40, 0x50]);
     const buf = BLEProtocol.buildDataChunk(2, 10, content);

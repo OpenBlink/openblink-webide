@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const FileManager = (function () {
+import { UIManager } from "./ui-manager.js";
+
+export const FileManager = (function () {
   let editorView = null;
   let currentFile = null;
   let isDirty = false;

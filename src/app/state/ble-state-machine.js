@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "../config.js";
+import { Logger } from "../logger.js";
+import { BLEProtocol } from "../ble-protocol.js";
+import { BLEState, isBLETransitionValid } from "./ble-states.js";
+import { BLECommandQueue } from "./ble-command-queue.js";
+import { BLEConnection } from "./ble-connection.js";
+import { BLETransfer } from "./ble-transfer.js";
+
 /**
  * BLEStateMachine - Facade managing BLE connection state and lifecycle.
  *
@@ -14,7 +22,7 @@
  *   init(bus) / getState() / isConnected() / canTransfer() / getNegotiatedMTU()
  *   connect() / disconnect() / sendReset() / sendReload() / startTransfer() / cleanup()
  */
-const BLEStateMachine = (function () {
+export const BLEStateMachine = (function () {
   const log = Logger.scope("BLEStateMachine");
 
   // ── State ───────────────────────────────────────────────────────────────

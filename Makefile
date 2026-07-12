@@ -119,11 +119,11 @@ mrbc: check-emcc
 mrubyc: check-emcc mrubyc-autogen $(MRUBYC_OUTPUT_DIR) $(MRUBYC_OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
 
-# Build CodeMirror
+# Build CodeMirror and app bundles
 codemirror:
-	@echo "Building CodeMirror..."
-	npm run build:codemirror
-	@echo "CodeMirror build complete. Output: public_html/codemirror/"
+	@echo "Building CodeMirror and app bundles..."
+	npm run build
+	@echo "Bundle build complete. Output: public_html/codemirror/, public_html/js/app.js"
 
 # Generate mrubyc auto-generated files
 mrubyc-autogen: check-ruby-autogen
@@ -157,8 +157,9 @@ clean-mrubyc:
 	cd vendor/mrubyc/src && rm -f _autogen_*.h
 
 clean-codemirror:
-	@echo "Cleaning CodeMirror build artifacts..."
+	@echo "Cleaning bundle build artifacts..."
 	rm -rf public_html/codemirror
+	rm -f public_html/js/app.js
 
 # Rebuild
 rebuild: clean-all all
@@ -173,7 +174,7 @@ help:
 	@echo "  check-ruby-autogen - Verify Ruby can run mruby/c generators"
 	@echo "  mrbc        - Build mrbc (mruby bytecode compiler)"
 	@echo "  mrubyc      - Build mrubyc (mruby/c VM for simulator)"
-	@echo "  codemirror  - Build CodeMirror from npm"
+	@echo "  codemirror  - Build CodeMirror and app bundles from npm"
 	@echo "  mrubyc-autogen - Generate mrubyc auto-generated files"
 	@echo "  clean       - Remove all build artifacts"
 	@echo "  clean-mrbc  - Remove mrbc build artifacts"

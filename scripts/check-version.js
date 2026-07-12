@@ -7,7 +7,7 @@ const path = require("path");
 
 const rootDir = path.resolve(__dirname, "..");
 const packageJsonPath = path.join(rootDir, "package.json");
-const mainJsPath = path.join(rootDir, "public_html", "js", "main.js");
+const mainJsPath = path.join(rootDir, "src", "app", "main.js");
 
 function fail(message) {
   console.error(message);
@@ -25,13 +25,13 @@ let mainJs;
 try {
   mainJs = fs.readFileSync(mainJsPath, "utf8");
 } catch (error) {
-  fail(`Unable to read public_html/js/main.js: ${error.message}`);
+  fail(`Unable to read src/app/main.js: ${error.message}`);
 }
 
 const match =
   /const\s+OPENBLINK_WEBIDE_VERSION\s*=\s*["']([^"']+)["']\s*;/.exec(mainJs);
 if (!match) {
-  fail("OPENBLINK_WEBIDE_VERSION was not found in public_html/js/main.js");
+  fail("OPENBLINK_WEBIDE_VERSION was not found in src/app/main.js");
 }
 
 const appVersion = match[1];

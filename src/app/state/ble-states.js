@@ -7,7 +7,7 @@
  * BLEState - Frozen BLE state constants and transition validation.
  * Single source of truth for all state names used by BLEStateMachine.
  */
-const BLEState = Object.freeze({
+export const BLEState = Object.freeze({
   DISCONNECTED: "DISCONNECTED",
   CONNECTING: "CONNECTING",
   CONNECTED: "CONNECTED",
@@ -20,7 +20,7 @@ const BLEState = Object.freeze({
  * Valid state transition map.
  * Key: current state, Value: array of allowed next states.
  */
-const BLE_VALID_TRANSITIONS = Object.freeze({
+export const BLE_VALID_TRANSITIONS = Object.freeze({
   [BLEState.DISCONNECTED]: Object.freeze([BLEState.CONNECTING]),
   [BLEState.CONNECTING]: Object.freeze([BLEState.CONNECTED, BLEState.DISCONNECTED]),
   [BLEState.CONNECTED]: Object.freeze([
@@ -44,7 +44,7 @@ const BLE_VALID_TRANSITIONS = Object.freeze({
  * @param {string} to - Target state
  * @returns {boolean}
  */
-function isBLETransitionValid(from, to) {
+export function isBLETransitionValid(from, to) {
   const allowed = BLE_VALID_TRANSITIONS[from];
   return Array.isArray(allowed) && allowed.includes(to);
 }

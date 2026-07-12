@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "../config.js";
+import { Logger } from "../logger.js";
+
 /**
  * BLECommandQueue - Serializes BLE GATT operations to prevent "GATT operation already in progress" errors.
  *
@@ -20,7 +23,7 @@
  *   BLECommandQueue.clear({ reason })
  *   BLECommandQueue.size()                             → number
  */
-const BLECommandQueue = (function () {
+export const BLECommandQueue = (function () {
   const log = Logger.scope("BLECommandQueue");
 
   let tail = Promise.resolve();

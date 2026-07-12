@@ -1,8 +1,11 @@
 // SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
 // SPDX-License-Identifier: BSD-3-Clause
 //
-// esbuild configuration for CodeMirror 6
-// Bundles CodeMirror modules from node_modules to public_html/codemirror/
+// esbuild configuration for the OpenBlink WebIDE browser bundles:
+//   - CodeMirror 6 (node_modules -> public_html/codemirror/)
+//   - Application core (src/app -> public_html/js/app.js)
+// js/simulator.js, lib/board-loader.js and boards/* stay as classic scripts
+// loaded on demand; the app bundle exposes the globals they rely on.
 
 import * as esbuild from "esbuild";
 import fs from "fs";
@@ -11,6 +14,7 @@ import path from "path";
 const isWatch = process.argv.includes("--watch");
 const outputDir = "public_html/codemirror";
 const outputFile = `${outputDir}/codemirror.js`;
+const appOutputFile = "public_html/js/app.js";
 const bundledPackages = [
   "codemirror",
   "@codemirror/autocomplete",
@@ -81,26 +85,40 @@ async function build() {
   fs.rmSync(outputDir, { recursive: true, force: true });
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const options = {
-    entryPoints: ["src/codemirror/editor.mjs"],
+  const commonOptions = {
     bundle: true,
-    outfile: outputFile,
     format: "iife",
     platform: "browser",
     target: "es2020",
     legalComments: "none",
     logLevel: "info",
+  };
+
+  const codemirrorOptions = {
+    ...commonOptions,
+    entryPoints: ["src/codemirror/editor.mjs"],
+    outfile: outputFile,
     plugins: [postBuildPlugin],
   };
 
+  const appOptions = {
+    ...commonOptions,
+    entryPoints: ["src/app/main.js"],
+    outfile: appOutputFile,
+  };
+
   if (isWatch) {
-    const context = await esbuild.context(options);
-    await context.watch();
-    console.log("Watching CodeMirror bundle...");
+    const codemirrorContext = await esbuild.context(codemirrorOptions);
+    const appContext = await esbuild.context(appOptions);
+    await Promise.all([codemirrorContext.watch(), appContext.watch()]);
+    console.log("Watching CodeMirror and app bundles...");
     return;
   }
 
-  await esbuild.build(options);
+  await Promise.all([
+    esbuild.build(codemirrorOptions),
+    esbuild.build(appOptions),
+  ]);
 }
 
 build().catch((err) => {

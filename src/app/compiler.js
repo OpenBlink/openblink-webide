@@ -4,7 +4,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const Compiler = (function () {
+import { I18n, t } from "./i18n.js";
+import { EventBus } from "./state/event-bus.js";
+
+export const Compiler = (function () {
   // Note: Global t() helper is defined in i18n.js
   const MRBC_MODULE_SRC = "mrbc/mrbc.js";
   let mrbcModule = null;

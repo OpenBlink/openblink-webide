@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "../config.js";
+import { Logger } from "../logger.js";
+import { BLECommandQueue } from "./ble-command-queue.js";
+
 /**
  * BLEConnection - Handles GATT connection, negotiation, and reconnection.
  *
@@ -17,7 +21,7 @@
  *   BLEConnection.tearDown(device)                   → Promise<void>
  *   BLEConnection.scheduleReconnect(device, attempt, signal, onConnected, onFailed)
  */
-const BLEConnection = (function () {
+export const BLEConnection = (function () {
   const log = Logger.scope("BLEConnection");
   const textDecoder = new TextDecoder();
 

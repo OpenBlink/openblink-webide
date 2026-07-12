@@ -3,7 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const HistoryManager = (function () {
+import { Logger } from "./logger.js";
+import { Utils } from "./utils.js";
+import { UIManager } from "./ui-manager.js";
+import { FileManager } from "./file-manager.js";
+
+export const HistoryManager = (function () {
   const log = Logger.scope("HistoryManager");
   const STORAGE_KEY = "openblink_history";
   const STORAGE_VERSION = 2;

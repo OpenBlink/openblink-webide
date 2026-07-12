@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
-import { loadScript } from "./helpers/load-module.js";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 function createChar() {
   const calls = [];
@@ -38,10 +37,13 @@ function deferred() {
 describe("BLECommandQueue", () => {
   let queue;
 
-  beforeEach(() => {
-    queue = loadScript("public_html/js/state/ble-command-queue.js", [
-      "BLECommandQueue",
-    ]).BLECommandQueue;
+  beforeEach(async () => {
+    // Re-import a fresh module instance so queue state does not leak
+    // between tests.
+    vi.resetModules();
+    ({ BLECommandQueue: queue } = await import(
+      "../src/app/state/ble-command-queue.js"
+    ));
   });
 
   it("propagates operation errors to the caller", async () => {

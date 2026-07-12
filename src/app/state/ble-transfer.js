@@ -3,6 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "../config.js";
+import { Logger } from "../logger.js";
+import { crc16_reflect } from "../lib/crc.js";
+import { BLEProtocol } from "../ble-protocol.js";
+import { BLECommandQueue } from "./ble-command-queue.js";
+
 /**
  * BLETransfer - Encapsulates the firmware transfer loop.
  *
@@ -14,7 +20,7 @@
  * Public API:
  *   BLETransfer.run(programChar, bytecode, slot, mtu, signal, onProgress) → Promise<void>
  */
-const BLETransfer = (function () {
+export const BLETransfer = (function () {
   const log = Logger.scope("BLETransfer");
 
   function _checkSignalAborted(signal) {

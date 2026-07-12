@@ -4,7 +4,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const UIManager = (function () {
+import { Config } from "./config.js";
+import { Logger } from "./logger.js";
+import { t } from "./i18n.js";
+import { BLEKnownDevices } from "./state/ble-known-devices.js";
+import { BLEStateMachine } from "./state/ble-state-machine.js";
+import { BoardManager } from "./board-manager.js";
+import { FileManager } from "./file-manager.js";
+
+export const UIManager = (function () {
   const log = Logger.scope("UIManager");
   const MAX_CONSOLE_LINES = 500;
 

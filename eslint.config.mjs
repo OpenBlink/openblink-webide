@@ -4,17 +4,14 @@
 import js from "@eslint/js";
 import globals from "globals";
 
-const browserGlobals = {
+// Globals shared between the app bundle and the dynamically loaded classic
+// scripts (js/simulator.js, lib/board-loader.js, boards/*).
+const legacyScriptGlobals = {
   ...globals.browser,
   Module: "readonly",
   createMrubycModule: "readonly",
-  I18n: "readonly",
   t: "readonly",
-  Utils: "readonly",
   UIManager: "readonly",
-  BLEProtocol: "readonly",
-  FileManager: "readonly",
-  HistoryManager: "readonly",
   BoardManager: "readonly",
   Compiler: "readonly",
   Simulator: "readonly",
@@ -22,20 +19,6 @@ const browserGlobals = {
   BOARD_CONFIG: "readonly",
   MrubycWasmAPI: "readonly",
   CRC16: "readonly",
-  ErrorHandler: "readonly",
-  crc16_reflect: "readonly",
-  EventBus: "readonly",
-  BLEStateMachine: "readonly",
-  Config: "readonly",
-  Logger: "readonly",
-  BLEState: "readonly",
-  BLE_VALID_TRANSITIONS: "readonly",
-  isBLETransitionValid: "readonly",
-  BLECommandQueue: "readonly",
-  BLEConnection: "readonly",
-  BLETransfer: "readonly",
-  BLEKnownDevices: "readonly",
-  NetUtils: "readonly",
 };
 
 export default [
@@ -47,6 +30,7 @@ export default [
       "vendor/mruby/**",
       "vendor/mrubyc/**",
       "public_html/codemirror/**",
+      "public_html/js/app.js",
       "public_html/mrbc/**",
       "public_html/mrubyc/**",
     ],
@@ -56,7 +40,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "script",
-      globals: browserGlobals,
+      globals: legacyScriptGlobals,
     },
     rules: {
       "no-redeclare": "off",
@@ -65,8 +49,31 @@ export default [
         "warn",
         {
           argsIgnorePattern: "^_|^(argc|colno|error)$",
-          varsIgnorePattern:
-            "^_|^(BLECommandQueue|BLEConnection|BLEKnownDevices|BLEProtocol|BLEState|BLEStateMachine|BLETransfer|BoardManager|Compiler|Config|EventBus|FileManager|HistoryManager|I18n|Logger|NetUtils|Simulator|UIManager|Utils|crc16_reflect|isBLETransitionValid|t)$",
+          varsIgnorePattern: "^_|^Simulator$",
+          caughtErrorsIgnorePattern: "^_|^e$",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/app/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        ...globals.browser,
+        // Provided by the dynamically loaded classic scripts.
+        Simulator: "readonly",
+        createMrubycModule: "readonly",
+      },
+    },
+    rules: {
+      "no-useless-escape": "off",
+      "no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_|^(argc|colno|error)$",
+          varsIgnorePattern: "^_",
           caughtErrorsIgnorePattern: "^_|^e$",
         },
       ],

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "./config.js";
+
 /**
  * Logger - Controlled logging utility for OpenBlink WebIDE.
  *
@@ -15,7 +17,7 @@
  *   const log = Logger.scope('BLEProtocol');
  *   log.warn('something happened');
  */
-const Logger = (function () {
+export const Logger = (function () {
   const LEVELS = Object.freeze({
     debug: 0,
     info: 1,
