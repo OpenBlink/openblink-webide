@@ -229,6 +229,18 @@ export const Compiler = (function () {
       }
 
       if (!isRuntimeReady(mrbcModule)) {
+        try {
+          await initializeRuntime();
+        } catch (_error) {
+          return notReadyResult();
+        }
+      }
+
+      if (workerReady) {
+        return compileInWorker(rubyCode);
+      }
+
+      if (!isRuntimeReady(mrbcModule)) {
         return notReadyResult();
       }
 
