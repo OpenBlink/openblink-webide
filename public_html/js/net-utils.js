@@ -22,6 +22,7 @@ const NetUtils = (function () {
   const log = Logger.scope("NetUtils");
 
   const _cache = new Map();
+  const _inflight = new Map();
 
   /**
    * Fetch a URL with AbortController timeout and exponential-backoff retry.
@@ -43,10 +44,30 @@ const NetUtils = (function () {
     // them would hand a consumed object to the second caller.
     const cacheable = useCache && parseAs !== "response";
     const cacheKey = `${url}:${parseAs}`;
-    if (cacheable && _cache.has(cacheKey)) {
-      return _cache.get(cacheKey);
+    if (cacheable) {
+      if (_cache.has(cacheKey)) {
+        return _cache.get(cacheKey);
+      }
+      // Deduplicate concurrent requests for the same resource.
+      if (_inflight.has(cacheKey)) {
+        return _inflight.get(cacheKey);
+      }
+      const promise = _doFetchWithRetry(url, timeout, maxAttempts, parseAs)
+        .then((result) => {
+          if (result !== null) _cache.set(cacheKey, result);
+          return result;
+        })
+        .finally(() => {
+          _inflight.delete(cacheKey);
+        });
+      _inflight.set(cacheKey, promise);
+      return promise;
     }
 
+    return _doFetchWithRetry(url, timeout, maxAttempts, parseAs);
+  }
+
+  async function _doFetchWithRetry(url, timeout, maxAttempts, parseAs) {
     let lastError = null;
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -76,7 +97,6 @@ const NetUtils = (function () {
             result = response;
         }
 
-        if (cacheable) _cache.set(cacheKey, result);
         return result;
       } catch (error) {
         clearTimeout(timeoutId);

@@ -6,6 +6,7 @@
 
 const UIManager = (function () {
   const log = Logger.scope("UIManager");
+  const MAX_CONSOLE_LINES = 500;
 
   let connectButton = null;
   let disconnectButton = null;
@@ -71,6 +72,10 @@ const UIManager = (function () {
       const line = document.createElement("div");
       line.textContent = msgStr;
       consoleOutput.appendChild(line);
+      // Cap the console to keep the DOM small during long sessions.
+      while (consoleOutput.childElementCount > MAX_CONSOLE_LINES) {
+        consoleOutput.removeChild(consoleOutput.firstElementChild);
+      }
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
     },
 

@@ -53,13 +53,16 @@ const BoardManager = (function () {
     loadBoards: async function () {
       const boardList = ["xiao-nrf54l15", "m5stamps3"]; // Add new board names here
 
-      for (const boardName of boardList) {
-        const config = await fetchJSON(`boards/${boardName}/config.json`);
-        if (config) {
-          const sampleCode = await fetchText(`boards/${boardName}/sample.rb`);
-          const reference = await fetchLocalizedReference(boardName);
-
-          boards.push({
+      // Fetch all board assets in parallel; Promise.all preserves boardList order.
+      const loaded = await Promise.all(
+        boardList.map(async (boardName) => {
+          const [config, sampleCode, reference] = await Promise.all([
+            fetchJSON(`boards/${boardName}/config.json`),
+            fetchText(`boards/${boardName}/sample.rb`),
+            fetchLocalizedReference(boardName),
+          ]);
+          if (!config) return null;
+          return {
             name: boardName,
             displayName: config.displayName || config.name,
             manufacturer: config.manufacturer,
@@ -67,9 +70,10 @@ const BoardManager = (function () {
             sampleCode: sampleCode || "",
             reference: reference || "",
             simulator: config.simulator || null,
-          });
-        }
-      }
+          };
+        }),
+      );
+      boards.push(...loaded.filter((b) => b !== null));
 
       if (boards.length > 0) {
         currentBoard = boards[0];
