@@ -53,6 +53,10 @@ jobs:
         id: version
         run: npm run check-version
 
+      - name: Unit tests
+        id: test
+        run: npm test
+
       - name: Lint summary
         if: always()
         run: |
