@@ -6,16 +6,9 @@
 const HistoryManager = (function () {
   const log = Logger.scope("HistoryManager");
   const STORAGE_KEY = "openblink_history";
+  const STORAGE_VERSION = 2;
   const MAX_CHECKPOINTS = 20;
   let history = [];
-
-  function sanitizeContent(content) {
-    return Utils.escapeHtml(content);
-  }
-
-  function unsanitizeContent(content) {
-    return Utils.unescapeHtml(content);
-  }
 
   function computeDiff(oldCode, newCode) {
     const oldLines = oldCode.split("\n");
@@ -43,11 +36,22 @@ const HistoryManager = (function () {
   function loadHistory() {
     try {
       const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        history = JSON.parse(stored);
-        if (!Array.isArray(history)) {
-          history = [];
-        }
+      if (!stored) return;
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        // Version 1 format stored HTML-escaped code; unescape on migration.
+        history = parsed.map((c) => ({
+          ...c,
+          code: Utils.unescapeHtml(c.code),
+        }));
+      } else if (
+        parsed &&
+        parsed.version === STORAGE_VERSION &&
+        Array.isArray(parsed.items)
+      ) {
+        history = parsed.items;
+      } else {
+        history = [];
       }
     } catch (e) {
       log.error("Failed to load history:", e);
@@ -55,18 +59,18 @@ const HistoryManager = (function () {
     }
   }
 
+  function serializeHistory() {
+    return JSON.stringify({ version: STORAGE_VERSION, items: history });
+  }
+
   function saveHistory() {
     try {
-      const serialized = JSON.stringify(history);
-      if (serialized.length > 5 * 1024 * 1024) {
-        while (
-          history.length > 1 &&
-          JSON.stringify(history).length > 4 * 1024 * 1024
-        ) {
-          history.shift();
-        }
+      let serialized = serializeHistory();
+      while (history.length > 1 && serialized.length > 4 * 1024 * 1024) {
+        history.shift();
+        serialized = serializeHistory();
       }
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+      sessionStorage.setItem(STORAGE_KEY, serialized);
     } catch (e) {
       log.error("Failed to save history:", e);
       if (e.name === "QuotaExceededError") {
@@ -77,7 +81,7 @@ const HistoryManager = (function () {
         ) {
           history.shift();
           try {
-            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+            sessionStorage.setItem(STORAGE_KEY, serializeHistory());
             break;
           } catch (retryError) {
             if (retryError.name !== "QuotaExceededError") {
@@ -109,7 +113,7 @@ const HistoryManager = (function () {
     const displayDiff = diff.slice(0, maxDiffLines);
 
     for (const item of displayDiff) {
-      const escapedContent = sanitizeContent(item.content);
+      const escapedContent = Utils.escapeHtml(item.content);
       const truncatedContent =
         escapedContent.length > 40
           ? escapedContent.substring(0, 40) + "..."
@@ -231,9 +235,7 @@ const HistoryManager = (function () {
     createCheckpoint: function (code, metadata) {
       const lastCheckpoint =
         history.length > 0 ? history[history.length - 1] : null;
-      const lastCode = lastCheckpoint
-        ? unsanitizeContent(lastCheckpoint.code)
-        : "";
+      const lastCode = lastCheckpoint ? lastCheckpoint.code : "";
 
       if (lastCode === code) {
         return null;
@@ -244,7 +246,7 @@ const HistoryManager = (function () {
       const checkpoint = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
         timestamp: Date.now(),
-        code: sanitizeContent(code),
+        code: code,
         diff: diff,
         metadata: {
           slot: metadata.slot || 2,
@@ -279,7 +281,7 @@ const HistoryManager = (function () {
         UIManager.appendToConsole("Restored to initial empty state");
       } else {
         const previousCheckpoint = history[checkpointIndex - 1];
-        code = unsanitizeContent(previousCheckpoint.code);
+        code = previousCheckpoint.code;
         UIManager.appendToConsole(
           `Restored to state before ${formatTimestamp(history[checkpointIndex].timestamp)}`,
         );

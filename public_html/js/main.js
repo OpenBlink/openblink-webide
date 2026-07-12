@@ -359,6 +359,10 @@ function setupEventWiring() {
     UIManager.appendToConsole(message);
   });
 
+  EventBus.on("COMPILER:OUTPUT", ({ message }) => {
+    UIManager.appendToConsole(message);
+  });
+
   EventBus.on("BLE:TRANSFER_STARTED", () => {
     UIManager.appendToConsole("Starting firmware transfer...");
   });
