@@ -19,6 +19,7 @@
  */
 const BLEConnection = (function () {
   const log = Logger.scope("BLEConnection");
+  const textDecoder = new TextDecoder();
 
   /** @type {WeakMap<BluetoothRemoteGATTCharacteristic, Function>} */
   const consoleHandlers = new WeakMap();
@@ -69,7 +70,7 @@ const BLEConnection = (function () {
    */
   async function _startNotifications(consoleChar, onMessage) {
     const handler = (event) => {
-      const value = new TextDecoder().decode(event.target.value);
+      const value = textDecoder.decode(event.target.value);
       if (onMessage) onMessage(value);
     };
     consoleHandlers.set(consoleChar, handler);

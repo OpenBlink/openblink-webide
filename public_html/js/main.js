@@ -132,7 +132,10 @@ async function initializeApp() {
     });
 
     updateLoadingMessage(t("loading.compiler") || "Loading compiler...");
-    await Compiler.initialize();
+    // Start the WASM compiler load without blocking the rest of the startup;
+    // it is awaited together with board loading below.
+    const compilerInit = Compiler.initialize();
+    compilerInit.catch(() => {}); // handled at the await below
 
     // Phase 3G: enable debug logging when ?debug=ble is present
     if (new URLSearchParams(window.location.search).get("debug") === "ble") {
@@ -182,7 +185,7 @@ async function initializeApp() {
     UIManager.appendToConsole(startedMsg);
 
     updateLoadingMessage(t("loading.boards") || "Loading boards...");
-    await BoardManager.loadBoards();
+    await Promise.all([compilerInit, BoardManager.loadBoards()]);
     const defaultBoard = BoardManager.getCurrentBoard();
     if (defaultBoard) {
       const loadedMsg =
@@ -365,13 +368,20 @@ function setupEventWiring() {
     UIManager.appendToConsole(message);
   });
 
+  let lastLoggedProgress = -1;
+
   EventBus.on("BLE:TRANSFER_STARTED", () => {
+    lastLoggedProgress = -1;
     UIManager.appendToConsole("Starting firmware transfer...");
   });
 
   EventBus.on("BLE:TRANSFER_PROGRESS", ({ sent, total }) => {
     const progress = Math.round((sent / total) * 100);
-    if (progress % 10 === 0 || progress === 100) {
+    if (
+      (progress % 10 === 0 || progress === 100) &&
+      progress !== lastLoggedProgress
+    ) {
+      lastLoggedProgress = progress;
       UIManager.appendToConsole(
         "Transfer progress: " + progress + "% (" + sent + "/" + total + ")",
       );
