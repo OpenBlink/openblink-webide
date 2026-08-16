@@ -25,31 +25,22 @@ const Compiler = (function () {
   }
 
   function appendCompilerOutput(text) {
-    const consoleOutput = document.getElementById("consoleOutput");
-    if (consoleOutput && text && text.trim() !== "") {
-      const line = document.createElement("div");
-      line.textContent = text;
-      consoleOutput.appendChild(line);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    if (text && text.trim() !== "") {
+      EventBus.emit("COMPILER:OUTPUT", { message: text });
     }
   }
 
   function appendCompilerError(text) {
-    const consoleOutput = document.getElementById("consoleOutput");
-    if (consoleOutput && text && text.trim() !== "") {
-      const line = document.createElement("div");
-      const prefix =
-        typeof I18n !== "undefined"
-          ? I18n.t("compiler.errorPrefix") || "Compiler Error: "
-          : "Compiler Error: ";
-      let errorText = prefix + text;
-      if (typeof I18n !== "undefined" && I18n.isEasyJapanese()) {
-        errorText = I18n.wrapCompilerError(text);
-      }
-      line.textContent = errorText;
-      consoleOutput.appendChild(line);
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    if (!text || text.trim() === "") return;
+    const prefix =
+      typeof I18n !== "undefined"
+        ? I18n.t("compiler.errorPrefix") || "Compiler Error: "
+        : "Compiler Error: ";
+    let errorText = prefix + text;
+    if (typeof I18n !== "undefined" && I18n.isEasyJapanese()) {
+      errorText = I18n.wrapCompilerError(text);
     }
+    EventBus.emit("COMPILER:OUTPUT", { message: errorText });
   }
 
   function getModuleOptions() {

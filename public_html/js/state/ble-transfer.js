@@ -7,8 +7,9 @@
  * BLETransfer - Encapsulates the firmware transfer loop.
  *
  * Sends bytecode to the device in chunks via BLECommandQueue, then issues
- * the program + reload commands.  Progress is reported via callbacks and
- * can be aborted at any chunk boundary via AbortSignal.
+ * the program + reload commands.  Packet buffers are built by BLEProtocol.
+ * Progress is reported via callbacks and can be aborted at any chunk
+ * boundary via AbortSignal.
  *
  * Public API:
  *   BLETransfer.run(programChar, bytecode, slot, mtu, signal, onProgress) → Promise<void>
@@ -22,46 +23,6 @@ const BLETransfer = (function () {
       err.name = "AbortError";
       throw err;
     }
-  }
-
-  /**
-   * Build a D-command (data chunk) buffer.
-   * @param {number} offset
-   * @param {number} chunkSize
-   * @param {Uint8Array} bytecode
-   * @returns {ArrayBuffer}
-   */
-  function _buildDataChunk(offset, chunkSize, bytecode) {
-    const actual = Math.min(chunkSize, bytecode.length - offset);
-    const buf = new ArrayBuffer(Config.ble.dataHeaderSize + actual);
-    const view = new DataView(buf);
-    view.setUint8(0, 0x01);
-    view.setUint8(1, "D".charCodeAt(0));
-    view.setUint16(2, offset, true);
-    view.setUint16(4, actual, true);
-    new Uint8Array(buf, Config.ble.dataHeaderSize, actual).set(
-      bytecode.subarray(offset, offset + actual),
-    );
-    return buf;
-  }
-
-  /**
-   * Build a P-command (program) buffer.
-   * @param {number} length - Total bytecode length
-   * @param {number} crc16
-   * @param {number} slot - 1 or 2
-   * @returns {ArrayBuffer}
-   */
-  function _buildProgramCommand(length, crc16, slot) {
-    const buf = new ArrayBuffer(Config.ble.programHeaderSize);
-    const view = new DataView(buf);
-    view.setUint8(0, 0x01);
-    view.setUint8(1, "P".charCodeAt(0));
-    view.setUint16(2, length, true);
-    view.setUint16(4, crc16, true);
-    view.setUint8(6, slot);
-    view.setUint8(7, 0);
-    return buf;
   }
 
   /**
@@ -92,7 +53,7 @@ const BLETransfer = (function () {
       _checkSignalAborted(signal);
 
       const chunkSize = Math.min(payloadSize, total - offset);
-      const buf = _buildDataChunk(offset, chunkSize, bytecode);
+      const buf = BLEProtocol.buildDataChunk(offset, chunkSize, bytecode);
 
       await BLECommandQueue.enqueueWrite(programChar, buf, {
         label: `data@${offset}`,
@@ -107,7 +68,7 @@ const BLETransfer = (function () {
 
     _checkSignalAborted(signal);
 
-    const programBuf = _buildProgramCommand(total, crc16, slot);
+    const programBuf = BLEProtocol.buildProgramCommand(total, crc16, slot);
     await BLECommandQueue.enqueueWrite(programChar, programBuf, {
       label: "programCmd",
       mode: "no-response",
