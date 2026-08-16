@@ -53,6 +53,10 @@ jobs:
         id: version
         run: npm run check-version
 
+      - name: Unit tests
+        id: test
+        run: npm test
+
       - name: Lint summary
         if: always()
         run: |
@@ -65,6 +69,7 @@ jobs:
           echo "| JSON validation | $(status ${{ steps.json.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Static assets | $(status ${{ steps.static.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Version | $(status ${{ steps.version.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Unit tests | $(status ${{ steps.test.outcome }}) |" >> "$GITHUB_STEP_SUMMARY"
 
   build-wasm:
     name: Build WASM

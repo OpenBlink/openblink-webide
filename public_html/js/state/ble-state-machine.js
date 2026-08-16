@@ -192,6 +192,18 @@ const BLEStateMachine = (function () {
     }
 
     // Count reconnect attempts regardless of current state (fixes TRANSFERRING bug)
+    _tryReconnect(device, "max_reconnects");
+  }
+
+  /**
+   * Attempt (or give up on) reconnection to a device.
+   * Increments the attempt counter, transitions to RECONNECTING and schedules
+   * the next attempt; when the attempt budget is exhausted, cleans up and
+   * transitions to DISCONNECTED with the given reason.
+   * @param {BluetoothDevice} device
+   * @param {string} failReason - Reason reported when attempts are exhausted
+   */
+  function _tryReconnect(device, failReason) {
     if (reconnectAttempts < Config.retries.bleReconnectMaxAttempts) {
       reconnectAttempts++;
       transition(BLEState.RECONNECTING, {
@@ -208,8 +220,8 @@ const BLEStateMachine = (function () {
       _scheduleReconnect(device, reconnectAttempts);
     } else {
       cleanupResources();
-      transition(BLEState.DISCONNECTED, { reason: "max_reconnects" });
-      _emit("BLE:DISCONNECTED", { reason: "max_reconnects" });
+      transition(BLEState.DISCONNECTED, { reason: failReason });
+      _emit("BLE:DISCONNECTED", { reason: failReason });
       _emit("BLE:RECONNECT_FAILED", {
         attempts: Config.retries.bleReconnectMaxAttempts,
       });
@@ -261,28 +273,7 @@ const BLEStateMachine = (function () {
       },
       (_err) => {
         reconnectHandle = null;
-        if (reconnectAttempts < Config.retries.bleReconnectMaxAttempts) {
-          reconnectAttempts++;
-          transition(BLEState.RECONNECTING, {
-            attempt: reconnectAttempts,
-            maxAttempts: Config.retries.bleReconnectMaxAttempts,
-          });
-          _emit("BLE:RECONNECTING", {
-            attempt: reconnectAttempts,
-            maxAttempts: Config.retries.bleReconnectMaxAttempts,
-            delay:
-              Config.timeouts.bleReconnectInitialDelay *
-              Math.pow(2, reconnectAttempts - 1),
-          });
-          _scheduleReconnect(device, reconnectAttempts);
-        } else {
-          cleanupResources();
-          transition(BLEState.DISCONNECTED, { reason: "reconnect_failed" });
-          _emit("BLE:DISCONNECTED", { reason: "reconnect_failed" });
-          _emit("BLE:RECONNECT_FAILED", {
-            attempts: Config.retries.bleReconnectMaxAttempts,
-          });
-        }
+        _tryReconnect(device, "reconnect_failed");
       },
     );
   }
@@ -386,6 +377,11 @@ const BLEStateMachine = (function () {
       if (connectAbortController) {
         connectAbortController.abort();
         connectAbortController = null;
+      }
+
+      if (transferAbortController) {
+        transferAbortController.abort();
+        transferAbortController = null;
       }
 
       if (

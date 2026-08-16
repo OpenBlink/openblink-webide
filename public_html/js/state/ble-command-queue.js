@@ -8,8 +8,10 @@
  *
  * All write/read/notify operations are chained via a promise tail so that at most
  * one GATT operation is in-flight at a time.  Each operation carries an individual
- * AbortSignal-based timeout; when a timeout fires the rejection is swallowed
- * by the tail's catch handler so subsequent operations are not blocked.
+ * timeout.  Errors (including timeouts) are propagated to the caller's promise;
+ * the internal tail always settles so subsequent operations are not blocked.
+ * After a timeout the tail keeps waiting for the underlying GATT operation to
+ * settle before starting the next one, so operations never overlap.
  *
  * Public API:
  *   BLECommandQueue.enqueueWrite(char, buffer, opts)  → Promise<void>
@@ -26,14 +28,13 @@ const BLECommandQueue = (function () {
   let generation = 0;
 
   /**
-   * Wrap an async operation with a per-operation timeout.
-   * On timeout the promise rejects; the caller's tail.catch() ensures subsequent operations are not blocked.
-   * @param {Function} fn - Async factory () => Promise
+   * Race a promise against a per-operation timeout.
+   * @param {Promise<any>} promise
    * @param {number} timeoutMs
    * @param {string} label
    * @returns {Promise<any>}
    */
-  function _withTimeout(fn, timeoutMs, label) {
+  function _withTimeout(promise, timeoutMs, label) {
     return new Promise((resolve, reject) => {
       let timedOut = false;
       const timer = setTimeout(() => {
@@ -44,7 +45,7 @@ const BLECommandQueue = (function () {
         );
       }, timeoutMs);
 
-      fn()
+      promise
         .then((v) => {
           if (!timedOut) {
             clearTimeout(timer);
@@ -62,6 +63,9 @@ const BLECommandQueue = (function () {
 
   /**
    * Enqueue an operation onto the serial tail.
+   * The returned promise rejects on failure or timeout; the internal tail
+   * always settles (and, on timeout, waits for the underlying operation to
+   * finish) so the queue never deadlocks and operations never overlap.
    * @param {Function} fn - Async operation factory
    * @param {number} timeoutMs
    * @param {string} label
@@ -70,23 +74,23 @@ const BLECommandQueue = (function () {
   function _enqueue(fn, timeoutMs, label) {
     pendingCount++;
     const gen = generation;
-    const p = tail.then(() => _withTimeout(fn, timeoutMs, label));
-    // Catch errors on the tail to prevent unhandled rejections in the chain
+    let opPromise = null;
+    const p = tail.then(() => {
+      opPromise = Promise.resolve().then(fn);
+      return _withTimeout(opPromise, timeoutMs, label);
+    });
     tail = p.catch((err) => {
-      // Log errors but don't propagate to avoid unhandled rejections
       log.debug(`Queue operation failed [${label}]:`, err.message);
+      // On timeout the GATT operation may still be in flight; wait for it to
+      // settle before releasing the queue so the next operation cannot collide.
+      return opPromise ? opPromise.catch(() => undefined) : undefined;
     });
-    // Also catch on the returned promise to prevent unhandled rejections
-    const handledPromise = p.catch((err) => {
-      // Return undefined to resolve the promise instead of rejecting
-      return undefined;
-    });
-    handledPromise.finally(() => {
+    tail.finally(() => {
       if (generation === gen) {
         pendingCount = Math.max(0, pendingCount - 1);
       }
     });
-    return handledPromise;
+    return p;
   }
 
   /**
@@ -132,7 +136,7 @@ const BLECommandQueue = (function () {
     if (bypass) {
       // Bypass mode: skip queueing and execute directly
       log.debug(`Bypassing queue for ${label}`);
-      return _withTimeout(() => _doWrite(char, buffer, mode), timeout, label);
+      return _withTimeout(_doWrite(char, buffer, mode), timeout, label);
     }
 
     return _enqueue(() => _doWrite(char, buffer, mode), timeout, label);
