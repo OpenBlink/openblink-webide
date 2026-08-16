@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-function crc16_reflect(poly, seed, src) {
+export function crc16_reflect(poly, seed, src) {
   let crc = seed;
   for (let i = 0; i < src.length; i++) {
     crc ^= src[i];

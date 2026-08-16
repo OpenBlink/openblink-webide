@@ -3,15 +3,18 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Logger } from "./logger.js";
+import { NetUtils } from "./net-utils.js";
+
 // Global translation helper function for use across all modules
-function t(key, params) {
+export function t(key, params) {
   if (typeof I18n !== "undefined" && typeof I18n.t === "function") {
     return I18n.t(key, params);
   }
   return null;
 }
 
-const I18n = (function () {
+export const I18n = (function () {
   const log = Logger.scope("I18n");
 
   const STORAGE_KEY = "openblink_language";

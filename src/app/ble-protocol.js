@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "./config.js";
+import { Logger } from "./logger.js";
+
 /**
  * BLEProtocol - Stateless BLE protocol operations.
  * Provides adapter availability checks, device selection, and pure packet
@@ -11,7 +14,7 @@
  * by BLEStateMachine.
  */
 
-const BLEProtocol = (function () {
+export const BLEProtocol = (function () {
   const log = Logger.scope("BLEProtocol");
 
   /** Cached Bluetooth availability (updated by subscribeAvailability). */

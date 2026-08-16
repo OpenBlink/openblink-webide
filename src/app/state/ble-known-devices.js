@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "../config.js";
+import { Logger } from "../logger.js";
+import { BLEState } from "./ble-states.js";
+import { BLEStateMachine } from "./ble-state-machine.js";
+
 /**
  * BLEKnownDevices - Manages previously-permitted BLE devices via getDevices().
  *
@@ -16,7 +21,7 @@
  *   BLEKnownDevices.forget(dev)        → Promise<void>
  *   BLEKnownDevices.isSupported()      → boolean
  */
-const BLEKnownDevices = (function () {
+export const BLEKnownDevices = (function () {
   const log = Logger.scope("BLEKnownDevices");
 
   /**

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const Utils = (function () {
+export const Utils = (function () {
   return {
     escapeHtml: function (text) {
       if (typeof text !== "string") {

@@ -7,7 +7,7 @@
  * Config - Centralized configuration constants for OpenBlink WebIDE.
  * All timeout, retry, logging, and BLE protocol constants are defined here.
  */
-const Config = Object.freeze({
+export const Config = Object.freeze({
   timeouts: Object.freeze({
     bleWrite: 10000,
     bleRead: 8000,

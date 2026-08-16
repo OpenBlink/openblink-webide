@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Config } from "./config.js";
+import { Logger } from "./logger.js";
+
 /**
  * NetUtils - Shared fetch utility with AbortController timeout and exponential-backoff retry.
  *
@@ -18,7 +21,7 @@
  *   parseAs    {string}  'response'|'json'|'text'|'arrayBuffer' (default: 'response')
  *   useCache   {boolean} cache successful results by url+parseAs key (default: false)
  */
-const NetUtils = (function () {
+export const NetUtils = (function () {
   const log = Logger.scope("NetUtils");
 
   const _cache = new Map();

@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Logger } from "../logger.js";
+
 /**
  * EventBus - Simple Pub/Sub event system for decoupled module communication
  * Enables loose coupling between BLE State Machine, UI Manager, and other modules.
  */
 
-const EventBus = (function () {
+export const EventBus = (function () {
   const log = Logger.scope("EventBus");
   const listeners = new Map();
 

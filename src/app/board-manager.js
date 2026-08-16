@@ -3,7 +3,14 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-const BoardManager = (function () {
+import { Logger } from "./logger.js";
+import { NetUtils } from "./net-utils.js";
+import { Utils } from "./utils.js";
+import { I18n } from "./i18n.js";
+import { UIManager } from "./ui-manager.js";
+import { FileManager } from "./file-manager.js";
+
+export const BoardManager = (function () {
   const log = Logger.scope("BoardManager");
 
   let boards = [];

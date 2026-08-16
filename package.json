@@ -5,15 +5,15 @@
   "description": "OpenBlink WebIDE - browser-based Ruby development for OpenBlink devices",
   "license": "BSD-3-Clause",
   "scripts": {
-    "lint": "eslint public_html/js public_html/lib public_html/boards scripts src/codemirror tests",
+    "lint": "eslint public_html/js public_html/lib public_html/boards scripts src/app src/codemirror tests",
     "lint:html": "htmlhint \"public_html/**/*.html\"",
     "lint:json": "node scripts/validate-json.js",
     "lint:static": "node scripts/validate-static-assets.js",
     "check-version": "node scripts/check-version.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:codemirror": "node esbuild.config.mjs",
-    "dev:codemirror": "node esbuild.config.mjs --watch"
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --watch"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

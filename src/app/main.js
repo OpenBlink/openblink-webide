@@ -3,12 +3,32 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+import { Logger } from "./logger.js";
+import { Utils } from "./utils.js";
+import { I18n, t } from "./i18n.js";
+import { ErrorHandler } from "./error-handler.js";
+import { EventBus } from "./state/event-bus.js";
+import { BLEProtocol } from "./ble-protocol.js";
+import { BLEState } from "./state/ble-states.js";
+import { BLEStateMachine } from "./state/ble-state-machine.js";
+import { UIManager } from "./ui-manager.js";
+import { FileManager } from "./file-manager.js";
+import { HistoryManager } from "./history-manager.js";
+import { BoardManager } from "./board-manager.js";
+import { Compiler } from "./compiler.js";
+
 const OPENBLINK_WEBIDE_VERSION = "0.3.6";
+
+// Compatibility bridge for the dynamically loaded classic scripts
+// (js/simulator.js, lib/board-loader.js, boards/*), which resolve these
+// modules as globals.
+window.UIManager = UIManager;
+window.BoardManager = BoardManager;
+window.Compiler = Compiler;
+window.t = t;
 
 // Track if initializeApp has been called to prevent duplicate initialization
 let isInitialized = false;
-
-// Note: Global t() helper is defined in i18n.js
 
 function checkBrowserCompatibility() {
   const features = {
