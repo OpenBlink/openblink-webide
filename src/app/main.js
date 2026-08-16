@@ -267,7 +267,7 @@ function setupEventWiring() {
       const rubyCode = window.editorView.state.doc.toString();
       const slot = UIManager.getSelectedSlot();
 
-      const compileResult = Compiler.compile(rubyCode);
+      const compileResult = await Compiler.compile(rubyCode);
 
       if (!compileResult.success) {
         UIManager.appendToConsole(compileResult.error);

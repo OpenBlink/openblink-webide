@@ -420,7 +420,7 @@ const Simulator = (function () {
 
       // Compile the code using the existing compiler
       const rubyCode = window.editorView.state.doc.toString();
-      const compileResult = Compiler.compile(rubyCode);
+      const compileResult = await Compiler.compile(rubyCode);
 
       if (!compileResult.success) {
         UIManager.appendToConsole("Compile error: " + compileResult.error);

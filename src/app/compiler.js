@@ -6,26 +6,26 @@
 
 import { I18n, t } from "./i18n.js";
 import { EventBus } from "./state/event-bus.js";
+import {
+  isRuntimeReady,
+  loadMrbcFactory,
+  compileSource,
+} from "./mrbc-runtime.js";
 
+// Main-thread facade for the mrbc compiler. Prefers running the compiler in a
+// module worker (js/compiler-worker.js) so compilation never blocks the UI;
+// falls back to an in-page runtime when workers are unavailable.
 export const Compiler = (function () {
-  // Note: Global t() helper is defined in i18n.js
+  const WORKER_SRC = "js/compiler-worker.js";
   const MRBC_MODULE_SRC = "mrbc/mrbc.js";
+
+  let worker = null;
+  let workerReady = false;
+  let nextRequestId = 1;
+  const pendingRequests = new Map();
+
   let mrbcModule = null;
   let initializationPromise = null;
-
-  function isRuntimeReady(moduleInstance) {
-    return (
-      moduleInstance &&
-      moduleInstance.FS &&
-      typeof moduleInstance.FS.writeFile === "function" &&
-      typeof moduleInstance.FS.readFile === "function" &&
-      typeof moduleInstance._malloc === "function" &&
-      typeof moduleInstance._free === "function" &&
-      typeof moduleInstance.stringToUTF8 === "function" &&
-      typeof moduleInstance.setValue === "function" &&
-      typeof moduleInstance._main === "function"
-    );
-  }
 
   function appendCompilerOutput(text) {
     if (text && text.trim() !== "") {
@@ -46,30 +46,142 @@ export const Compiler = (function () {
     EventBus.emit("COMPILER:OUTPUT", { message: errorText });
   }
 
-  function getModuleOptions() {
+  function notReadyResult() {
     return {
-      locateFile: (path) => "mrbc/" + path,
-      print: appendCompilerOutput,
-      printErr: appendCompilerError,
+      success: false,
+      error:
+        "mrbc runtime is not ready. Please reload the page and try again.",
+      compileTime: 0,
     };
   }
 
-  async function loadEsModuleFactory(src) {
-    const moduleUrl = new URL(src, window.location.href).href;
-    const moduleNamespace = await import(moduleUrl);
-    const moduleFactory =
-      moduleNamespace.default || moduleNamespace.createMrbcModule;
-
-    if (typeof moduleFactory !== "function") {
-      throw new Error("mrbc module factory was not found: " + src);
+  // Converts the transport-level result from mrbc-runtime / the worker into
+  // the localized result shape callers expect.
+  function finalizeResult(result) {
+    if (result.success) {
+      return result;
     }
 
-    return moduleFactory;
+    if (typeof result.exitCode === "number") {
+      const errorMsg =
+        (typeof t === "function" &&
+          t("compiler.failed", { code: result.exitCode })) ||
+        "mrbc failed with exit code: " + result.exitCode;
+      return {
+        success: false,
+        error: errorMsg,
+        compileTime: result.compileTime,
+      };
+    }
+
+    return {
+      success: false,
+      error: result.errorMessage || result.error || "Compilation failed.",
+      compileTime: result.compileTime || 0,
+    };
+  }
+
+  function failPendingRequests(message) {
+    for (const [, pending] of pendingRequests) {
+      pending.resolve({ success: false, error: message, compileTime: 0 });
+    }
+    pendingRequests.clear();
+  }
+
+  function handleWorkerMessage(event) {
+    const data = event.data || {};
+
+    switch (data.type) {
+      case "output":
+        appendCompilerOutput(data.text);
+        break;
+      case "error":
+        appendCompilerError(data.text);
+        break;
+      case "result": {
+        const pending = pendingRequests.get(data.id);
+        if (pending) {
+          pendingRequests.delete(data.id);
+          pending.resolve(finalizeResult(data.result));
+        }
+        break;
+      }
+    }
+  }
+
+  function initializeWorker() {
+    return new Promise((resolve, reject) => {
+      let candidate;
+      try {
+        candidate = new Worker(WORKER_SRC, { type: "module" });
+      } catch (error) {
+        reject(error);
+        return;
+      }
+
+      const handleInitMessage = (event) => {
+        const data = event.data || {};
+        if (data.type === "ready") {
+          candidate.removeEventListener("message", handleInitMessage);
+          candidate.addEventListener("message", handleWorkerMessage);
+          candidate.addEventListener("error", (errorEvent) => {
+            failPendingRequests(
+              "Compiler worker failed: " +
+                (errorEvent.message || "unknown error"),
+            );
+            workerReady = false;
+            worker = null;
+            initializationPromise = null;
+            candidate.terminate();
+          });
+          worker = candidate;
+          workerReady = true;
+          resolve(candidate);
+        } else if (data.type === "init-error") {
+          candidate.terminate();
+          reject(new Error(data.message));
+        } else {
+          handleWorkerMessage(event);
+        }
+      };
+
+      candidate.addEventListener("message", handleInitMessage);
+      candidate.addEventListener("error", (errorEvent) => {
+        if (!workerReady) {
+          candidate.terminate();
+          reject(
+            new Error(errorEvent.message || "Compiler worker failed to load."),
+          );
+        }
+      });
+      candidate.postMessage({ type: "init" });
+    });
+  }
+
+  async function initializeInPageRuntime() {
+    if (isRuntimeReady(mrbcModule)) {
+      return mrbcModule;
+    }
+
+    const moduleUrl = new URL(MRBC_MODULE_SRC, window.location.href).href;
+    const moduleFactory = await loadMrbcFactory(moduleUrl);
+    const moduleInstance = await moduleFactory({
+      locateFile: (path) => "mrbc/" + path,
+      print: appendCompilerOutput,
+      printErr: appendCompilerError,
+    });
+
+    if (!isRuntimeReady(moduleInstance)) {
+      throw new Error("mrbc runtime did not expose the required API.");
+    }
+
+    mrbcModule = moduleInstance;
+    return mrbcModule;
   }
 
   async function initializeRuntime() {
-    if (isRuntimeReady(mrbcModule)) {
-      return mrbcModule;
+    if (workerReady || isRuntimeReady(mrbcModule)) {
+      return;
     }
 
     if (initializationPromise) {
@@ -77,16 +189,19 @@ export const Compiler = (function () {
     }
 
     initializationPromise = (async () => {
-      const moduleOptions = getModuleOptions();
-      const moduleFactory = await loadEsModuleFactory(MRBC_MODULE_SRC);
-      const moduleInstance = await moduleFactory(moduleOptions);
-
-      if (!isRuntimeReady(moduleInstance)) {
-        throw new Error("mrbc runtime did not expose the required API.");
+      if (typeof Worker === "function") {
+        try {
+          await initializeWorker();
+          return;
+        } catch (error) {
+          appendCompilerOutput(
+            "Compiler worker unavailable (" +
+              error.message +
+              "); compiling on the main thread.",
+          );
+        }
       }
-
-      mrbcModule = moduleInstance;
-      return mrbcModule;
+      await initializeInPageRuntime();
     })();
 
     try {
@@ -97,92 +212,39 @@ export const Compiler = (function () {
     }
   }
 
-  function tryUnlink(fs, path) {
-    try {
-      fs.unlink(path);
-    } catch (_error) {
-      return;
-    }
+  function compileInWorker(rubyCode) {
+    return new Promise((resolve) => {
+      const id = nextRequestId++;
+      pendingRequests.set(id, { resolve: resolve });
+      worker.postMessage({ type: "compile", id: id, source: rubyCode });
+    });
   }
 
   return {
     initialize: initializeRuntime,
 
-    compile: function (rubyCode) {
+    compile: async function (rubyCode) {
+      if (workerReady) {
+        return compileInWorker(rubyCode);
+      }
+
       if (!isRuntimeReady(mrbcModule)) {
-        const errorMsg =
-          "mrbc runtime is not ready. Please reload the page and try again.";
-        return {
-          success: false,
-          error: errorMsg,
-          compileTime: 0,
-        };
-      }
-
-      const sourceFileName = "temp.rb";
-      const outputFileName = "temp.mrb";
-
-      tryUnlink(mrbcModule.FS, outputFileName);
-      mrbcModule.FS.writeFile(sourceFileName, rubyCode);
-
-      const args = ["mrbc", "-o", outputFileName, sourceFileName];
-      const argc = args.length;
-
-      let argv = null;
-      let argPointers = [];
-
-      try {
-        argv = mrbcModule._malloc(args.length * 4);
-        if (!argv) {
-          throw new Error("Failed to allocate compiler argv.");
-        }
-
-        for (const arg of args) {
-          const ptr = mrbcModule._malloc(arg.length + 1);
-          if (!ptr) {
-            throw new Error("Failed to allocate compiler argument.");
-          }
-          mrbcModule.stringToUTF8(arg, ptr, arg.length + 1);
-          argPointers.push(ptr);
-        }
-
-        for (let i = 0; i < argPointers.length; i++) {
-          mrbcModule.setValue(argv + i * 4, argPointers[i], "i32");
-        }
-
-        const startTime = performance.now();
-        const result = mrbcModule._main(argc, argv);
-        const endTime = performance.now();
-        const compileTime = endTime - startTime;
-
-        if (result !== 0) {
-          const errorMsg =
-            (typeof t === "function" &&
-              t("compiler.failed", { code: result })) ||
-            "mrbc failed with exit code: " + result;
-          return {
-            success: false,
-            error: errorMsg,
-            compileTime: compileTime,
-          };
-        }
-
-        const mrbContent = mrbcModule.FS.readFile(outputFileName);
-
-        return {
-          success: true,
-          bytecode: mrbContent,
-          compileTime: compileTime,
-          size: mrbContent.length,
-        };
-      } finally {
-        if (argPointers.length > 0) {
-          argPointers.forEach((ptr) => mrbcModule._free(ptr));
-        }
-        if (argv !== null) {
-          mrbcModule._free(argv);
+        try {
+          await initializeRuntime();
+        } catch (_error) {
+          return notReadyResult();
         }
       }
+
+      if (workerReady) {
+        return compileInWorker(rubyCode);
+      }
+
+      if (!isRuntimeReady(mrbcModule)) {
+        return notReadyResult();
+      }
+
+      return finalizeResult(compileSource(mrbcModule, rubyCode));
     },
   };
 })();
