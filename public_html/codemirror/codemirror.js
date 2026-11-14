@@ -16592,6 +16592,177 @@
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
+  // node_modules/@codemirror/streamparser/dist/index.js
+  function countCol(string2, end, tabSize, startIndex = 0, startValue = 0) {
+    if (end == null) {
+      end = string2.search(/[^\s\u00a0]/);
+      if (end == -1)
+        end = string2.length;
+    }
+    let n = startValue;
+    for (let i2 = startIndex; i2 < end; i2++) {
+      if (string2.charCodeAt(i2) == 9)
+        n += tabSize - n % tabSize;
+      else
+        n++;
+    }
+    return n;
+  }
+  var StringStream = class {
+    /**
+    Create a stream.
+    */
+    constructor(string2, tabSize, indentUnit2, overrideIndent) {
+      this.string = string2;
+      this.tabSize = tabSize;
+      this.indentUnit = indentUnit2;
+      this.overrideIndent = overrideIndent;
+      this.pos = 0;
+      this.start = 0;
+      this.lastColumnPos = 0;
+      this.lastColumnValue = 0;
+    }
+    /**
+    True if we are at the end of the line.
+    */
+    eol() {
+      return this.pos >= this.string.length;
+    }
+    /**
+    True if we are at the start of the line.
+    */
+    sol() {
+      return this.pos == 0;
+    }
+    /**
+    Get the next code unit after the current position, or undefined
+    if we're at the end of the line.
+    */
+    peek() {
+      return this.string.charAt(this.pos) || void 0;
+    }
+    /**
+    Read the next code unit and advance `this.pos`.
+    */
+    next() {
+      if (this.pos < this.string.length)
+        return this.string.charAt(this.pos++);
+    }
+    /**
+    Match the next character against the given string, regular
+    expression, or predicate. Consume and return it if it matches.
+    */
+    eat(match) {
+      let ch = this.string.charAt(this.pos);
+      let ok;
+      if (typeof match == "string")
+        ok = ch == match;
+      else
+        ok = ch && (match instanceof RegExp ? match.test(ch) : match(ch));
+      if (ok) {
+        ++this.pos;
+        return ch;
+      }
+    }
+    /**
+    Continue matching characters that match the given string,
+    regular expression, or predicate function. Return true if any
+    characters were consumed.
+    */
+    eatWhile(match) {
+      let start = this.pos;
+      while (this.eat(match)) {
+      }
+      return this.pos > start;
+    }
+    /**
+    Consume whitespace ahead of `this.pos`. Return true if any was
+    found.
+    */
+    eatSpace() {
+      let start = this.pos;
+      while (/[\s\u00a0]/.test(this.string.charAt(this.pos)))
+        ++this.pos;
+      return this.pos > start;
+    }
+    /**
+    Move to the end of the line.
+    */
+    skipToEnd() {
+      this.pos = this.string.length;
+    }
+    /**
+    Move to directly before the given character, if found on the
+    current line.
+    */
+    skipTo(ch) {
+      let found = this.string.indexOf(ch, this.pos);
+      if (found > -1) {
+        this.pos = found;
+        return true;
+      }
+    }
+    /**
+    Move back `n` characters.
+    */
+    backUp(n) {
+      this.pos -= n;
+    }
+    /**
+    Get the column position at `this.pos`.
+    */
+    column() {
+      if (this.lastColumnPos < this.start) {
+        this.lastColumnValue = countCol(this.string, this.start, this.tabSize, this.lastColumnPos, this.lastColumnValue);
+        this.lastColumnPos = this.start;
+      }
+      return this.lastColumnValue;
+    }
+    /**
+    Get the indentation column of the current line.
+    */
+    indentation() {
+      var _a2;
+      return (_a2 = this.overrideIndent) !== null && _a2 !== void 0 ? _a2 : countCol(this.string, null, this.tabSize);
+    }
+    /**
+    Match the input against the given string or regular expression
+    (which should start with a `^`). Return true or the regexp match
+    if it matches.
+
+    Unless `consume` is set to `false`, this will move `this.pos`
+    past the matched text.
+
+    When matching a string `caseInsensitive` can be set to true to
+    make the match case-insensitive.
+    */
+    match(pattern, consume, caseInsensitive) {
+      if (typeof pattern == "string") {
+        let cased = (str) => caseInsensitive ? str.toLowerCase() : str;
+        let substr = this.string.substr(this.pos, pattern.length);
+        if (cased(substr) == cased(pattern)) {
+          if (consume !== false)
+            this.pos += pattern.length;
+          return true;
+        } else
+          return null;
+      } else {
+        let match = this.string.slice(this.pos).match(pattern);
+        if (match && match.index > 0)
+          return null;
+        if (match && consume !== false)
+          this.pos += match[0].length;
+        return match;
+      }
+    }
+    /**
+    Get the current token.
+    */
+    current() {
+      return this.string.slice(this.start, this.pos);
+    }
+  };
+
   // node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
@@ -17432,11 +17603,10 @@
       if (tr.isUserEvent("delete"))
         tr.changes.iterChangedRanges((fromA, toA) => folded = clearTouchedFolds(folded, fromA, toA));
       folded = folded.map(tr.changes);
+      let rangesToFold = [];
       for (let e of tr.effects) {
         if (e.is(foldEffect) && !foldExists(folded, e.value.from, e.value.to)) {
-          let { preparePlaceholder } = tr.state.facet(foldConfig);
-          let widget = !preparePlaceholder ? foldWidget : Decoration.replace({ widget: new PreparedFoldWidget(preparePlaceholder(tr.state, e.value)) });
-          folded = folded.update({ add: [widget.range(e.value.from, e.value.to)] });
+          rangesToFold.push(e.value);
         } else if (e.is(unfoldEffect)) {
           folded = folded.update({
             filter: (from, to) => e.value.from != from || e.value.to != to,
@@ -17444,6 +17614,14 @@
             filterTo: e.value.to
           });
         }
+      }
+      if (rangesToFold.length) {
+        let { preparePlaceholder } = tr.state.facet(foldConfig);
+        let decorations2 = rangesToFold.map((value) => {
+          let widget = !preparePlaceholder ? foldWidget : Decoration.replace({ widget: new PreparedFoldWidget(preparePlaceholder(tr.state, value)) });
+          return widget.range(value.from, value.to);
+        });
+        folded = folded.update({ add: decorations2 });
       }
       if (tr.selection)
         folded = clearTouchedFolds(folded, tr.selection.main.head);
@@ -17733,7 +17911,7 @@
     or array of tags in their `tag` property, and either a single
     `class` property providing a static CSS class (for highlighter
     that rely on external styling), or a
-    [`style-mod`](https://github.com/marijnh/style-mod#documentation)-style
+    [`style-mod`](https://code.haverbeke.berlin/marijn/style-mod#documentation)-style
     set of CSS properties (which define the styling for those tags).
 
     The CSS rules created for a highlighter will be emitted in the
@@ -18037,175 +18215,6 @@
     }
     return iter.done ? { start: startToken, matched: false } : null;
   }
-  function countCol(string2, end, tabSize, startIndex = 0, startValue = 0) {
-    if (end == null) {
-      end = string2.search(/[^\s\u00a0]/);
-      if (end == -1)
-        end = string2.length;
-    }
-    let n = startValue;
-    for (let i2 = startIndex; i2 < end; i2++) {
-      if (string2.charCodeAt(i2) == 9)
-        n += tabSize - n % tabSize;
-      else
-        n++;
-    }
-    return n;
-  }
-  var StringStream = class {
-    /**
-    Create a stream.
-    */
-    constructor(string2, tabSize, indentUnit2, overrideIndent) {
-      this.string = string2;
-      this.tabSize = tabSize;
-      this.indentUnit = indentUnit2;
-      this.overrideIndent = overrideIndent;
-      this.pos = 0;
-      this.start = 0;
-      this.lastColumnPos = 0;
-      this.lastColumnValue = 0;
-    }
-    /**
-    True if we are at the end of the line.
-    */
-    eol() {
-      return this.pos >= this.string.length;
-    }
-    /**
-    True if we are at the start of the line.
-    */
-    sol() {
-      return this.pos == 0;
-    }
-    /**
-    Get the next code unit after the current position, or undefined
-    if we're at the end of the line.
-    */
-    peek() {
-      return this.string.charAt(this.pos) || void 0;
-    }
-    /**
-    Read the next code unit and advance `this.pos`.
-    */
-    next() {
-      if (this.pos < this.string.length)
-        return this.string.charAt(this.pos++);
-    }
-    /**
-    Match the next character against the given string, regular
-    expression, or predicate. Consume and return it if it matches.
-    */
-    eat(match) {
-      let ch = this.string.charAt(this.pos);
-      let ok;
-      if (typeof match == "string")
-        ok = ch == match;
-      else
-        ok = ch && (match instanceof RegExp ? match.test(ch) : match(ch));
-      if (ok) {
-        ++this.pos;
-        return ch;
-      }
-    }
-    /**
-    Continue matching characters that match the given string,
-    regular expression, or predicate function. Return true if any
-    characters were consumed.
-    */
-    eatWhile(match) {
-      let start = this.pos;
-      while (this.eat(match)) {
-      }
-      return this.pos > start;
-    }
-    /**
-    Consume whitespace ahead of `this.pos`. Return true if any was
-    found.
-    */
-    eatSpace() {
-      let start = this.pos;
-      while (/[\s\u00a0]/.test(this.string.charAt(this.pos)))
-        ++this.pos;
-      return this.pos > start;
-    }
-    /**
-    Move to the end of the line.
-    */
-    skipToEnd() {
-      this.pos = this.string.length;
-    }
-    /**
-    Move to directly before the given character, if found on the
-    current line.
-    */
-    skipTo(ch) {
-      let found = this.string.indexOf(ch, this.pos);
-      if (found > -1) {
-        this.pos = found;
-        return true;
-      }
-    }
-    /**
-    Move back `n` characters.
-    */
-    backUp(n) {
-      this.pos -= n;
-    }
-    /**
-    Get the column position at `this.pos`.
-    */
-    column() {
-      if (this.lastColumnPos < this.start) {
-        this.lastColumnValue = countCol(this.string, this.start, this.tabSize, this.lastColumnPos, this.lastColumnValue);
-        this.lastColumnPos = this.start;
-      }
-      return this.lastColumnValue;
-    }
-    /**
-    Get the indentation column of the current line.
-    */
-    indentation() {
-      var _a2;
-      return (_a2 = this.overrideIndent) !== null && _a2 !== void 0 ? _a2 : countCol(this.string, null, this.tabSize);
-    }
-    /**
-    Match the input against the given string or regular expression
-    (which should start with a `^`). Return true or the regexp match
-    if it matches.
-
-    Unless `consume` is set to `false`, this will move `this.pos`
-    past the matched text.
-
-    When matching a string `caseInsensitive` can be set to true to
-    make the match case-insensitive.
-    */
-    match(pattern, consume, caseInsensitive) {
-      if (typeof pattern == "string") {
-        let cased = (str) => caseInsensitive ? str.toLowerCase() : str;
-        let substr = this.string.substr(this.pos, pattern.length);
-        if (cased(substr) == cased(pattern)) {
-          if (consume !== false)
-            this.pos += pattern.length;
-          return true;
-        } else
-          return null;
-      } else {
-        let match = this.string.slice(this.pos).match(pattern);
-        if (match && match.index > 0)
-          return null;
-        if (match && consume !== false)
-          this.pos += match[0].length;
-        return match;
-      }
-    }
-    /**
-    Get the current token.
-    */
-    current() {
-      return this.string.slice(this.start, this.pos);
-    }
-  };
   function fullParser(spec) {
     return {
       name: spec.name || "",
@@ -23093,6 +23102,7 @@
     } else if (ch == "0") {
       if (stream.eat("x")) stream.eatWhile(/[\da-fA-F]/);
       else if (stream.eat("b")) stream.eatWhile(/[01]/);
+      else if (stream.eat(".")) stream.eat(/[\d_]*(?:[eE][+\-]?[\d_]+)?/);
       else stream.eatWhile(/[0-7]/);
       return "number";
     } else if (/\d/.test(ch)) {
