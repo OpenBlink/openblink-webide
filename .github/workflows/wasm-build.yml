@@ -42,7 +42,7 @@ jobs:
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v16
         with:
-          version: 5.0.7
+          version: 7.0.0
 
       - name: Verify Emscripten
         run: emcc --version
