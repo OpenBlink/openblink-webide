@@ -91,9 +91,13 @@ describe("mrbc.wasm / mrubyc.wasm integration", () => {
         result.bytecode.length,
       );
 
+      const printed = [];
       const mrubycModule = await (
         await import(MRUBYC_JS)
-      ).default({ locateFile: (p) => `${baseUrl}/mrubyc/${p}` });
+      ).default({
+        locateFile: (p) => `${baseUrl}/mrubyc/${p}`,
+        print: (text) => printed.push(text),
+      });
       mrubycModule._mrbc_wasm_init();
       const ptr = mrubycModule._malloc(result.bytecode.length);
       mrubycModule.HEAPU8.set(result.bytecode, ptr);
@@ -106,6 +110,7 @@ describe("mrbc.wasm / mrubyc.wasm integration", () => {
       );
       mrubycModule._free(ptr);
       expect(ret).toBe(0);
+      expect(printed.join("")).toContain("3");
     },
     30000,
   );
