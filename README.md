@@ -151,7 +151,7 @@ $ git submodule update
 2. Install and Activate Emscripten in the `emsdk` Directory
 
 ```console
-$ cd emsdk
+$ cd vendor/emsdk
 emsdk $ ./emsdk install 7.0.1
 emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
@@ -327,7 +327,7 @@ $ git submodule update
 2. 在 `emsdk` 目录中安装并激活 Emscripten
 
 ```console
-$ cd emsdk
+$ cd vendor/emsdk
 emsdk $ ./emsdk install 7.0.1
 emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
@@ -503,7 +503,7 @@ $ git submodule update
 2. `emsdk` ディレクトリで Emscripten をインストールして有効化
 
 ```console
-$ cd emsdk
+$ cd vendor/emsdk
 emsdk $ ./emsdk install 7.0.1
 emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
