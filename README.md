@@ -155,7 +155,7 @@ $ cd vendor/emsdk
 emsdk $ ./emsdk install 7.0.1
 emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
-emsdk $ cd ..
+emsdk $ cd ../..
 ```
 
 3. Install Node.js Dependencies
@@ -331,7 +331,7 @@ $ cd vendor/emsdk
 emsdk $ ./emsdk install 7.0.1
 emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
-emsdk $ cd ..
+emsdk $ cd ../..
 ```
 
 3. 安装 Node.js 依赖
@@ -507,7 +507,7 @@ $ cd vendor/emsdk
 emsdk $ ./emsdk install 7.0.1
 emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
-emsdk $ cd ..
+emsdk $ cd ../..
 ```
 
 3. Node.js 依存関係のインストール
