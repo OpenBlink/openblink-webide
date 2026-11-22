@@ -105,6 +105,9 @@ jobs:
       - name: Build WebAssembly artifacts
         run: make all
 
+      - name: Unit tests against built artifacts
+        run: npm test
+
       - name: Verify build artifacts
         run: |
           echo "## Build Artifacts" >> "$GITHUB_STEP_SUMMARY"
