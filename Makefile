@@ -128,7 +128,7 @@ mrbc: check-emcc
 
 # Build mrubyc (mruby/c VM). The autogen step regenerates mrblib.c with the
 # host mrbc, so it depends on the mrbc build.
-mrubyc: check-emcc mrbc mrubyc-autogen $(MRUBYC_OUTPUT_DIR) $(MRUBYC_OUTPUT_JS)
+mrubyc: check-emcc mrubyc-autogen $(MRUBYC_OUTPUT_DIR) $(MRUBYC_OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
 
 # Build CodeMirror and app bundles
@@ -137,8 +137,10 @@ codemirror:
 	npm run build
 	@echo "Bundle build complete. Output: public_html/codemirror/, public_html/js/app.js"
 
-# Generate mrubyc auto-generated files
-mrubyc-autogen: check-ruby-autogen
+# Generate mrubyc auto-generated files (mrbc provides the host mrbc binary
+# used to regenerate mrblib.c; keep the dependency here so parallel builds
+# order it correctly).
+mrubyc-autogen: check-ruby-autogen mrbc
 	@echo "Generating mrubyc auto-generated files..."
 	PATH="$(RUBY_BINDIR):$(PATH)" $(MAKE) -C vendor/mrubyc autogen MRBC="$(CURDIR)/build/host/bin/mrbc"
 	@echo "mrubyc auto-generated files complete."
