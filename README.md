@@ -152,8 +152,8 @@ $ git submodule update
 
 ```console
 $ cd emsdk
-emsdk $ ./emsdk install 5.0.7
-emsdk $ ./emsdk activate 5.0.7
+emsdk $ ./emsdk install 7.0.1
+emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
 emsdk $ cd ..
 ```
@@ -328,8 +328,8 @@ $ git submodule update
 
 ```console
 $ cd emsdk
-emsdk $ ./emsdk install 5.0.7
-emsdk $ ./emsdk activate 5.0.7
+emsdk $ ./emsdk install 7.0.1
+emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
 emsdk $ cd ..
 ```
@@ -504,8 +504,8 @@ $ git submodule update
 
 ```console
 $ cd emsdk
-emsdk $ ./emsdk install 5.0.7
-emsdk $ ./emsdk activate 5.0.7
+emsdk $ ./emsdk install 7.0.1
+emsdk $ ./emsdk activate 7.0.1
 emsdk $ source ./emsdk_env.sh
 emsdk $ cd ..
 ```

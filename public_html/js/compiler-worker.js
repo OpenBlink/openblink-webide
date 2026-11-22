@@ -20,12 +20,57 @@ function tryUnlink(fs, path) {
     return;
   }
 }
+var RITE_BINARY_HEADER_SIZE = 20;
+var RITE_LVAR_IDENT = "LVAR";
+function removeLvarSection(bytecode) {
+  if (!bytecode || bytecode.length < RITE_BINARY_HEADER_SIZE || String.fromCharCode(...bytecode.slice(0, 4)) !== "RITE") {
+    return bytecode;
+  }
+  const view = new DataView(bytecode.buffer, bytecode.byteOffset);
+  const kept = [bytecode.slice(0, RITE_BINARY_HEADER_SIZE)];
+  let stripped = 0;
+  let pos = RITE_BINARY_HEADER_SIZE;
+  while (pos + 8 <= bytecode.length) {
+    const size = view.getUint32(pos + 4);
+    if (size < 8 || pos + size > bytecode.length) {
+      return bytecode;
+    }
+    const ident = String.fromCharCode(...bytecode.slice(pos, pos + 4));
+    if (ident === RITE_LVAR_IDENT) {
+      stripped += size;
+    } else {
+      kept.push(bytecode.slice(pos, pos + size));
+    }
+    pos += size;
+  }
+  if (pos !== bytecode.length) {
+    return bytecode;
+  }
+  if (stripped === 0) {
+    return bytecode;
+  }
+  const result = new Uint8Array(bytecode.length - stripped);
+  let offset = 0;
+  for (const chunk of kept) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  const resultView = new DataView(result.buffer);
+  resultView.setUint32(8, result.length);
+  return result;
+}
 function compileSource(mrbcModule2, rubyCode) {
   const sourceFileName = "temp.rb";
   const outputFileName = "temp.mrb";
   tryUnlink(mrbcModule2.FS, outputFileName);
   mrbcModule2.FS.writeFile(sourceFileName, rubyCode);
-  const args = ["mrbc", "-o", outputFileName, sourceFileName];
+  const args = [
+    "mrbc",
+    "-o",
+    outputFileName,
+    "--remove-lv",
+    sourceFileName
+  ];
   const argc = args.length;
   let argv = null;
   let argPointers = [];
@@ -56,7 +101,9 @@ function compileSource(mrbcModule2, rubyCode) {
         compileTime
       };
     }
-    const mrbContent = mrbcModule2.FS.readFile(outputFileName);
+    const mrbContent = removeLvarSection(
+      mrbcModule2.FS.readFile(outputFileName)
+    );
     return {
       success: true,
       bytecode: mrbContent,
