@@ -1,15 +1,17 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026 OpenBlink All Rights Reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 
-# Minimal host build: provides yacc (Lrama) and gperf commands required by
-# mruby-compiler to generate y.tab.c and lex.def from parse.y/keywords.
-# Without this, MRuby.targets["host"] is nil and CI builds fail because
-# y.tab.c is .gitignored and must be regenerated.
+# Minimal host build: produces the host mrbc binary used by mruby/c's
+# autogen step to regenerate mrblib.c, plus host-side tools for generators
+# that run during the emscripten cross build (presym is always enabled
+# since mruby 4.0, which removed MRB_NO_PRESYM/conf.disable_presym).
 MRuby::Build.new do |conf|
   toolchain :gcc
   conf.build_dir = File.expand_path('build/host', __dir__)
+
+  conf.gem core: 'mruby-bin-mrbc'
+  conf.build_mrbc_exec
   conf.disable_libmruby
-  conf.disable_presym
 end
 
 # WASM_BUILD=debug enables Emscripten runtime checks; the default release
@@ -68,7 +70,6 @@ MRuby::Build.new('emscripten') do |conf|
   conf.gem core: 'mruby-bin-mrbc'
   conf.build_mrbc_exec
   conf.disable_libmruby
-  conf.disable_presym
 end
 
 MRuby.each_target do |target|

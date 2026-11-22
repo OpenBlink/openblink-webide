@@ -25,7 +25,7 @@ function compileSource(mrbcModule2, rubyCode) {
   const outputFileName = "temp.mrb";
   tryUnlink(mrbcModule2.FS, outputFileName);
   mrbcModule2.FS.writeFile(sourceFileName, rubyCode);
-  const args = ["mrbc", "-o", outputFileName, sourceFileName];
+  const args = ["mrbc", "--remove-lv", "-o", outputFileName, sourceFileName];
   const argc = args.length;
   let argv = null;
   let argPointers = [];

@@ -52,7 +52,7 @@ export function compileSource(mrbcModule, rubyCode) {
   tryUnlink(mrbcModule.FS, outputFileName);
   mrbcModule.FS.writeFile(sourceFileName, rubyCode);
 
-  const args = ["mrbc", "-o", outputFileName, sourceFileName];
+  const args = ["mrbc", "--remove-lv", "-o", outputFileName, sourceFileName];
   const argc = args.length;
 
   let argv = null;
