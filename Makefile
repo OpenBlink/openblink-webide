@@ -12,7 +12,9 @@
 MRUBYC_DIR = vendor/mrubyc
 MRUBYC_SRC_DIR = $(MRUBYC_DIR)/src
 SRC_DIR = src
-HAL_DIR = $(SRC_DIR)/lib/mrubyc
+# Upstream Emscripten HAL shipped with mruby/c 4.0.0 (identical to the local
+# copy this project had in src/lib/mrubyc).
+HAL_DIR = $(MRUBYC_DIR)/hal/emscripten
 BUILD_DIR = public_html
 
 # Build type: "release" (default) omits Emscripten runtime checks for speed
@@ -34,6 +36,7 @@ MRUBYC_CFLAGS = -O3 \
                 -DMRBC_SCHEDULER_EXIT=1 \
                 -DMRBC_USE_FLOAT=2 \
                 -DMRBC_USE_MATH=1 \
+                -DMRBC_SUPPORT_OP_EXT=1 \
                 -DMAX_VM_COUNT=5 \
                 -DMRBC_MEMORY_SIZE=131072
 
@@ -123,8 +126,9 @@ mrbc: check-emcc
 	cd vendor/mruby && PATH="$(RUBY_BINDIR):$(PATH)" rake MRUBY_CONFIG=../../mruby_build_config.rb
 	@echo "mrbc build complete. Output: public_html/mrbc/"
 
-# Build mrubyc (mruby/c VM)
-mrubyc: check-emcc mrubyc-autogen $(MRUBYC_OUTPUT_DIR) $(MRUBYC_OUTPUT_JS)
+# Build mrubyc (mruby/c VM). The autogen step regenerates mrblib.c with the
+# host mrbc, so it depends on the mrbc build.
+mrubyc: check-emcc mrbc mrubyc-autogen $(MRUBYC_OUTPUT_DIR) $(MRUBYC_OUTPUT_JS)
 	@echo "mrubyc build complete. Output: public_html/mrubyc/"
 
 # Build CodeMirror and app bundles
@@ -136,7 +140,7 @@ codemirror:
 # Generate mrubyc auto-generated files
 mrubyc-autogen: check-ruby-autogen
 	@echo "Generating mrubyc auto-generated files..."
-	PATH="$(RUBY_BINDIR):$(PATH)" $(MAKE) -C vendor/mrubyc autogen
+	PATH="$(RUBY_BINDIR):$(PATH)" $(MAKE) -C vendor/mrubyc autogen MRBC="$(CURDIR)/build/host/bin/mrbc"
 	@echo "mrubyc auto-generated files complete."
 
 # Create build directory
