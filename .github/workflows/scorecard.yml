@@ -18,7 +18,7 @@ jobs:
     name: OpenSSF Scorecard analysis
     # scorecard-action only supports analysis publication on the default branch
     if: github.ref_name == 'main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       security-events: write # upload SARIF results to code scanning
       id-token: write      # publish results to OpenSSF REST API
