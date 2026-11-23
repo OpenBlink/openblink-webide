@@ -102,6 +102,9 @@ jobs:
             echo "✓ $f (${size} bytes)"
           done
 
+      - name: Smoke-test the built WASM
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-wasm.js
+
       - name: Install 7-Zip
         run: sudo apt-get update && sudo apt-get install -y p7zip-full
 

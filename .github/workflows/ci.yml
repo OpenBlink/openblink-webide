@@ -154,6 +154,9 @@ jobs:
             fi
           done
 
+      - name: Smoke-test the built WASM
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-wasm.js
+
       - name: Upload public_html artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
