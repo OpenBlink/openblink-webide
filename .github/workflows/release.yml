@@ -49,6 +49,9 @@ jobs:
       - name: Validate static assets
         run: npm run lint:static
 
+      - name: Unit tests
+        run: npm test
+
       - name: npm audit
         run: npm audit --audit-level=high
 
