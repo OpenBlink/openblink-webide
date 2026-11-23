@@ -103,6 +103,7 @@ jobs:
           done
 
       - name: Smoke-test the built WASM
+        timeout-minutes: 1
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-wasm.js
 
       - name: Install 7-Zip
