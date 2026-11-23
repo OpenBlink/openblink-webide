@@ -16,6 +16,8 @@ concurrency:
 jobs:
   analysis:
     name: OpenSSF Scorecard analysis
+    # scorecard-action only supports analysis publication on the default branch
+    if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     permissions:
       security-events: write # upload SARIF results to code scanning
