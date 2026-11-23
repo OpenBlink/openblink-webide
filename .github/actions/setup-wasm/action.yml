@@ -1,0 +1,51 @@
+name: Set up and build WebAssembly
+description: Set up the toolchain and build WebAssembly with the shared CI cache.
+runs:
+  using: composite
+  steps:
+  - name: Resolve submodule SHAs
+    id: submodules
+    shell: bash
+    run: |
+      mruby_sha=$(git rev-parse HEAD:vendor/mruby)
+      mrubyc_sha=$(git rev-parse HEAD:vendor/mrubyc)
+      printf 'mruby-sha=%s\nmrubyc-sha=%s\n' "$mruby_sha" "$mrubyc_sha" >> "$GITHUB_OUTPUT"
+
+  # 'emsdk7.0.1' and 'ruby4' must match the toolchain versions configured below.
+  - name: Restore WASM build cache
+    id: wasm-build-cache
+    uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    with:
+      path: |
+        build/
+        vendor/mrubyc/src/_autogen_*.h
+        vendor/mrubyc/src/mrblib.c
+      key: wasm-build-${{ runner.os }}-emsdk7.0.1-ruby4-${{ steps.submodules.outputs.mruby-sha }}-${{ steps.submodules.outputs.mrubyc-sha }}-${{ hashFiles('mruby_build_config.rb', 'Makefile') }}
+  # Fresh checkouts give sources newer mtimes than the restored objects,
+  # which would make rake/make recompile them all. Mark objects fresh
+  # instead: the key already guarantees identical inputs.
+  - name: Mark restored objects fresh
+    if: steps.wasm-build-cache.outputs.cache-hit == 'true'
+    shell: bash
+    run: |
+      find build -exec touch {} + 2>/dev/null || true
+      touch vendor/mrubyc/src/_autogen_*.h vendor/mrubyc/src/mrblib.c 2>/dev/null || true
+
+  - name: Setup Emscripten
+    uses: mymindstorm/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
+    with:
+      version: 7.0.1
+      actions-cache-folder: .emsdk-cache
+
+  - name: Verify Emscripten
+    shell: bash
+    run: emcc --version
+
+  - name: Setup Ruby
+    uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
+    with:
+      ruby-version: '4.0'
+
+  - name: Build WebAssembly artifacts
+    shell: bash
+    run: make all

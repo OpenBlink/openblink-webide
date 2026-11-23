@@ -94,46 +94,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Resolve submodule SHAs
-        run: |
-          echo "MRUBY_SHA=$(git rev-parse HEAD:vendor/mruby)" >> "$GITHUB_ENV"
-          echo "MRUBYC_SHA=$(git rev-parse HEAD:vendor/mrubyc)" >> "$GITHUB_ENV"
-
-      # 'emsdk7.0.1' and 'ruby4' must match the toolchain versions configured below.
-      - name: Restore WASM build cache
-        id: wasm-build-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            build/
-            vendor/mrubyc/src/_autogen_*.h
-            vendor/mrubyc/src/mrblib.c
-          key: wasm-build-${{ runner.os }}-emsdk7.0.1-ruby4-${{ env.MRUBY_SHA }}-${{ env.MRUBYC_SHA }}-${{ hashFiles('mruby_build_config.rb', 'Makefile') }}
-      # Fresh checkouts give sources newer mtimes than the restored objects,
-      # which would make rake/make recompile them all. Mark objects fresh
-      # instead: the key already guarantees identical inputs.
-      - name: Mark restored objects fresh
-        if: steps.wasm-build-cache.outputs.cache-hit == 'true'
-        run: |
-          find build -exec touch {} + 2>/dev/null || true
-          touch vendor/mrubyc/src/_autogen_*.h vendor/mrubyc/src/mrblib.c 2>/dev/null || true
-
-      - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@4528d102f7230f0e7b276855c01ea1159be0e984 # v16
-        with:
-          version: 7.0.1
-          actions-cache-folder: .emsdk-cache
-
-      - name: Verify Emscripten
-        run: emcc --version
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@be3c7df29b3349ec6bcfc6b4792f1cf9f5237d18 # v1.343.0
-        with:
-          ruby-version: '4.0'
-
-      - name: Build WebAssembly artifacts
-        run: make all
+      - name: Set up and build WebAssembly
+        uses: ./.github/actions/setup-wasm # zizmor: ignore[self-repository] load the action from the checked-out workspace
 
       - name: Verify build artifacts
         run: |
