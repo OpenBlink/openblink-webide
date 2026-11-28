@@ -34,6 +34,17 @@ jobs:
       - name: Run actionlint
         run: ./actionlint -color
 
+  release-policy:
+    name: Release policy
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: shellcheck .github/scripts/*release*.sh
+      - run: bash .github/scripts/test_release_policy.sh
+
   zizmor:
     name: zizmor
     runs-on: ubuntu-slim

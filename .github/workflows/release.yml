@@ -15,11 +15,21 @@ concurrency:
 jobs:
   validate:
     name: Validate
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-26.04
+    permissions:
+      actions: read
+      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
+      - name: Verify the tag and production policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/validate_release.sh
+      - name: Test release policy
+        run: bash .github/scripts/test_release_policy.sh
 
       - name: Use Node.js 26
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -138,6 +148,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release
+          retention-days: 35
           path: |
             openblink-webide-*.zip
             checksums-sha256.txt
@@ -148,17 +159,28 @@ jobs:
     runs-on: ubuntu-26.04
     environment: production
     permissions:
+      actions: read
       contents: write
       id-token: write
       attestations: write
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Recheck production policy and require a new Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/validate_release.sh --publish-check
       - name: Download release artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: release
+          digest-mismatch: error
 
       - name: List release files
-        run: ls -la openblink-webide-*.zip checksums-sha256.txt
+        run: |
+          ls -la openblink-webide-*.zip checksums-sha256.txt
+          sha256sum --check checksums-sha256.txt
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -167,13 +189,9 @@ jobs:
             openblink-webide-*.zip
             checksums-sha256.txt
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
-        # zizmor: ignore[superfluous-actions] keeps gh-release for generated notes + file upload UX
-        with:
-          generate_release_notes: true
-          files: |
-            openblink-webide-*.zip
-            checksums-sha256.txt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes openblink-webide-*.zip checksums-sha256.txt
 
       - name: Release summary
         if: always()
