@@ -181,6 +181,10 @@ bypass, and allow only the `v*` deployment tag policy. After approval, the
 workflow rechecks that policy and automatically publishes the verified ZIP
 and SHA-256 checksums. It will not change an existing Release for the tag.
 
+If an interrupted run left a GitHub Release, verify that it is an unpublished
+draft for the same tag and contains none of the expected release assets.
+Delete only that draft, keeping the Git tag, then use **Re-run failed jobs**.
+
 ## Documentation
 
 - [Creating Board Configurations for WebSimulator](doc/creating-board-configurations.md)
