@@ -17,12 +17,24 @@ printf '{"deleted":false}\n' > "$GITHUB_EVENT_PATH"
 git -c tag.gpgSign=false tag v1.2.3
 
 gh() {
+  local arg response paginate=false slurp=false
   case "$*" in
-    *deployment-branch-policies*) printf '%s\n' "$POLICIES" ;;
-    *'/releases?'*) printf '%s\n' "$RELEASES" ;;
-    *'/environments/production') printf '%s\n' "$ENVIRONMENT" ;;
+    *deployment-branch-policies*) response=$POLICIES ;;
+    *'/releases?'*) response=$RELEASES ;;
+    *'/environments/production') printf '%s\n' "$ENVIRONMENT"; return ;;
     *) return 1 ;;
   esac
+  for arg in "$@"; do
+    case "$arg" in
+      --paginate) paginate=true ;;
+      --slurp) slurp=true ;;
+    esac
+  done
+  if [[ "$paginate" == true && "$slurp" == true ]]; then
+    printf '%s\n' "$response"
+  else
+    jq -c '.[0]' <<< "$response"
+  fi
 }
 export -f gh
 export ENVIRONMENT='{"can_admins_bypass":false,"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true},"protection_rules":[{"type":"required_reviewers","reviewers":[{}]}]}'
