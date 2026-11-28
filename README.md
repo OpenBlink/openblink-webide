@@ -172,6 +172,15 @@ $ make all
 
 This builds mrbc (mruby bytecode compiler), mrubyc (mruby/c VM for WebSimulator), and CodeMirror from npm packages. The build outputs are placed in `public_html/mrbc/`, `public_html/mrubyc/`, and `public_html/codemirror/`.
 
+### Publishing a GitHub Release
+
+After the release commit is on `main` and CI is green, push an unsigned
+`v*` tag that matches the package and WebIDE application versions. The
+`production` environment must require reviewers, disable administrator
+bypass, and allow only the `v*` deployment tag policy. After approval, the
+workflow rechecks that policy and automatically publishes the verified ZIP
+and SHA-256 checksums. It will not change an existing Release for the tag.
+
 ## Documentation
 
 - [Creating Board Configurations for WebSimulator](doc/creating-board-configurations.md)
